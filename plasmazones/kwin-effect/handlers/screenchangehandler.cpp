@@ -33,7 +33,7 @@ constexpr int ScreenChangeDebounceMs = 500;
 
 // Whether @p w can reserve screen-edge space (a strut) and so must be tracked
 // for work-area reporting. Plasma panels and X11 docks report isDock(). A
-// layer-shell panel from a third-party shell (e.g. a phosphor-shell bar with
+// layer-shell panel from a third-party shell (e.g. Lambent's bar with
 // an exclusive zone) does NOT — KWin classifies it as an unmovable NORMAL
 // window (isDock()=false, isNormalWindow()=true, isMovable()=false) — so an
 // isDock()-only gate leaves its strut changes unreported and the daemon's

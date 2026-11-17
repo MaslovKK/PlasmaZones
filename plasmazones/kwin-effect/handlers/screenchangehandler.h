@@ -73,7 +73,7 @@ public:
     /// Hook @p w for work-area reporting when it may reserve screen-edge
     /// space: connects its geometry-changed signal and schedules a report.
     /// Matches docks AND unmovable layer-shell surfaces — a third-party
-    /// shell's panel (e.g. phosphor-shell) carries an exclusive zone but is
+    /// shell's panel (e.g. Lambent's) carries an exclusive zone but is
     /// NOT isDock() to KWin, and missing it leaves the daemon's compositor
     /// work-area override stale when that panel resizes. A no-op for every
     /// other window. Called for every `windowAdded` and once per

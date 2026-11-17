@@ -76,7 +76,7 @@ void PlasmaZonesEffect::initTouchpadGestures()
     const auto swipe = [this](KWin::SwipeDirection direction, uint fingers) {
         const QString name = swipeDirectionName(direction);
         auto* action = new QAction(this);
-        action->setObjectName(QStringLiteral("phosphor-shell-swipe-%1-%2").arg(name).arg(fingers));
+        action->setObjectName(QStringLiteral("lambent-swipe-%1-%2").arg(name).arg(fingers));
         connect(action, &QAction::triggered, this, [this, name, fingers]() {
             reportShellGesture(QStringLiteral("swipe"), name, fingers);
         });
@@ -85,7 +85,7 @@ void PlasmaZonesEffect::initTouchpadGestures()
     const auto pinch = [this](KWin::PinchDirection direction, uint fingers) {
         const QString name = pinchDirectionName(direction);
         auto* action = new QAction(this);
-        action->setObjectName(QStringLiteral("phosphor-shell-pinch-%1-%2").arg(name).arg(fingers));
+        action->setObjectName(QStringLiteral("lambent-pinch-%1-%2").arg(name).arg(fingers));
         connect(action, &QAction::triggered, this, [this, name, fingers]() {
             reportShellGesture(QStringLiteral("pinch"), name, fingers);
         });

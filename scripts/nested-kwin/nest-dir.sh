@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # Sourced, never run: the one place the nested session's runtime dir and state
-# dir are resolved. run-nested.sh, daemon.sh, dump-windows.sh and the
-# phosphor-shell nested-shell scripts all source it, so a follow-up script
+# dir are resolved. run-nested.sh, daemon.sh, dump-windows.sh and Lambent's
+# nested-shell scripts (through LAMBENT_PLASMAZONES) all source it, so a follow-up script
 # always joins the session run-nested.sh started. Each of them used to carry
 # its own copy, and the copies drifted (a new PZ_NESTED_SESSION suffix reached
 # the launcher and none of the others).

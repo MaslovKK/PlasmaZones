@@ -675,7 +675,7 @@ target_link_libraries(plasmazonesd
         # include <PhosphorSurface/...> and daemon/overlayservice/decoration.cpp
         # calls its exported chain-compose helpers, so a future demotion of that
         # edge to PRIVATE would break them. The other chain hosts (kwin-effect,
-        # phosphor-shell, and the settings app's decoration preview) all name it
+        # Lambent's chrome, and the settings app's decoration preview) all name it
         # explicitly already.
         PhosphorSurface::PhosphorSurface  # SurfaceChainCompose / registry / DecorationSupportedPaths
         # Named directly for the same reason: daemon/main.cpp includes

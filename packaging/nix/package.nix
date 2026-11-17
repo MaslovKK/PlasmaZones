@@ -254,7 +254,8 @@ stdenv.mkDerivation (finalAttrs: {
     # Disable developer tools (shader-render CLI, etc.) — not needed in packages.
     "-DBUILD_TOOLS=OFF"
 
-    # Disable the phosphor-shell WIP desktop shell — not packaged yet.
+    # The Lambent integration (shell appearance, shell decoration), not
+    # packaged until the shell ships.
     "-DBUILD_PHOSPHOR_SHELL=OFF"
 
     # LTO (Link-Time Optimization): opt-in, default OFF (see `enableLTO` above).

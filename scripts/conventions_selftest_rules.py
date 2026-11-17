@@ -492,7 +492,6 @@ def _license_tree_failures(partition_readable) -> list[str]:
         # An LGPL header in an app tier is the defect.
         ("plasmazones/src/a.cpp", lgpl, True),
         ("plasmazones/src/a.cpp", gpl3, False),
-        ("phosphor-shell/src/b.cpp", lgpl, True),
         ("scripts/x.py", lgpl, True),
         # The data tree is deliberately ungoverned: the licence follows the
         # incorporated content, so neither identifier may be reported.

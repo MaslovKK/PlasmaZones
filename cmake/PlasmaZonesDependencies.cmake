@@ -70,10 +70,10 @@ set(PLASMAZONES_DEP_phosphor-libs_SHA256 "f072437c31f9b96e5ed43c32e55bc0e6e8c7ac
 # Phosphor.* surface libraries and the system service libraries. Added after
 # phosphor-libs, so this file's phosphor-libs pin is the one in use and that
 # tree's own pin is never fetched. A commit, so VERSION is the commit hash.
-set(PLASMAZONES_DEP_phosphor-shell-libs_VERSION "fe2cc5bc62d25bf7407d85bbc0d6df7cb04ccd74")
-set(PLASMAZONES_DEP_phosphor-shell-libs_URL "https://github.com/phosphor-works/phosphor-shell-libs/archive/fe2cc5bc62d25bf7407d85bbc0d6df7cb04ccd74.tar.gz")
-set(PLASMAZONES_DEP_phosphor-shell-libs_FILE "phosphor-shell-libs-fe2cc5bc62d25bf7407d85bbc0d6df7cb04ccd74.tar.gz")
-set(PLASMAZONES_DEP_phosphor-shell-libs_SHA256 "f10a23100f019a4211625e238873cf243b199206cacefc6930bd5c161d74cd58")
+set(PLASMAZONES_DEP_phosphor-shell-libs_VERSION "18386019f57cd9d225c1bfe5d3bd4668cba07ddb")
+set(PLASMAZONES_DEP_phosphor-shell-libs_URL "https://github.com/phosphor-works/phosphor-shell-libs/archive/18386019f57cd9d225c1bfe5d3bd4668cba07ddb.tar.gz")
+set(PLASMAZONES_DEP_phosphor-shell-libs_FILE "phosphor-shell-libs-18386019f57cd9d225c1bfe5d3bd4668cba07ddb.tar.gz")
+set(PLASMAZONES_DEP_phosphor-shell-libs_SHA256 "4f93d39a3d793787007c9cb21ca7b5803837d395eb64e194b84a3ad3db5aab5e")
 
 # The suite's branding release (CC-BY-SA-4.0, phosphor-works/branding): the app
 # icons, installed from it with its cmake/PhosphorBranding.cmake. No app keeps

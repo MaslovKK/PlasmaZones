@@ -84,7 +84,6 @@ tasks:
       - 'docs/**/*'
       - 'scripts/**/*'
       - 'packaging/**/*'
-      - 'phosphor-shell/**/*'
       - 'plasmazones/**/*'
 
   schemas:
@@ -144,16 +143,11 @@ tasks:
     args:
       - '--install'
       - 'build'
-    # Two edges, because the tier graph has two leaves: phosphor-shell and
-    # plasmazones. Layer enforcement forbids the shell depending
-    # on plasmazones, so neither leaf reaches the other through `^:build`, and
-    # depending on one alone would leave the other tier unbuilt. The debug
-    # preset sets BUILD_PHOSPHOR_SHELL=ON, so the configure generates install
-    # rules for every tier, and `phosphor_tier_target()` collects only targets
-    # declared under its own directory — `cmake --install` would then hit
-    # `file(INSTALL)` on binaries that were never built.
+    # plasmazones is the only tier, so its build is the whole tree's.
+    # `phosphor_tier_target()` collects only targets declared under its own
+    # directory, and `cmake --install` would otherwise hit `file(INSTALL)` on
+    # binaries that were never built.
     deps:
-      - 'phosphor-shell:build'
       - 'plasmazones:build'
     options:
       cache: false
