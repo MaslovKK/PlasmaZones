@@ -3,7 +3,7 @@
 //
 // Canonical uniform contract for POINTER shaders — the fourth shader-pack
 // family, alongside overlay (data/overlays), animation (data/animations) and
-// surface (data/surface). A pointer pack decorates the mouse pointer: trails,
+// surface (phosphor-surface-packs). A pointer pack decorates the mouse pointer: trails,
 // halos, click ripples, sparks. It is a CONTINUOUS decoration: the host ticks
 // it every frame while the pointer has recent motion or a recent button event
 // (its metadata `trailSeconds` window), then goes quiet. Event reactions (a

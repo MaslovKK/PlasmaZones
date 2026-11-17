@@ -46,7 +46,7 @@ layout(std140, binding = 0) uniform ZoneUniforms {
     // units the settings UI and zoneParams use) by this to reach the device-px
     // space iResolution / vFragCoord / zoneRectPos are in. The overlay
     // counterpart of the decoration contract's uSurfaceScale
-    // (data/surface/shared/surface_uniforms.glsl). std140 places this float
+    // (phosphor-surface-packs' shared/surface_uniforms.glsl). std140 places this float
     // immediately after the zoneParams array; the block pads to 16 from here.
     float uZoneScale;
 };
@@ -172,7 +172,7 @@ float sdRoundedBox(vec2 p, vec2 b, float r) {
 }
 
 // Zone frame geometry + rounded-rect signed distance — the overlay counterpart
-// of the decoration side's frameSdf() (data/surface/shared/surface_lib.glsl).
+// of the decoration side's frameSdf() (phosphor-surface-packs' shared/surface_lib.glsl).
 // One call replaces the centre / half-size / radius / SDF idiom every overlay
 // pack repeated inline, and fixes the three ways those inline copies diverged
 // from the decoration packs:

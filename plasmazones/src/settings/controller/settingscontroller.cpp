@@ -781,7 +781,7 @@ SettingsController::SettingsController(QObject* parent)
     });
 
     // Surface shader registry — settings-side mirror of the daemon's /
-    // compositor's. Scans the same XDG `plasmazones/surface` dirs
+    // compositor's. Scans the same XDG surface pack dirs
     // independently; FS watching keeps each in sync without IPC. Mirrors
     // the animation-shader registry block above (XDG search paths + user
     // dir, materialised before registration so the watcher attaches a

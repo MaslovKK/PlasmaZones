@@ -86,8 +86,8 @@
 
 let
   # ── Source archives ──────────────────────────────────────────────────────
-  # The phosphor-libs commit and the branding release pinned (version, URL and
-  # SHA-256) in cmake/PlasmaZonesDependencies.cmake, and Luau and valijson,
+  # The phosphor-libs commit, the branding release and the surface packs commit
+  # pinned (version, URL and SHA-256) in cmake/PlasmaZonesDependencies.cmake, and Luau and valijson,
   # pinned by that phosphor-libs commit in its cmake/PhosphorDependencies.cmake. The build
   # runs in the sandbox with no network, so they are fetched here as fixed-output
   # derivations and handed to CMake as one directory (PHOSPHOR_DEPS_ARCHIVES in
@@ -131,6 +131,14 @@ let
         url = "https://github.com/phosphor-works/branding/releases/download/v0.1.0/phosphor-branding-0.1.0.tar.gz";
         # sha256 53c7247e7e2c304a4d2e75a7bdd1a87164c63c1defa4159f3cef8da23d8244b3
         hash = "sha256-U8ckfn4sMEpNLnWnvdGocWTGPB3vpBWfPO+Noj2CRLM=";
+      };
+    }
+    {
+      name = "phosphor-surface-packs-e89d9f7bb6320eab8b6a0b3325858d2ca5356ce3.tar.gz";
+      path = fetchurl {
+        url = "https://github.com/phosphor-works/phosphor-surface-packs/archive/e89d9f7bb6320eab8b6a0b3325858d2ca5356ce3.tar.gz";
+        # sha256 fbbf0b9849d83396029bc4e310c3dcac49c08758e73d560538888e685f0a5e30
+        hash = "sha256-+78LmEnYM5YCm8TjEMPcrEnAh1jnPVYFOIiOaF8KXjA=";
       };
     }
   ];

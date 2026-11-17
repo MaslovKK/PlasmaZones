@@ -82,7 +82,7 @@ CompositorAssembly surfaceMainAssembly(const SurfaceShaderEffect& eff)
 
 } // namespace
 
-// Validate one SURFACE pack directory (data/surface/*). Reproduces the surface
+// Validate one SURFACE pack directory (phosphor-surface-packs' packs/*). Reproduces the surface
 // runtime's fragment assembly — the pSurface entry scaffold (an entry-only pack
 // gets a generated main(); a pack with its own main() passes through unchanged) +
 // include expansion + the generated p_<id> preamble — and bakes BOTH branches

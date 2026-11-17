@@ -4,7 +4,7 @@
 // Opt-in hashing / value-noise helpers for POINTER shader packs. `#include
 // <pointer_noise.glsl>` only in packs that need them (comet sparkle, spark
 // launch directions). Two hash families are exposed deliberately, matching
-// data/surface/shared/surface_noise.glsl:
+// phosphor-surface-packs' shared/surface_noise.glsl:
 //
 //   • hash13 / hash23 — Dave-Hoskins integer hashes, driver-stable (no sin()),
 //     the default for anything that must look identical across GPUs.

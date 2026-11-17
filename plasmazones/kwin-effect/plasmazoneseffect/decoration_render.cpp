@@ -36,7 +36,7 @@ namespace PlasmaZones {
 // surface_compile.cpp (compiledPack() / ensureSurfaceRegistryPaths()),
 // reusing the shared GLSL include / param-preamble
 // / #define-PLASMAZONES_KWIN pipeline. The border is the first surface
-// shader pack: data/surface/border, loaded via SurfaceShaderRegistry.
+// shader pack: phosphor-surface-packs' border, loaded via SurfaceShaderRegistry.
 // ─────────────────────────────────────────────────────────────────────────────
 
 // Lazily compile the passthrough present shader. It samples a bound texture

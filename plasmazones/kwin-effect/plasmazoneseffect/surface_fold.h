@@ -308,7 +308,7 @@ inline SurfaceCanvas surfaceCanvasFor(const QRectF& expandedOrFrame, qreal outer
 ///                        and this one had no quiet condition at all
 ///
 /// This function answers only the first group. Treating focus as per-frame is what
-/// disqualified the DEFAULT border pack — data/surface/border/effect.frag mixes its
+/// disqualified the DEFAULT border pack — phosphor-surface-packs' border/effect.frag mixes its
 /// active and inactive colours on uSurfaceFocused — and with the flagship chain
 /// ["border"] disqualified, both the prefix cache and the whole-composite cache were
 /// dead code for the most common decorated window on the desktop.

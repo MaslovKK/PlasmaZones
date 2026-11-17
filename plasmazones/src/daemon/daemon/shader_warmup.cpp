@@ -80,10 +80,10 @@ void Daemon::setupSurfaceShaderEffects()
     // System dirs from XDG_DATA_DIRS in descending priority. Reverse so the
     // first registered is the lowest-priority system dir — the loader applies
     // first-registration-wins, yielding `user > sys-highest > ... > sys-lowest`
-    // after the user dir is appended last. Surface packs install to
-    // `plasmazones/surface` (singular), the third category beside
-    // `plasmazones/overlays` and `plasmazones/animations`.
-    const QString surfacePackSubdir = PhosphorSurfaceShaders::surfacePackDataSubdir();
+    // after the user dir is appended last. Surface packs install where
+    // phosphor-surface-packs puts them, shared with the other apps that draw
+    // them, rather than under `plasmazones/` beside the overlays and animations.
+    const QString surfacePackSubdir = ConfigDefaults::surfacePacksSubdir();
     QStringList surfaceDirs = QStandardPaths::locateAll(QStandardPaths::GenericDataLocation, surfacePackSubdir,
                                                         QStandardPaths::LocateDirectory);
     std::reverse(surfaceDirs.begin(), surfaceDirs.end());

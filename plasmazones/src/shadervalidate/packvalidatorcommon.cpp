@@ -165,13 +165,29 @@ void appendDidYouMean(QTextStream& out, const QString& diagnostic, const QString
     }
 }
 
-/// The family directory names the runtime registries scan under
-/// `plasmazones/`. An installed pack always sits directly inside one of them,
-/// so the name identifies the family without guessing at metadata.
-bool isKnownFamilyDir(const QString& name)
+/// The directories the runtime registries scan under each XDG data dir, one
+/// per family, relative to that data dir. An installed pack always sits
+/// directly inside one of them, so the directory identifies the family without
+/// guessing at metadata. The surface packs install where phosphor-surface-packs
+/// puts them, shared with the other apps that draw them.
+const QStringList& installedFamilyDirs()
 {
-    return name == QLatin1String("animations") || name == QLatin1String("overlays") || name == QLatin1String("surface")
-        || name == QLatin1String("pointer");
+    static const QStringList dirs{QStringLiteral("plasmazones/animations"), QStringLiteral("plasmazones/overlays"),
+                                  QStringLiteral("plasmazones/pointer"),
+                                  QStringLiteral(PHOSPHOR_SURFACE_PACKS_DATA_SUBDIR)};
+    return dirs;
+}
+
+/// The installed family directory @p familyDir is, or empty when it is none:
+/// @p familyDir ends with one of installedFamilyDirs() at a path boundary.
+QString installedFamilyDir(const QString& familyDir)
+{
+    for (const QString& dir : installedFamilyDirs()) {
+        if (familyDir.endsWith(QLatin1Char('/') + dir)) {
+            return dir;
+        }
+    }
+    return QString();
 }
 
 /// Which family's marker header @p shared holds, if any.
@@ -203,8 +219,8 @@ QStringList packSharedRoots(const QString& packDir)
     const QString parent = QFileInfo(dir).absolutePath();
     const QString sibling = QDir::cleanPath(parent + QStringLiteral("/shared"));
 
-    // Only the INSTALLED layout, `<data root>/plasmazones/<family>/<id>`, is
-    // widened to the XDG chain. Such a pack usually has no sibling `shared/`
+    // Only the INSTALLED layout, `<data root>/<family dir>/<id>`, is widened to
+    // the XDG chain. Such a pack usually has no sibling `shared/`
     // at all (the helpers ship once into the system prefix while the pack
     // sits in the user's data dir), and when it has one it may be a PARTIAL
     // user override of a header or two, which the runtime resolves alongside
@@ -216,18 +232,16 @@ QStringList packSharedRoots(const QString& packDir)
     // laid out like it, a vendored pack set) is self-contained: it resolves
     // against its sibling and nowhere else, so an installed copy of the
     // helpers can never satisfy an include the tree itself lacks.
-    const QString family = QFileInfo(parent).fileName();
-    const QString dataRootChild = QFileInfo(QFileInfo(parent).absolutePath()).fileName();
-    const bool installedLayout = isKnownFamilyDir(family) && dataRootChild == QLatin1String("plasmazones");
-    if (!installedLayout) {
+    const QString familyDir = installedFamilyDir(parent);
+    if (familyDir.isEmpty()) {
         return {sibling};
     }
 
     QStringList roots{sibling};
     {
-        const QStringList installed = QStandardPaths::locateAll(
-            QStandardPaths::GenericDataLocation, QStringLiteral("plasmazones/") + family + QStringLiteral("/shared"),
-            QStandardPaths::LocateDirectory);
+        const QStringList installed =
+            QStandardPaths::locateAll(QStandardPaths::GenericDataLocation, familyDir + QStringLiteral("/shared"),
+                                      QStandardPaths::LocateDirectory);
         for (const QString& dir : installed) {
             const QString clean = QDir::cleanPath(dir);
             if (!roots.contains(clean)) {

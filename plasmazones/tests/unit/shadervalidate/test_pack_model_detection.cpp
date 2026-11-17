@@ -76,7 +76,7 @@ private Q_SLOTS:
     /// An INSTALLED pack detects from the XDG data chain, not just its sibling.
     ///
     /// This is the layout every third-party and user pack actually ships in:
-    /// the pack lands in `~/.local/share/plasmazones/<family>/<id>` while the
+    /// the pack lands in its family directory under `~/.local/share` while the
     /// shared helpers stay in the system prefix, so the pack has NO sibling
     /// `shared/` at all. A sibling-only lookup therefore failed on exactly the
     /// packs the tool exists to check, reporting the pack as undetected and
@@ -98,10 +98,11 @@ private Q_SLOTS:
             PackModel expected;
         };
         const QList<Family> families = {
-            {"animations", "animation_uniforms.glsl", PackModel::Animation},
-            {"surface", "surface_uniforms.glsl", PackModel::Surface},
-            {"pointer", "pointer_uniforms.glsl", PackModel::Pointer},
-            {"overlays", "common.glsl", PackModel::Overlay},
+            {"plasmazones/animations", "animation_uniforms.glsl", PackModel::Animation},
+            // The surface packs install where phosphor-surface-packs puts them.
+            {PHOSPHOR_SURFACE_PACKS_DATA_SUBDIR, "surface_uniforms.glsl", PackModel::Surface},
+            {"plasmazones/pointer", "pointer_uniforms.glsl", PackModel::Pointer},
+            {"plasmazones/overlays", "common.glsl", PackModel::Overlay},
         };
 
         for (const Family& family : families) {
@@ -110,7 +111,7 @@ private Q_SLOTS:
             QVERIFY2(sysRoot.isValid(), family.dir);
             QVERIFY2(userRoot.isValid(), family.dir);
 
-            const QString familyPath = QStringLiteral("plasmazones/") + QLatin1String(family.dir);
+            const QString familyPath = QLatin1String(family.dir);
 
             // The helpers, installed once into the system prefix.
             const QString sharedDir = sysRoot.filePath(familyPath + QStringLiteral("/shared"));
@@ -287,7 +288,7 @@ private Q_SLOTS:
         };
         const QList<Tree> trees = {
             {P_SOURCE_DIR "/data/animations", PackModel::Animation},
-            {P_SOURCE_DIR "/data/surface", PackModel::Surface},
+            {PHOSPHOR_SURFACE_PACKS_DIR, PackModel::Surface},
             {P_SOURCE_DIR "/data/pointer", PackModel::Pointer},
             {P_SOURCE_DIR "/data/overlays", PackModel::Overlay},
         };

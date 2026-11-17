@@ -269,7 +269,7 @@ void PlasmaZonesEffect::initRenderingAndRegistries()
                 syncStockEffectSuppression();
             });
 
-    // Surface shader pack hot-reload: when a data/surface pack changes on disk,
+    // Surface shader pack hot-reload: when a surface pack changes on disk,
     // drop EVERY compiled surface pack so the next paint recompiles each
     // referenced pack against the new source, and repaint so decorated windows
     // pick it up. Also clear each window's chainKey and fold flags: a recompiled pack

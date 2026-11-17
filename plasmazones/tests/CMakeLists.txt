@@ -17,6 +17,10 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/plasmazones/tests/unit
 )
 
+# The surface decoration packs are not in this tree: the tests that load them
+# read the pinned phosphor-surface-packs tree (plasmazones/CMakeLists.txt).
+add_compile_definitions(PHOSPHOR_SURFACE_PACKS_DIR="${PHOSPHOR_SURFACE_PACKS_DIR}")
+
 # Add subdirectories
 add_subdirectory(unit)
 # add_subdirectory(integration)  # Enable when integration tests are ready

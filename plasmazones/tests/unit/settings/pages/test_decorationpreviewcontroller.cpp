@@ -324,7 +324,7 @@ private Q_SLOTS:
     void shipping_packs_compose_identically_from_an_empty_map()
     {
         PhosphorSurfaceShaders::SurfaceShaderRegistry registry;
-        registry.addSearchPath(QStringLiteral(P_SOURCE_DIR "/data/surface"), PhosphorFsLoader::LiveReload::Off);
+        registry.addSearchPath(QStringLiteral(PHOSPHOR_SURFACE_PACKS_DIR), PhosphorFsLoader::LiveReload::Off);
         QVERIFY2(registry.hasEffect(QStringLiteral("mosaic")), "shipping packs must be discoverable");
         DecorationPreviewController c(&registry, nullptr);
 

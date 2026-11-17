@@ -24,7 +24,7 @@ int validatePack(const QString& packDir, QTextStream& out);
 // Requires glslangValidator or glslang on PATH for the compositor branch.
 int validateAnimationPack(const QString& packDir, QTextStream& out);
 
-// surface/decoration packs (data/surface/*): SurfaceShaderEffect + paramPreamble;
+// surface/decoration packs (phosphor-surface-packs' packs/*): SurfaceShaderEffect + paramPreamble;
 // validates effect.frag, buffer passes, and the shared vertex stage.
 int validateSurfacePack(const QString& packDir, QTextStream& out);
 

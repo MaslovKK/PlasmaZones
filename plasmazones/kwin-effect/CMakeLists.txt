@@ -326,7 +326,7 @@ target_link_libraries(kwin_effect_plasmazones PRIVATE
     PhosphorShaders::PhosphorShaders
     # PhosphorSurface: the surface-shader pack registry/contract. The effect
     # compiles the selected surface pack (window border / rounded corners) from
-    # data/surface via SurfaceShaderRegistry, the third shader-pack category
+    # phosphor-surface-packs via SurfaceShaderRegistry, the third shader-pack category
     # alongside animations + overlay shaders. GPL->LGPL link is fine.
     PhosphorSurface::PhosphorSurface
     # PhosphorPointer: the pointer-shader pack registry, contract, profile and

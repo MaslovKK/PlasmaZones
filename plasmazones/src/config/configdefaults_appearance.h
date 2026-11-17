@@ -24,7 +24,7 @@
 // the effect renders with before the async settings load lands.
 #include <PhosphorCompositor/DecorationDefaults.h>
 // Surface-shader decoration tree — the user-applied pack stack. The `border`
-// PACK (data/surface/border) lives in that stack like any other pack; the
+// PACK (phosphor-surface-packs' border) lives in that stack like any other pack; the
 // window-manager border/title-bar APPEARANCE defaults live in the
 // config-backed window-appearance settings above, not in this tree's default.
 #include <PhosphorSurface/DecorationProfileTree.h>

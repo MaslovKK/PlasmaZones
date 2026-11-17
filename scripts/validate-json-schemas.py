@@ -7,7 +7,13 @@ The schemas live in two trees: data/schemas/ in phosphor-libs holds the shared
 contracts and plasmazones/data/schemas/ the app-only ones. The phosphor-libs
 tree is the commit cmake/PlasmaZonesDependencies.cmake pins, found by
 scripts/pinned_phosphor_libs.py (PHOSPHOR_LIBS_DIR overrides it with a local
-checkout), and a SCHEMA_MAP key written `phosphor-libs:<path>` is relative to it. Some are the
+checkout), and a SCHEMA_MAP key written `phosphor-libs:<path>` is relative to it.
+The surface decoration packs are data of their own repository,
+phosphor-surface-packs, at the commit the same file pins: a data glob written
+`surface-packs:<glob>` is relative to its packs directory, found by
+scripts/pinned_surface_packs.py (PHOSPHOR_SURFACE_PACKS_DIR overrides it). The
+packs are validated here, against the pinned schema, because that pair is what
+this checkout ships together. Some are the
 single source of truth shared with runtime validation: phosphor-fsloader's
 SchemaValidator (valijson) compiles the same schema file at load time. The
 others are an author-time-only contract, because their document types
@@ -67,7 +73,8 @@ JSONSCHEMA_REQUIREMENT = f"jsonschema[format]=={JSONSCHEMA_VERSION}"
 
 # Maps a schema (relative to the source root, or to the pinned phosphor-libs
 # tree when it starts with LIBS_PREFIX) to the glob(s) of data files it governs,
-# which are always relative to the source root. Add an entry here when a new document type gets a
+# which are relative to the source root, or to the pinned surface packs when
+# they start with PACKS_PREFIX. Add an entry here when a new document type gets a
 # schema. Some schemas are also embedded via RCC and compiled by the
 # runtime SchemaValidator; the others are validated only here, where the
 # runtime checks those document types in C++ directly.
@@ -77,7 +84,7 @@ SCHEMA_MAP: dict[str, list[str]] = {
     "phosphor-libs:data/schemas/curve.schema.json": ["plasmazones/data/curves/*.json"],
     "phosphor-libs:data/schemas/animation-metadata.schema.json": ["plasmazones/data/animations/*/metadata.json"],
     "phosphor-libs:data/schemas/shader-metadata.schema.json": ["plasmazones/data/overlays/*/metadata.json"],
-    "phosphor-libs:data/schemas/surface-metadata.schema.json": ["plasmazones/data/surface/*/metadata.json"],
+    "phosphor-libs:data/schemas/surface-metadata.schema.json": ["surface-packs:*/metadata.json"],
     "phosphor-libs:data/schemas/pointer-metadata.schema.json": ["plasmazones/data/pointer/*/metadata.json"],
     "plasmazones/data/schemas/whatsnew.schema.json": ["plasmazones/data/whatsnew.json"],
     "phosphor-libs:data/schemas/host-descriptor.schema.json": ["plasmazones/data/placement-hosts/*.json"],
@@ -91,6 +98,8 @@ SCHEMA_DIRS: list[str] = sorted({posixpath.dirname(schema_rel) for schema_rel in
 
 # The SCHEMA_MAP key prefix for a schema in the pinned phosphor-libs tree.
 LIBS_PREFIX = "phosphor-libs:"
+# The SCHEMA_MAP glob prefix for data in the pinned surface packs.
+PACKS_PREFIX = "surface-packs:"
 
 
 def schema_location(root: Path, libs: Path, rel: str) -> Path:
@@ -104,6 +113,21 @@ def schema_key(root: Path, libs: Path, path: Path) -> str:
     """The SCHEMA_MAP key spelling of a schema file, inverse of schema_location."""
     try:
         return LIBS_PREFIX + path.relative_to(libs).as_posix()
+    except ValueError:
+        return path.relative_to(root).as_posix()
+
+
+def data_files(root: Path, packs: Path, pattern: str) -> list[Path]:
+    """The data files a SCHEMA_MAP glob matches."""
+    if pattern.startswith(PACKS_PREFIX):
+        return sorted(packs.glob(pattern[len(PACKS_PREFIX):]))
+    return sorted(root.glob(pattern))
+
+
+def data_label(root: Path, packs: Path, path: Path) -> str:
+    """A data file's name in messages, spelled the way its SCHEMA_MAP glob is."""
+    try:
+        return PACKS_PREFIX + path.relative_to(packs).as_posix()
     except ValueError:
         return path.relative_to(root).as_posix()
 
@@ -458,6 +482,12 @@ def main() -> int:
     except PinnedTreeError as exc:
         fail(f"cannot find the phosphor-libs tree its shared schemas live in: {exc}")
         return 2
+    try:
+        import pinned_surface_packs
+        packs: Path = pinned_surface_packs.tree(root)
+    except PinnedTreeError as exc:
+        fail(f"cannot find the surface packs: {exc}")
+        return 2
 
     # Resolve the explicit file list (if any) to absolute paths for
     # membership testing against each schema's matched set.
@@ -481,7 +511,7 @@ def main() -> int:
     for schema_rel, globs in sorted(SCHEMA_MAP.items()):
         targets: list[Path] = []
         for pattern in globs:
-            targets.extend(sorted(root.glob(pattern)))
+            targets.extend(data_files(root, packs, pattern))
 
         # Recorded here, ahead of every schema-level `continue` below. A
         # requested file whose schema is missing or invalid is then reported
@@ -543,7 +573,7 @@ def main() -> int:
             if requested is not None and target.resolve() not in requested:
                 continue
             checked += 1
-            rel = target.relative_to(root)
+            rel = data_label(root, packs, target)
             try:
                 document = load_json(target)
             except ValueError as exc:

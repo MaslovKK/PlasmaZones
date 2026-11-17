@@ -19,7 +19,8 @@ The Phosphor libraries (engines, rendering, layer-shell, animation, config, ipc,
 - The scripts that read library files without a build (the JSON schema gate, the dep-pins rule) find the pinned tree with `scripts/pinned_phosphor_libs.py`, which unpacks the pinned archive into `.cache/phosphor-libs/`. `PHOSPHOR_LIBS_DIR=<checkout>` points them at a local tree instead.
 - In CMake the library tree is `${phosphor-libs_SOURCE_DIR}` and its build tree `${phosphor-libs_BINARY_DIR}`. Its shared helper modules (`PhosphorTestIsolation`, `PhosphorLibTesting`, `PhosphorTestPch`) are in `${PHOSPHOR_LIBS_CMAKE_DIR}`, which is also on `CMAKE_MODULE_PATH`.
 - The shell libraries (theme, popout, the `Phosphor.*` surfaces, the `phosphor-service-*` libraries) are the same kind of repository, [phosphor-works/phosphor-shell-libs](https://github.com/phosphor-works/phosphor-shell-libs), checked out as `../phosphor-shell-libs`. Only PlasmaZones' Lambent integration needs them, so `plasmazones_add_phosphor_shell_libs()` adds them under `BUILD_PHOSPHOR_SHELL`, after phosphor-libs, and the phosphor-libs pin here is the one that tree uses. Its pin is in the same file but outside the recipes, because no package builds the shell. Override it with `-DCPM_phosphor-shell-libs_SOURCE=<dir>` or `-DPHOSPHOR_SHELL_LIBS_GIT_REF=<ref>`.
-- The shell itself is [phosphor-works/Lambent](https://github.com/phosphor-works/Lambent) (app ID `org.phosphor_works.Lambent`), checked out as `../Lambent`. `BUILD_PHOSPHOR_SHELL` builds PlasmaZones' side of it: the shell appearance adapter, the shell decoration plugin and the shell decoration settings pages. Lambent's nested-shell scripts run on this repository's `scripts/nested-kwin/` harness and build tree, and the shell draws the decoration packs in `plasmazones/data/surface`.
+- The shell itself is [phosphor-works/Lambent](https://github.com/phosphor-works/Lambent) (app ID `org.phosphor_works.Lambent`), checked out as `../Lambent`. `BUILD_PHOSPHOR_SHELL` builds PlasmaZones' side of it: the shell appearance adapter, the shell decoration plugin and the shell decoration settings pages. Lambent's nested-shell scripts run on this repository's `scripts/nested-kwin/` harness and build tree.
+- The surface decoration packs (borders, glows, shadows, blur and glass) are [phosphor-works/phosphor-surface-packs](https://github.com/phosphor-works/phosphor-surface-packs), shared with Lambent and checked out as `../phosphor-surface-packs`. PlasmaZones pins one commit of it in `cmake/PlasmaZonesDependencies.cmake`, fetches it like the branding release and installs its packs to `share/phosphor-works/surface` with its `cmake/PhosphorSurfacePacks.cmake`. User packs go in `~/.local/share/phosphor-works/surface`. In CMake the packs are `${PHOSPHOR_SURFACE_PACKS_DIR}` and the install subdir `${PHOSPHOR_SURFACE_PACKS_DATA_SUBDIR}`, which each process hands to `PhosphorSurfaceShaders::setSurfacePackDataSubdir()` at startup. A pack change is a phosphor-surface-packs PR followed by a pin bump here, and `scripts/pinned_surface_packs.py` finds the pinned packs for the scripts that read them without a build (`PHOSPHOR_SURFACE_PACKS_DIR=<packs dir>` points them at a local checkout).
 
 ## Behavioral Rules (Always Enforced)
 - NEVER question or doubt what the user says they did (installed, restarted, tested, etc.) — trust them and focus on the code
@@ -50,7 +51,7 @@ The Phosphor libraries (engines, rendering, layer-shell, animation, config, ipc,
   - **App tiers** (`plasmazones/**` except its `data/` trees, `scripts/**`): `GPL-3.0-or-later`
   - **Reusable libraries, including their own tests** (everything in phosphor-libs, and phosphor-shell-libs' `libs/`): `LGPL-2.1-or-later`
   - A library's own `tests/` follow the library (LGPL), NOT the app-tier GPL rule: test code that links and ships inside an LGPL lib must not taint that lib's build tree with GPL. The GPL `plasmazones/tests/**` rule means only the top-level app test tree.
-  - **Bundled animation and pointer shader packs** (`plasmazones/data/animations/**` and `plasmazones/data/pointer/**` shader source: `.frag`, `.vert`, `.glsl`): `LGPL-2.1-or-later` for PlasmaZones-original shaders, so a third-party pack or tool can build on them. The exception is incorporated upstream copyleft. A shader that copies verbatim or ports GPL-3.0 upstream code (the Burn-My-Windows ports and their `shared/bmw_compat.glsl` shim, the niri `honeycomb` port) MUST stay `GPL-3.0-or-later` and carries a second `SPDX-FileCopyrightText` crediting the upstream author, because PlasmaZones is not the copyright holder of those bodies and cannot relicense them. The license follows the incorporated content and is never a per-directory blanket, so a pack's `.frag` and `.vert` may legitimately differ (a GPL-derived `.frag` beside a PlasmaZones-original LGPL `.vert`). Ports of permissively-licensed upstreams such as the MIT gl-transitions `desktop-*` frags may be LGPL. Generated editor aids like `p_generated.glsl` are gitignored and carry no SPDX header. (`plasmazones/data/overlays/**` is currently GPL and `plasmazones/data/surface/**` is mixed. Neither has been normalized, so follow the existing header in those trees.)
+  - **Bundled animation and pointer shader packs** (`plasmazones/data/animations/**` and `plasmazones/data/pointer/**` shader source: `.frag`, `.vert`, `.glsl`): `LGPL-2.1-or-later` for PlasmaZones-original shaders, so a third-party pack or tool can build on them. The exception is incorporated upstream copyleft. A shader that copies verbatim or ports GPL-3.0 upstream code (the Burn-My-Windows ports and their `shared/bmw_compat.glsl` shim, the niri `honeycomb` port) MUST stay `GPL-3.0-or-later` and carries a second `SPDX-FileCopyrightText` crediting the upstream author, because PlasmaZones is not the copyright holder of those bodies and cannot relicense them. The license follows the incorporated content and is never a per-directory blanket, so a pack's `.frag` and `.vert` may legitimately differ (a GPL-derived `.frag` beside a PlasmaZones-original LGPL `.vert`). Ports of permissively-licensed upstreams such as the MIT gl-transitions `desktop-*` frags may be LGPL. Generated editor aids like `p_generated.glsl` are gitignored and carry no SPDX header. (`plasmazones/data/overlays/**` is currently GPL and has not been normalized, so follow the existing header in that tree. The surface packs carry their own REUSE licensing in phosphor-surface-packs.)
   - Rationale: the shell is GPL; libraries are LGPL so third-party plugins / tools can link them without inheriting GPL. Never "fix" a lib header to GPL-3 without understanding the split.
 - `#pragma once` for C++ headers
 
@@ -203,9 +204,10 @@ On Linux (native):
 # so nothing needs installing. Anywhere else install your distro's glslang
 # package before running ctest. Not needed with BUILD_TESTING=OFF.
 #
-# PINNED SOURCES: phosphor-libs and the branding release are pinned archives in
-# cmake/PlasmaZonesDependencies.cmake (version, URL, SHA-256), and the
-# phosphor-libs tree pins its own Luau and valijson the same way. None of them
+# PINNED SOURCES: phosphor-libs, the branding release and the surface packs
+# are pinned archives in cmake/PlasmaZonesDependencies.cmake (version, URL,
+# SHA-256), and the phosphor-libs tree pins its own Luau and valijson the same
+# way. None of them
 # is committed here. The first configure downloads them with CPM into
 # .cache/cpm, which every build dir shares. An offline build passes
 # -DPHOSPHOR_DEPS_ARCHIVES=<dir> holding the archives instead, and
@@ -249,8 +251,8 @@ ctest --test-dir build --output-on-failure
 # can reach, that packaging/debian/copyright still declares every file's real
 # license and copyright holders, that a chain-resolved shader param's
 # DESCRIPTION reads identically on every pack that offers it (the twenty
-# roundBottomCorners copies; the check and its data live in
-# scripts/conventions_shared_text.py), and that every packaging recipe repeats
+# roundBottomCorners copies in the pinned surface packs; the check and its data
+# live in scripts/conventions_shared_text.py), and that every packaging recipe repeats
 # the archive pins of cmake/PlasmaZonesDependencies.cmake and of the pinned
 # phosphor-libs tree exactly (the dep-pins
 # rule, in scripts/conventions_dep_pins.py). Stdlib only, spread over seven
@@ -333,7 +335,6 @@ plasmazones/             — PlasmaZones
   data/scrolling-templates/ — Bundled strip templates — scrolling
   data/animations/       — Window animation shader packs
   data/overlays/         — Zone overlay shader packs
-  data/surface/          — Window/shell decoration packs
   data/pointer/          — Pointer shader packs
   data/curves/           — Animation easing curves
   data/placement-hosts/  — Host descriptor for the placement settings API
@@ -342,7 +343,7 @@ cmake/                   — Shared CMake modules, including the pins (PlasmaZon
 scripts/                 — Repo-level checks and dev harnesses
 .moon/                   — moon workspace config (see Build & Test)
 ```
-Not exhaustive: `scripts/`, `packaging/` and `docs/` sit at the root; `plasmazones/translations/`, `plasmazones/dbus/` and `plasmazones/scripts/` (the installed support script) live inside their tiers. App icons are not in the tree: they install from the pinned branding release (`cmake/PlasmaZonesDependencies.cmake`).
+Not exhaustive: `scripts/`, `packaging/` and `docs/` sit at the root; `plasmazones/translations/`, `plasmazones/dbus/` and `plasmazones/scripts/` (the installed support script) live inside their tiers. App icons are not in the tree: they install from the pinned branding release (`cmake/PlasmaZonesDependencies.cmake`). Neither are the surface decoration packs, which install from the pinned phosphor-surface-packs commit.
 
 ## Testing
 - Qt Test: `QTEST_MAIN`, `QCOMPARE`, `QVERIFY`

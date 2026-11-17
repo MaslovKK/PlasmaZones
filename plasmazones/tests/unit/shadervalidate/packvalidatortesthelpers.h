@@ -109,7 +109,7 @@ inline bool linkPointerSharedIncludes(const QTemporaryDir& tmp)
 /// cue to skip rather than fail.
 inline bool linkSurfaceSharedIncludes(const QTemporaryDir& tmp)
 {
-    const QString target = QStringLiteral(P_SOURCE_DIR "/data/surface/shared");
+    const QString target = QStringLiteral(PHOSPHOR_SURFACE_PACKS_DIR "/shared");
     return linkSharedInto(tmp, target);
 }
 
@@ -448,5 +448,5 @@ inline bool reportLineHasWithout(const QString& report, const QString& stage, co
         QSKIP("glslangValidator not on PATH");                                                                         \
     }                                                                                                                  \
     if (!PackValidatorTest::linkSurfaceSharedIncludes(tmp)) {                                                          \
-        QSKIP("data/surface/shared not found — running outside source tree");                                          \
+        QSKIP("the surface packs' shared/ was not found");                                                             \
     }

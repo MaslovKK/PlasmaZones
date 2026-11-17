@@ -568,7 +568,7 @@ void PlasmaZonesEffect::updateWindowDecoration(const QString& windowId, KWin::Ef
     if (showBorder) {
         // Easy mode: the resolved border appearance rides the built-in
         // "border" pack's OWN declared parameters (borderWidth / cornerRadius /
-        // activeColor / inactiveColor, see data/surface/border/metadata.json),
+        // activeColor / inactiveColor, see phosphor-surface-packs' border/metadata.json),
         // routed by id through the same translateSurfaceParams path every
         // other pack's overrides take — no positional slot layout is assumed
         // anywhere. width / radius fall back to the shared DecorationDefaults
