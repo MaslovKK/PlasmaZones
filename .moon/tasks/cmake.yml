@@ -113,8 +113,8 @@ tasks:
   # bare here. Wrapping it in another dbus-run-session would put the private
   # buses inside a second bus for no gain.
   # A tier configured OFF has no build/<tier> directory, so ctest exits with
-  # a bare "--test-dir does not exist". If that happens for phosphor-shell or
-  # phosphor-shell-libs, the tree was configured without BUILD_PHOSPHOR_SHELL;
+  # a bare "--test-dir does not exist". If that happens for phosphor-shell,
+  # the tree was configured without BUILD_PHOSPHOR_SHELL;
   # the presets turn it on, a hand-rolled `cmake -B build` does not.
   test:
     command: 'ctest'

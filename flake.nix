@@ -80,7 +80,6 @@
           lib.fileset.unions [
             ./.github
             ./docs
-            ./phosphor-shell-libs/examples
             ./README.md
             ./CHANGELOG.md
             ./CONTRIBUTING.md
@@ -97,7 +96,6 @@
             # every tier-graph tweak.
             ./.moon
             ./moon.yml
-            ./phosphor-shell-libs/moon.yml
             ./phosphor-shell/moon.yml
             ./plasmazones/moon.yml
             ./AGENTS.md

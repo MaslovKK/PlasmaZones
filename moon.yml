@@ -84,7 +84,6 @@ tasks:
       - 'docs/**/*'
       - 'scripts/**/*'
       - 'packaging/**/*'
-      - 'phosphor-shell-libs/**/*'
       - 'phosphor-shell/**/*'
       - 'plasmazones/**/*'
 
@@ -145,8 +144,8 @@ tasks:
     args:
       - '--install'
       - 'build'
-    # Two edges, because the tier graph has two leaves: phosphor-shell
-    # (dependsOn phosphor-shell-libs) and plasmazones. Layer enforcement forbids the shell depending
+    # Two edges, because the tier graph has two leaves: phosphor-shell and
+    # plasmazones. Layer enforcement forbids the shell depending
     # on plasmazones, so neither leaf reaches the other through `^:build`, and
     # depending on one alone would leave the other tier unbuilt. The debug
     # preset sets BUILD_PHOSPHOR_SHELL=ON, so the configure generates install
