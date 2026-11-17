@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 fuddlesworth
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#include "layoutadaptor.h"
+#include "layoutservice.h"
 #include "config/configdefaults.h"
 #include "core/interfaces/interfaces.h"
 #include <PhosphorLayoutApi/AspectRatioClass.h>
@@ -37,7 +37,7 @@ namespace PlasmaZones {
 // Editor Launch Helper
 // ═══════════════════════════════════════════════════════════════════════════════
 
-bool LayoutAdaptor::launchEditor(const QStringList& args, const QString& description)
+bool LayoutService::launchEditor(const QStringList& args, const QString& description)
 {
     // Resolved once for the daemon's lifetime, deliberately: the fallback is
     // the bare name, which QProcess re-resolves against PATH at every spawn,
@@ -84,7 +84,7 @@ bool LayoutAdaptor::launchEditor(const QStringList& args, const QString& descrip
 // Import/Export
 // ═══════════════════════════════════════════════════════════════════════════════
 
-QString LayoutAdaptor::importLayout(const QString& filePath)
+QString LayoutService::importLayout(const QString& filePath)
 {
     if (!validateNonEmpty(filePath, QStringLiteral("file path"), QStringLiteral("import layout"))) {
         return QString();
@@ -124,7 +124,7 @@ QString LayoutAdaptor::importLayout(const QString& filePath)
     return newId;
 }
 
-bool LayoutAdaptor::exportLayout(const QString& layoutId, const QString& filePath)
+bool LayoutService::exportLayout(const QString& layoutId, const QString& filePath)
 {
     if (!validateNonEmpty(filePath, QStringLiteral("file path"), QStringLiteral("export layout"))) {
         return false;
@@ -158,7 +158,7 @@ bool LayoutAdaptor::exportLayout(const QString& layoutId, const QString& filePat
 // PhosphorZones::Layout Update (Editor Support)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-bool LayoutAdaptor::updateLayout(const QString& layoutJson)
+bool LayoutService::updateLayout(const QString& layoutJson)
 {
     if (!validateNonEmpty(layoutJson, QStringLiteral("JSON"), QStringLiteral("update layout"))) {
         return false;
@@ -398,7 +398,7 @@ bool LayoutAdaptor::updateLayout(const QString& layoutJson)
     return true;
 }
 
-QString LayoutAdaptor::createLayoutFromJson(const QString& layoutJson)
+QString LayoutService::createLayoutFromJson(const QString& layoutJson)
 {
     if (!validateNonEmpty(layoutJson, QStringLiteral("JSON"), QStringLiteral("create layout from JSON"))) {
         return QString();
@@ -481,19 +481,19 @@ QString LayoutAdaptor::createLayoutFromJson(const QString& layoutJson)
 // Editor Launch
 // ═══════════════════════════════════════════════════════════════════════════════
 
-bool LayoutAdaptor::openEditor()
+bool LayoutService::openEditor()
 {
     return launchEditor({}, QString());
 }
 
-bool LayoutAdaptor::openEditorForScreen(const QString& screenId)
+bool LayoutService::openEditorForScreen(const QString& screenId)
 {
     // Intentionally passes the screen ID — the editor process
     // uses it for QScreen::name() matching and geometry lookup.
     return launchEditor({QStringLiteral("--screen"), screenId}, QStringLiteral("for screen: %1").arg(screenId));
 }
 
-bool LayoutAdaptor::openEditorForLayoutOnScreen(const QString& layoutId, const QString& screenId)
+bool LayoutService::openEditorForLayoutOnScreen(const QString& layoutId, const QString& screenId)
 {
     // Validate the bus-supplied id before spawning a process: an autotile
     // preview id is a legal non-UUID shape, everything else must parse.
@@ -508,7 +508,7 @@ bool LayoutAdaptor::openEditorForLayoutOnScreen(const QString& layoutId, const Q
     return launchEditor(args, QStringLiteral("for layout: %1 on screen: %2").arg(layoutId, screenId));
 }
 
-bool LayoutAdaptor::openEditorForScrollingTemplate(const QString& templateId)
+bool LayoutService::openEditorForScrollingTemplate(const QString& templateId)
 {
     // An EMPTY id is the documented "create a new template" shape. A
     // NON-EMPTY id must parse as a UUID and name a template the store

@@ -68,7 +68,7 @@
 #include "core/utils/utils.h"
 #include "core/platform/logging.h"
 #include "core/interfaces/shaderregistry.h"
-#include "dbus/layoutadaptor/layoutadaptor.h"
+#include "runtime/services/layoutservice/layoutservice.h"
 #include "runtime/windowtracker/windowtracker.h"
 #include "runtime/services/snapservice/snapservice.h"
 
@@ -409,8 +409,8 @@ void Daemon::initLayoutAndSettingsWiring()
     m_previewNotifyTimer.setInterval(100);
     m_layoutSettingsWiringConnections.append(connect(&m_previewNotifyTimer, &QTimer::timeout, this, [this]() {
         if (m_algorithmRegistry && m_algorithmRegistry->previewParams() != m_preRetilePreviewParams
-            && m_layoutAdaptor) {
-            m_layoutAdaptor->notifyLayoutListChanged();
+            && m_layoutService) {
+            m_layoutService->notifyLayoutListChanged();
         }
     }));
 
@@ -599,7 +599,7 @@ void Daemon::initLayoutAndSettingsWiring()
         // screens and leaves subscribers to activeLayoutForScreenChanged (the
         // KWin effect's ActiveLayout rule matching) pinned to the old layout.
         //
-        // During init()'s D-Bus retry loop this can run before m_layoutAdaptor
+        // During init()'s D-Bus retry loop this can run before m_layoutService
         // exists: the snapshot advances and the publish is dropped. Harmless —
         // the adaptor's mirror is seeded by the priming diffActiveAssignments()
         // in initEngines once the adaptor is up.

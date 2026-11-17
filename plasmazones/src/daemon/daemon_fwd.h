@@ -84,7 +84,9 @@ class OverlayService;
 
 class ShortcutManager;
 class ShellCheatsheetBridge;
+class LayoutService;
 class LayoutAdaptor;
+class SettingsService;
 class SettingsAdaptor;
 class ShaderAdaptor;
 class ShaderService;
@@ -92,6 +94,7 @@ class ControlAdaptor;
 class ControlService;
 class CompositorBridgeAdaptor;
 class OverlayAdaptor;
+class OverlayControlService;
 class ZoneDetectionAdaptor;
 class ZoneQueryService;
 class WindowTracker;

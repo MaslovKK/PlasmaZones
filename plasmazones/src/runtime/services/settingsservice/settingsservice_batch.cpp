@@ -1,27 +1,25 @@
 // SPDX-FileCopyrightText: 2026 fuddlesworth
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-// Batch read/write surface for SettingsAdaptor:
+// Batch read/write surface for SettingsService:
 //   * getSettings — batch read (omit-missing contract)
 //   * setSettings — batch write with signal suppression, single save, and the
 //     post-commit snapshot/diff/re-emit machinery (metaobject NOTIFY replay,
 //     the JSON-facade alias table, the per-mode disable replay table)
 //
-// Same class as settingsadaptor.cpp, separate TU, no API change (mirrors the
+// Same class as settingsservice.cpp, separate TU, no API change (mirrors the
 // SettingsController multi-TU split, e.g. settingscontroller_pagestate.cpp).
 
-#include "settingsadaptor.h"
+#include "settingsservice.h"
 #include "core/interfaces/interfaces.h"
-#include "core/utils/dbusvariantutils.h"
 #include "core/platform/logging.h"
 #include <PhosphorProtocol/ServiceConstants.h>
-#include <QDBusVariant>
 #include <QMetaMethod>
 #include <QMetaProperty>
 
 namespace PlasmaZones {
 
-QVariantMap SettingsAdaptor::getSettings(const QStringList& keys)
+QVariantMap SettingsService::getSettings(const QStringList& keys)
 {
     QVariantMap result;
     if (keys.isEmpty()) {
@@ -50,7 +48,7 @@ QVariantMap SettingsAdaptor::getSettings(const QStringList& keys)
     return result;
 }
 
-bool SettingsAdaptor::setSettings(const QVariantMap& settings)
+bool SettingsService::setSettings(const QVariantMap& settings)
 {
     if (settings.isEmpty()) {
         qCDebug(lcDbusSettings) << "setSettings: empty map";
@@ -117,11 +115,11 @@ bool SettingsAdaptor::setSettings(const QVariantMap& settings)
                 }
                 continue;
             }
-            // Convert QDBusArgument types to plain Qt types before passing to setters.
-            // Complex types (QVariantList of QVariantMaps, e.g. dragActivationTriggers)
-            // arrive from D-Bus as QDBusArgument objects; without conversion, toList()/toMap()
-            // return empty containers, silently zeroing trigger settings.
-            QVariant converted = DBusVariantUtils::convertDbusArgument(it.value());
+            // Plain Qt types: SettingsService unwraps the QDBusArgument-wrapped
+            // complex values (QVariantList of QVariantMaps, e.g.
+            // dragActivationTriggers) before they get here; wrapped, toList()
+            // and toMap() would return empty containers and silently zero them.
+            const QVariant& converted = it.value();
             if (!setter.value()(converted)) {
                 qCWarning(lcDbusSettings) << "setSettings: setter failed for key" << key;
                 allOk = false;

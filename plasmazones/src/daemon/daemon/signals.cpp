@@ -9,8 +9,8 @@
 #include "core/types/constants.h"
 #include "daemon/controllers/unifiedlayoutcontroller.h"
 #include "daemon/overlayservice.h"
-#include "dbus/layoutadaptor/layoutadaptor.h"
-#include "dbus/settingsadaptor/settingsadaptor.h"
+#include "runtime/services/layoutservice/layoutservice.h"
+#include "runtime/services/settingsservice/settingsservice.h"
 // Complete types needed for the WindowLifecycleRelay PMF connects below
 // (TilingService::onTrackedWindowDestroyed / pruneStaleFloatBroadcasts) —
 // daemon.h forward declares TilingService only.
@@ -170,8 +170,8 @@ void Daemon::connectLayoutSignals()
                                                   diffActiveAssignments();
                                                   // Relay to the D-Bus surface so the settings app
                                                   // refreshes its template views on store CRUD.
-                                                  if (m_layoutAdaptor) {
-                                                      Q_EMIT m_layoutAdaptor->scrollingTemplatesChanged();
+                                                  if (m_layoutService) {
+                                                      Q_EMIT m_layoutService->scrollingTemplatesChanged();
                                                   }
                                               });
     }
@@ -530,16 +530,16 @@ void Daemon::finalizeStartup()
     // store is wired (F236).
 
     // Signal that daemon is fully initialized and ready for queries
-    if (m_layoutAdaptor) {
-        Q_EMIT m_layoutAdaptor->daemonReady();
+    if (m_layoutService) {
+        Q_EMIT m_layoutService->daemonReady();
     }
 
     // Explicitly broadcast settingsChanged so the KWin effect re-fetches all
     // settings (including activation triggers) after daemonReady.  The effect's
     // initial async getSetting() calls can race with daemon construction and
     // return stale/empty values; this second broadcast guarantees a clean load.
-    if (m_settingsAdaptor)
-        Q_EMIT m_settingsAdaptor->settingsChanged();
+    if (m_settingsService)
+        Q_EMIT m_settingsService->settingsChanged();
 
     // Show the layout OSD on ALL screens so the user sees what's assigned everywhere.
     // The layoutApplied signal only fires for the focused screen; this covers the rest.

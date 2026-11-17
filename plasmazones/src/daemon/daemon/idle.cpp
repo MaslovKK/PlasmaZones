@@ -19,7 +19,7 @@
 #include "config/settings.h"
 #include "core/interfaces/isettings.h"
 #include "dbus/compositorbridgeadaptor.h"
-#include "dbus/settingsadaptor/settingsadaptor.h"
+#include "runtime/services/settingsservice/settingsservice.h"
 
 #include <PhosphorServiceIdle/IdleService.h>
 
@@ -112,7 +112,7 @@ void Daemon::setupIdleService()
     // that per pixel of travel.
     //
     // NOT guarded on m_settings. It is a unique_ptr built in the constructor's init list
-    // and cannot be null here — m_settingsAdaptor was constructed FROM it already. A
+    // and cannot be null here — m_settingsService was constructed FROM it already. A
     // guard would be worse than pointless: were it ever to trip, this connect would be
     // skipped and the ladder would sit pinned to its startup timeout for the process
     // lifetime, so the slider would become a silent no-op.
@@ -175,7 +175,7 @@ bool Daemon::sessionIdleNow() const
 
 void Daemon::publishSessionIdle(bool idle, bool force)
 {
-    if (!m_settingsAdaptor) {
+    if (!m_settingsService) {
         return;
     }
     // Only on a real change, per the project's emit-on-change rule. The idle service can
@@ -188,7 +188,7 @@ void Daemon::publishSessionIdle(bool idle, bool force)
         return;
     }
     m_publishedSessionIdle = idle;
-    Q_EMIT m_settingsAdaptor->sessionIdleChanged(idle);
+    Q_EMIT m_settingsService->sessionIdleChanged(idle);
 }
 
 void Daemon::refreshIdleStages()
