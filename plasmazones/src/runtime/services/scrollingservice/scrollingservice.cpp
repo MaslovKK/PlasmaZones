@@ -1,11 +1,10 @@
 // SPDX-FileCopyrightText: 2026 fuddlesworth
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#include "scrollingadaptor.h"
+#include "scrollingservice.h"
 
 #include "config/configdefaults.h"
 #include "core/platform/logging.h"
-#include "dbus/dbushelpers.h"
 
 #include <algorithm>
 
@@ -50,8 +49,8 @@ inline QLatin1String blueprintUsedKey()
 }
 } // namespace
 
-ScrollingAdaptor::ScrollingAdaptor(PhosphorScrollEngine::ScrollEngine* engine, QObject* parent)
-    : QDBusAbstractAdaptor(parent)
+ScrollingService::ScrollingService(PhosphorScrollEngine::ScrollEngine* engine, QObject* parent)
+    : QObject(parent)
     , m_engine(engine)
 {
     // PRECONDITION: the adaptor is constructed before the engine can push a
@@ -63,7 +62,7 @@ ScrollingAdaptor::ScrollingAdaptor(PhosphorScrollEngine::ScrollEngine* engine, Q
     // set, and there is no re-wire path that could reach that state (clearEngine
     // is terminal; the next cycle deletes and re-news the whole adaptor set).
     if (!m_engine) {
-        qCWarning(lcDbusScrolling) << "ScrollingAdaptor created with null engine";
+        qCWarning(lcDbusScrolling) << "ScrollingService created with null engine";
         return;
     }
     connect(m_engine, &PhosphorScrollEngine::ScrollEngine::scrollingScreensChanged, this,
@@ -126,7 +125,7 @@ ScrollingAdaptor::ScrollingAdaptor(PhosphorScrollEngine::ScrollEngine* engine, Q
     });
 }
 
-QStringList ScrollingAdaptor::scrollingScreens() const
+QStringList ScrollingService::scrollingScreens() const
 {
     if (!m_engine) {
         return {};
@@ -139,7 +138,7 @@ QStringList ScrollingAdaptor::scrollingScreens() const
     return out;
 }
 
-QVariantMap ScrollingAdaptor::scrollEffectBehaviour() const
+QVariantMap ScrollingService::scrollEffectBehaviour() const
 {
     // No engine gate, unlike scrollingScreens above: this map is daemon-built
     // (the engine never sees the effect-owned facts), so a cleared
@@ -148,7 +147,7 @@ QVariantMap ScrollingAdaptor::scrollEffectBehaviour() const
     return m_scrollEffectBehaviour;
 }
 
-void ScrollingAdaptor::setScrollEffectBehaviour(const QStringList& focusFollowsMouseScreens,
+void ScrollingService::setScrollEffectBehaviour(const QStringList& focusFollowsMouseScreens,
                                                 const QStringList& cropStraddlerScreens,
                                                 const QStringList& verticalAxisScreens)
 {
@@ -181,7 +180,7 @@ void ScrollingAdaptor::setScrollEffectBehaviour(const QStringList& focusFollowsM
     Q_EMIT scrollEffectBehaviourChanged(m_scrollEffectBehaviour);
 }
 
-QStringList ScrollingAdaptor::scrollFocusScrollBlockedWindows() const
+QStringList ScrollingService::scrollFocusScrollBlockedWindows() const
 {
     // Ungated like the behaviour map above and for the same reason: the list
     // is daemon-built, so a cleared engine pointer during shutdown does not
@@ -189,7 +188,7 @@ QStringList ScrollingAdaptor::scrollFocusScrollBlockedWindows() const
     return m_scrollFocusScrollBlockedWindows;
 }
 
-void ScrollingAdaptor::setScrollFocusScrollBlockedWindows(const QStringList& windowIds)
+void ScrollingService::setScrollFocusScrollBlockedWindows(const QStringList& windowIds)
 {
     QStringList next = windowIds;
     std::sort(next.begin(), next.end());
@@ -206,7 +205,7 @@ void ScrollingAdaptor::setScrollFocusScrollBlockedWindows(const QStringList& win
     Q_EMIT scrollFocusScrollBlockedWindowsChanged(m_scrollFocusScrollBlockedWindows);
 }
 
-void ScrollingAdaptor::focusColumn(const QString& screenId, int delta)
+void ScrollingService::focusColumn(const QString& screenId, int delta)
 {
     // Wire-boundary validation: only the two adjacent steps are meaningful,
     // and the shared guard's ownership term keeps a wheel event from a
@@ -226,27 +225,27 @@ void ScrollingAdaptor::focusColumn(const QString& screenId, int delta)
     m_engine->focusColumnByDelta(delta, screenId);
 }
 
-void ScrollingAdaptor::setViewScrollStepProvider(std::function<int()> provider)
+void ScrollingService::setViewScrollStepProvider(std::function<int()> provider)
 {
     m_viewScrollStep = std::move(provider);
 }
 
-void ScrollingAdaptor::setContextGateProvider(std::function<bool(const QString&)> provider)
+void ScrollingService::setContextGateProvider(std::function<bool(const QString&)> provider)
 {
     m_contextGated = std::move(provider);
 }
 
-void ScrollingAdaptor::setAutotileScreenResolver(std::function<bool(const QString&)> resolver)
+void ScrollingService::setAutotileScreenResolver(std::function<bool(const QString&)> resolver)
 {
     m_isAutotileScreen = std::move(resolver);
 }
 
-bool ScrollingAdaptor::refusesForContext(const QString& screenId) const
+bool ScrollingService::refusesForContext(const QString& screenId) const
 {
     return !m_contextGated || m_contextGated(screenId);
 }
 
-bool ScrollingAdaptor::refusesScreenVerb(const QString& screenId) const
+bool ScrollingService::refusesScreenVerb(const QString& screenId) const
 {
     // The four-term entry guard every screen-scoped verb shares. Written once
     // because it had drifted into identical copies, and a term added to some
@@ -262,7 +261,7 @@ bool ScrollingAdaptor::refusesScreenVerb(const QString& screenId) const
     return !m_engine || screenId.isEmpty() || !m_engine->isActiveOnScreen(screenId) || refusesForContext(screenId);
 }
 
-void ScrollingAdaptor::scrollView(const QString& screenId, int delta)
+void ScrollingService::scrollView(const QString& screenId, int delta)
 {
     // focusColumn's wire-boundary gate, plus the provider: without a step
     // there is no distance to move, and a silent no-op beats inventing one.
@@ -274,7 +273,7 @@ void ScrollingAdaptor::scrollView(const QString& screenId, int delta)
     m_engine->scrollViewByPercent(delta * m_viewScrollStep(), screenId);
 }
 
-void ScrollingAdaptor::focusColumnAt(const QString& screenId, int index)
+void ScrollingService::focusColumnAt(const QString& screenId, int index)
 {
     // focusColumn's gate chain through the shared guard, plus the
     // out-of-contract index. The strip's own clamp handles an index past the
@@ -286,7 +285,7 @@ void ScrollingAdaptor::focusColumnAt(const QString& screenId, int index)
     m_engine->focusColumnAtIndex(index, screenId);
 }
 
-void ScrollingAdaptor::moveColumnTo(const QString& screenId, int from, int to)
+void ScrollingService::moveColumnTo(const QString& screenId, int from, int to)
 {
     // focusColumnAt's gates. Both indices are refused when negative here,
     // so a bad model never reads as a move of the first column; an index
@@ -298,7 +297,7 @@ void ScrollingAdaptor::moveColumnTo(const QString& screenId, int from, int to)
     m_engine->moveColumnToIndex(from, to, screenId);
 }
 
-void ScrollingAdaptor::scrollViewByPx(const QString& screenId, int px)
+void ScrollingService::scrollViewByPx(const QString& screenId, int px)
 {
     // Same guard as focusColumnAt. A zero distance is refused at this
     // boundary rather than handed down: a drag that has not moved yet is not
@@ -316,7 +315,7 @@ void ScrollingAdaptor::scrollViewByPx(const QString& screenId, int px)
     m_engine->scrollViewByPx(qBound(-kMaxPanPx, px, kMaxPanPx), screenId);
 }
 
-void ScrollingAdaptor::setColumnWidthProportion(const QString& screenId, double proportion)
+void ScrollingService::setColumnWidthProportion(const QString& screenId, double proportion)
 {
     // Wire-boundary validation in focusColumn's terms: the screen gate keeps
     // a stray call from being redirected by the engine's screen fallback, and
@@ -337,7 +336,7 @@ void ScrollingAdaptor::setColumnWidthProportion(const QString& screenId, double 
     m_engine->setColumnWidth(PhosphorScrollEngine::ColumnWidth::makeProportion(proportion), screenId);
 }
 
-void ScrollingAdaptor::setColumnWidthPixels(const QString& screenId, int px)
+void ScrollingService::setColumnWidthPixels(const QString& screenId, int px)
 {
     if (refusesScreenVerb(screenId)) {
         return;
@@ -349,7 +348,7 @@ void ScrollingAdaptor::setColumnWidthPixels(const QString& screenId, int px)
     m_engine->setColumnWidth(PhosphorScrollEngine::ColumnWidth::makeFixed(px), screenId);
 }
 
-void ScrollingAdaptor::setWindowHeightProportion(const QString& screenId, double proportion)
+void ScrollingService::setWindowHeightProportion(const QString& screenId, double proportion)
 {
     if (refusesScreenVerb(screenId)) {
         return;
@@ -365,7 +364,7 @@ void ScrollingAdaptor::setWindowHeightProportion(const QString& screenId, double
     m_engine->setWindowHeight(PhosphorScrollEngine::WindowHeight::makePreset(proportion), screenId);
 }
 
-void ScrollingAdaptor::setWindowHeightPixels(const QString& screenId, int px)
+void ScrollingService::setWindowHeightPixels(const QString& screenId, int px)
 {
     if (refusesScreenVerb(screenId)) {
         return;
@@ -377,7 +376,7 @@ void ScrollingAdaptor::setWindowHeightPixels(const QString& screenId, int px)
     m_engine->setWindowHeight(PhosphorScrollEngine::WindowHeight::makeFixed(px), screenId);
 }
 
-bool ScrollingAdaptor::toggleMaximizeColumn(const QString& screenId, const QString& windowId)
+bool ScrollingService::toggleMaximizeColumn(const QString& screenId, const QString& windowId)
 {
     // Same gate chain as the width setters above: ownership, engine activity
     // on the screen, and the per-context gate. There is no value to range
@@ -416,7 +415,7 @@ bool ScrollingAdaptor::toggleMaximizeColumn(const QString& screenId, const QStri
     return m_engine->toggleMaximizeColumn(screenId, windowId);
 }
 
-bool ScrollingAdaptor::toggleMaximizeToEdges(const QString& screenId, const QString& windowId)
+bool ScrollingService::toggleMaximizeToEdges(const QString& screenId, const QString& windowId)
 {
     // toggleMaximizeColumn's contract, verbatim: same gate chain, same
     // caller-screen gate against an engine that resolves the named window's
@@ -435,11 +434,8 @@ bool ScrollingAdaptor::toggleMaximizeToEdges(const QString& screenId, const QStr
     return m_engine->toggleMaximizeToEdges(screenId, windowId);
 }
 
-void ScrollingAdaptor::clearWindowedFullscreen(const QString& windowId)
+void ScrollingService::clearWindowedFullscreen(const QString& windowId)
 {
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return;
-    }
     // Malformed input is a silent no-op and the engine's own lookup rejects an
     // untracked window.
     //
@@ -457,11 +453,8 @@ void ScrollingAdaptor::clearWindowedFullscreen(const QString& windowId)
     m_engine->clearWindowedFullscreen(windowId);
 }
 
-void ScrollingAdaptor::reapplyWindowGeometry(const QString& windowId)
+void ScrollingService::reapplyWindowGeometry(const QString& windowId)
 {
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return;
-    }
     // Same wire-boundary policy as clearWindowedFullscreen above, including
     // its deliberate skip of the per-context gate and the reason for it:
     // malformed input is a silent no-op, and the engine's own lookup rejects
@@ -472,12 +465,9 @@ void ScrollingAdaptor::reapplyWindowGeometry(const QString& windowId)
     m_engine->reapplyWindowGeometry(windowId);
 }
 
-void ScrollingAdaptor::reportCommittedSize(const QString& windowId, int offeredWidth, int offeredHeight,
+void ScrollingService::reportCommittedSize(const QString& windowId, int offeredWidth, int offeredHeight,
                                            int committedWidth, int committedHeight)
 {
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return;
-    }
     // clearWindowedFullscreen's wire-boundary policy, context gate skipped
     // for its reason. Non-positive sizes are malformed and dropped here (the
     // engine repeats that check); the engine refuses an untracked window and
@@ -489,11 +479,8 @@ void ScrollingAdaptor::reportCommittedSize(const QString& windowId, int offeredW
     m_engine->reportCommittedSize(windowId, QSize(offeredWidth, offeredHeight), QSize(committedWidth, committedHeight));
 }
 
-bool ScrollingAdaptor::setWindowFullscreenFloat(const QString& windowId, const QString& screenId, bool floating)
+bool ScrollingService::setWindowFullscreenFloat(const QString& windowId, const QString& screenId, bool floating)
 {
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return false;
-    }
     // clearWindowedFullscreen's wire-boundary policy: a reconciliation call
     // reporting what the compositor has already done, so no ownership or
     // context gate. The engine refuses an untracked window and a float it
@@ -504,7 +491,7 @@ bool ScrollingAdaptor::setWindowFullscreenFloat(const QString& windowId, const Q
     return m_engine->setWindowFullscreenFloat(windowId, floating, screenId);
 }
 
-QString ScrollingAdaptor::visibleStripJson(const QString& screenId) const
+QString ScrollingService::visibleStripJson(const QString& screenId) const
 {
     // isEmpty kept even though isActiveOnScreen would reject "" anyway:
     // rejecting a malformed argument at the wire boundary should not depend
@@ -569,7 +556,7 @@ QString ScrollingAdaptor::visibleStripJson(const QString& screenId) const
     return QString::fromUtf8(QJsonDocument(arr).toJson(QJsonDocument::Compact));
 }
 
-QString ScrollingAdaptor::stripModelJson(const QString& screenId) const
+QString ScrollingService::stripModelJson(const QString& screenId) const
 {
     // Same wire-boundary and ownership gates as visibleStripJson, for the
     // same load-bearing reason (a sibling-context strip survives the screen
@@ -612,7 +599,7 @@ QString ScrollingAdaptor::stripModelJson(const QString& screenId) const
     return QString::fromUtf8(QJsonDocument(obj).toJson(QJsonDocument::Compact));
 }
 
-QString ScrollingAdaptor::presetVocabularyJson(const QString& screenId) const
+QString ScrollingService::presetVocabularyJson(const QString& screenId) const
 {
     // Same wire-boundary and screen gates as visibleStripJson, for the same
     // reasons: a screen that is not scrolling must not answer with the
@@ -633,7 +620,7 @@ QString ScrollingAdaptor::presetVocabularyJson(const QString& screenId) const
     return QString::fromUtf8(QJsonDocument(obj).toJson(QJsonDocument::Compact));
 }
 
-QString ScrollingAdaptor::blueprintProgressJson(const QString& screenId) const
+QString ScrollingService::blueprintProgressJson(const QString& screenId) const
 {
     // Same wire-boundary and screen gates as its two siblings. The gate is
     // what makes a non-scrolling screen answer the empty object rather than
@@ -649,7 +636,7 @@ QString ScrollingAdaptor::blueprintProgressJson(const QString& screenId) const
     return QString::fromUtf8(QJsonDocument(obj).toJson(QJsonDocument::Compact));
 }
 
-void ScrollingAdaptor::clearEngine()
+void ScrollingService::clearEngine()
 {
     if (m_engine) {
         disconnect(m_engine, &PhosphorScrollEngine::ScrollEngine::scrollingScreensChanged, this, nullptr);

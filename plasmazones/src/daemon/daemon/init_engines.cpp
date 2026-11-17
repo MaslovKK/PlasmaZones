@@ -29,7 +29,8 @@
 #include "dbus/autotileadaptor.h"
 #include "runtime/services/autotileservice/autotileservice.h"
 #include "dbus/tilingadaptor/tilingadaptor.h"
-#include "dbus/scrollingadaptor/scrollingadaptor.h"
+#include "runtime/services/scrollingservice/scrollingservice.h"
+#include "dbus/scrollingadaptor.h"
 #include "dbus/snapadaptor/snapadaptor.h"
 #include "dbus/controladaptor.h"
 #include "runtime/services/ruleservice.h"
@@ -930,9 +931,9 @@ void Daemon::initEnginesAndWiring()
         return runningModeForContext(screenId, desktop, activity) == PhosphorZones::AssignmentEntry::Autotile;
     });
 
-    // Create the engine D-Bus adaptors. SnapAdaptor, AutotileAdaptor and ScrollingAdaptor take their
-    // engine and connect its relays in their constructors; TilingAdaptor takes none, and its engine
-    // relays are connected here.
+    // Create the engine services and their D-Bus adaptors. SnapAdaptor and the Autotile and Scrolling
+    // services take their engine and connect its relays in their constructors; TilingAdaptor takes
+    // none, and its engine relays are connected here.
     // stop() → init() re-entry: the previous cycle's WHOLE adaptor set
     // (engine and core) is deleted in one dependency-ordered preamble at the
     // top of initCoreAdaptors(), which init() always runs immediately before
@@ -975,20 +976,21 @@ void Daemon::initEnginesAndWiring()
     m_tilingAdaptor->setWindowRegistry(m_windowRegistry.get());
     m_autotileService = new AutotileService(autotileEngine, m_algorithmRegistry.get(), this);
     m_autotileAdaptor = new AutotileAdaptor(m_autotileService, this);
-    m_scrollingAdaptor = new ScrollingAdaptor(scrollEngine, this);
+    m_scrollingService = new ScrollingService(scrollEngine, this);
+    m_scrollingAdaptor = new ScrollingAdaptor(m_scrollingService, this);
     // The wheel's view step, from ShortcutManager (ctor-owned, never reset).
-    m_scrollingAdaptor->setViewScrollStepProvider([this]() {
+    m_scrollingService->setViewScrollStepProvider([this]() {
         return m_shortcutManager->scrollViewScrollStepPercent();
     });
     // The per-context disable gate the keyboard scroll verbs pass through
     // (scrolling_init.cpp's engineFor). Installed unconditionally: the adaptor
     // fails closed without it, and it reads the resolver live.
-    m_scrollingAdaptor->setContextGateProvider([this](const QString& screenId) {
+    m_scrollingService->setContextGateProvider([this](const QString& screenId) {
         return isFocusedContextGatedForMode(screenId, PhosphorZones::AssignmentEntry::Scrolling);
     });
     // Which screens leaving the scrolling set run autotile now. updateEngineScreens
     // sets autotile's screens before the scrolling ones, so the answer is final.
-    m_scrollingAdaptor->setAutotileScreenResolver(
+    m_scrollingService->setAutotileScreenResolver(
         [engine = QPointer<PhosphorTileEngine::AutotileEngine>(autotileEngine)](const QString& screenId) {
             return engine && engine->isActiveOnScreen(screenId);
         });

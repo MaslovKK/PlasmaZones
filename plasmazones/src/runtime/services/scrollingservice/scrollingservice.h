@@ -7,7 +7,6 @@
 
 #include <PhosphorProtocol/ServiceConstants.h>
 
-#include <QDBusAbstractAdaptor>
 #include <QObject>
 #include <QString>
 #include <QStringList>
@@ -22,9 +21,11 @@ class ScrollEngine;
 namespace PlasmaZones {
 
 /**
- * @brief D-Bus adaptor for the scrolling placement engine
+ * @brief The scrolling placement engine's service, behind
+ *        org.phosphor_works.Placement.Scrolling
  *
- * Provides D-Bus interface: org.phosphor_works.Placement.Scrolling
+ * Bound to D-Bus by ScrollingAdaptor (dbus/scrollingadaptor.h), which also
+ * admits the compositor-only reports.
  *
  * The scroll-SPECIFIC wire surface: the scrolling screen set the KWin effect
  * uses as its Mode-stamp discriminator, the strip-preview snapshot (with the
@@ -52,10 +53,9 @@ namespace PlasmaZones {
  * engine-managed screen set and one geometry pipeline for both tiling-family
  * engines, and TilingAdaptor routes per screen.
  */
-class PLASMAZONES_EXPORT ScrollingAdaptor : public QDBusAbstractAdaptor
+class PLASMAZONES_EXPORT ScrollingService : public QObject
 {
     Q_OBJECT
-    Q_CLASSINFO("D-Bus Interface", "org.phosphor_works.Placement.Scrolling")
 
     Q_PROPERTY(QStringList scrollingScreens READ scrollingScreens NOTIFY scrollingScreensChanged)
     Q_PROPERTY(QVariantMap scrollEffectBehaviour READ scrollEffectBehaviour NOTIFY scrollEffectBehaviourChanged)
@@ -63,8 +63,8 @@ class PLASMAZONES_EXPORT ScrollingAdaptor : public QDBusAbstractAdaptor
                    scrollFocusScrollBlockedWindowsChanged)
 
 public:
-    explicit ScrollingAdaptor(PhosphorScrollEngine::ScrollEngine* engine, QObject* parent = nullptr);
-    ~ScrollingAdaptor() override = default;
+    explicit ScrollingService(PhosphorScrollEngine::ScrollEngine* engine, QObject* parent = nullptr);
+    ~ScrollingService() override = default;
 
     /// The scrolling screen set, sorted so a property read and a signal
     /// payload for the same set compare equal.
@@ -453,7 +453,7 @@ public Q_SLOTS:
      * the strip's flag permanently disagreeing with a client that has already
      * left fullscreen. The engine's own lookup rejects an untracked window.
      * Compositor-only all the same: any bus caller but the registered bridge
-     * is answered with AccessDenied (DbusHelpers::admitCompositorReport), as
+     * is answered with AccessDenied by ScrollingAdaptor (DbusHelpers::admitCompositorReport), as
      * for reapplyWindowGeometry, reportCommittedSize and
      * setWindowFullscreenFloat.
      *
@@ -475,7 +475,7 @@ public Q_SLOTS:
      * policy as clearWindowedFullscreen: a repair call, so neither
      * ownership- nor context-gated, but compositor-only: any bus caller but
      * the registered bridge is answered with AccessDenied
-     * (DbusHelpers::admitCompositorReport).
+     * (ScrollingAdaptor runs DbusHelpers::admitCompositorReport).
      *
      * @param windowId Window to re-emit; an empty string is ignored
      */
@@ -506,7 +506,7 @@ public Q_SLOTS:
      * context-gated, since it reports what the client has already done.
      *
      * Refused HERE only for a caller other than the registered compositor
-     * bridge (answered with AccessDenied, DbusHelpers::admitCompositorReport),
+     * bridge (ScrollingAdaptor answers it with AccessDenied, DbusHelpers::admitCompositorReport),
      * a null engine, an empty id or a non-positive size. The engine repeats
      * the size check (QSize::isEmpty) and owns every
      * other refusal: an interactive move, an unknown, floating or

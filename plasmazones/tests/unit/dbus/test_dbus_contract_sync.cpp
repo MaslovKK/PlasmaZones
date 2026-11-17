@@ -56,7 +56,7 @@
 
 #include "dbus/autotileadaptor.h"
 #include "dbus/tilingadaptor/tilingadaptor.h"
-#include "dbus/scrollingadaptor/scrollingadaptor.h"
+#include "dbus/scrollingadaptor.h"
 #include "dbus/compositorbridgeadaptor.h"
 #include "dbus/controladaptor.h"
 #include "dbus/layoutadaptor/layoutadaptor.h"

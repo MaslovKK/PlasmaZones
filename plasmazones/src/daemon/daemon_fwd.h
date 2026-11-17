@@ -104,6 +104,7 @@ class WorkspaceController;
 class TilingAdaptor;
 class AutotileAdaptor;
 class AutotileService;
+class ScrollingService;
 class ScrollingAdaptor;
 class ScreenModeRouter;
 class CrossSurfaceResolver;

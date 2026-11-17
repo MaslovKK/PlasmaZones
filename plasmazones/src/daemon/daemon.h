@@ -1404,7 +1404,8 @@ private:
     /// scroll-specific screen set; lifecycle traffic rides the shared
     /// tiling adaptor. Qt-parented; stop() clears its engine pointer
     /// before the engine unique_ptr resets.
-    ScrollingAdaptor* m_scrollingAdaptor = nullptr;
+    ScrollingService* m_scrollingService = nullptr;
+    ScrollingAdaptor* m_scrollingAdaptor = nullptr; // D-Bus binding of m_scrollingService, deleted before it
     // Compositor bridge adaptor (KWin effect ↔ daemon protocol endpoint).
     // Parented to `this`; holds only plain state, so it needs no detach().
     CompositorBridgeAdaptor* m_compositorBridge = nullptr;

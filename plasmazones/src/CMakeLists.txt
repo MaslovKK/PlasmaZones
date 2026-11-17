@@ -226,8 +226,10 @@ set(plasmazones_core_SRCS
     runtime/dragresolver/dropproxy.cpp
     runtime/dragresolver/dropproxy.h
     runtime/dragresolver/dragresolver.h
-    dbus/scrollingadaptor/scrollingadaptor.cpp
-    dbus/scrollingadaptor/scrollingadaptor.h
+    dbus/scrollingadaptor.cpp
+    dbus/scrollingadaptor.h
+    runtime/services/scrollingservice/scrollingservice.cpp
+    runtime/services/scrollingservice/scrollingservice.h
     dbus/autotileadaptor.cpp
     dbus/autotileadaptor.h
     runtime/services/autotileservice/autotileservice.cpp

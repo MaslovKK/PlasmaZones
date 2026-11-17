@@ -43,7 +43,8 @@
 // neither the destructor nor a class-specific operator delete.
 #include "dbus/autotileadaptor.h"
 #include "runtime/services/autotileservice/autotileservice.h"
-#include "dbus/scrollingadaptor/scrollingadaptor.h"
+#include "runtime/services/scrollingservice/scrollingservice.h"
+#include "dbus/scrollingadaptor.h"
 #include "dbus/snapadaptor/snapadaptor.h"
 #include "dbus/shaderadaptor.h"
 #include "runtime/services/shaderservice.h"
@@ -88,6 +89,8 @@ void Daemon::initCoreAdaptors()
     m_tilingAdaptor = nullptr;
     delete m_scrollingAdaptor;
     m_scrollingAdaptor = nullptr;
+    delete m_scrollingService;
+    m_scrollingService = nullptr;
     // The binding before the resolver it forwards to.
     delete m_windowDragAdaptor;
     m_windowDragAdaptor = nullptr;

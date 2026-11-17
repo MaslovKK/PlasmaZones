@@ -30,7 +30,7 @@
 #include "runtime/dragresolver/dragresolver.h"
 #include "runtime/services/autotileservice/autotileservice.h"
 #include "dbus/tilingadaptor/tilingadaptor.h"
-#include "dbus/scrollingadaptor/scrollingadaptor.h"
+#include "runtime/services/scrollingservice/scrollingservice.h"
 #include "dbus/snapadaptor/snapadaptor.h"
 #include "runtime/services/shaderservice.h"
 #include "dbus/compositorbridgeadaptor.h"
@@ -414,7 +414,7 @@ void Daemon::stop()
     // The other raw-Qt-parented adaptors (LayoutAdaptor,
     // OverlayAdaptor, ZoneDetectionAdaptor, WindowTracker,
     // DBusScreenAdaptor, DragResolver, CompositorBridgeAdaptor,
-    // SnapAdaptor, TilingAdaptor, AutotileAdaptor, ScrollingAdaptor) all
+    // SnapAdaptor, TilingAdaptor, AutotileAdaptor, ScrollingService) all
     // ship destructors that don't
     // deref any borrowed pointer — they are `= default` or empty-body
     // (no member access); DBusScreenAdaptor's out-of-line body does
@@ -563,8 +563,8 @@ void Daemon::stop()
     if (m_autotileService) {
         m_autotileService->clearEngine();
     }
-    if (m_scrollingAdaptor) {
-        m_scrollingAdaptor->clearEngine();
+    if (m_scrollingService) {
+        m_scrollingService->clearEngine();
     }
     if (m_snapAdaptor) {
         m_snapAdaptor->clearEngine();
@@ -704,7 +704,7 @@ void Daemon::stop()
     // currentActivity, and runningModeForContext). No live deref
     // can occur today — m_autotileEngine is destroyed on the running path below
     // while `this` is still alive — but clearing it keeps the engine-side clears
-    // complete and grep-discoverable (ScrollingAdaptor's step and gate providers
+    // complete and grep-discoverable (ScrollingService's step and gate providers
     // stay installed on purpose: its scroll slots refuse once clearEngine nulls
     // the engine), exactly like the SnapEngine exclude-rule borrow above.
     // `m_autotileEngine` is base-typed `PlacementEngineBase*`;
