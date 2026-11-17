@@ -62,8 +62,8 @@ Source3:        https://github.com/phosphor-works/branding/releases/download/v0.
 # cmake/PlasmaZonesDependencies.cmake. Its libraries are built from it and
 # installed with the package. Luau and valijson above are the archives that
 # commit pins in its own cmake/PhosphorDependencies.cmake.
-# phosphor-libs-c5d6ee8a24f803607b403f90b8625b94b8a25110.tar.gz sha256 f072437c31f9b96e5ed43c32e55bc0e6e8c7ac7323262dbeaf871008c670e8e6
-Source4:        https://github.com/phosphor-works/phosphor-libs/archive/c5d6ee8a24f803607b403f90b8625b94b8a25110.tar.gz#/phosphor-libs-c5d6ee8a24f803607b403f90b8625b94b8a25110.tar.gz
+# phosphor-libs-793344a136af82d067e4a8b0e5abe0d57404f74a.tar.gz sha256 a35b8fbdec56b8ed17368d5d4df149c9cd473f7a974aa815e7db78a0c19281fd
+Source4:        https://github.com/phosphor-works/phosphor-libs/archive/793344a136af82d067e4a8b0e5abe0d57404f74a.tar.gz#/phosphor-libs-793344a136af82d067e4a8b0e5abe0d57404f74a.tar.gz
 # The surface decoration packs commit, pinned in the same file. Shader source
 # and metadata the build installs as data, so no bundled() provide.
 # phosphor-surface-packs-e89d9f7bb6320eab8b6a0b3325858d2ca5356ce3.tar.gz sha256 fbbf0b9849d83396029bc4e310c3dcac49c08758e73d560538888e685f0a5e30
@@ -337,9 +337,10 @@ echo ""
 # MIT licence of the bundled Luau runtime (Source1) and BSD-2-Clause licence of
 # the bundled valijson headers (Source2), copied out of the unpacked archives
 # and installed by the phosphor-scripting / phosphor-fsloader CMake whenever it
-# builds them, rather than a system copy.
-%license %{_datadir}/licenses/plasmazones/LICENSE.Luau
-%license %{_datadir}/licenses/plasmazones/LICENSE.valijson
+# builds them, rather than a system copy. The library tree installs them in
+# its own licence directory, not the app's.
+%license %{_datadir}/licenses/phosphor-libs/LICENSE.Luau
+%license %{_datadir}/licenses/phosphor-libs/LICENSE.valijson
 %doc README.md
 
 # Executables — globbed by the plasmazones prefix (plasmazonesd plus
@@ -406,8 +407,9 @@ echo ""
 %{_datadir}/systemsettings/categories/settings-windowmanagement-plasmazones.desktop
 
 # Runtime data — application data plus the Phosphor data trees the build
-# installs: phosphorwayland/ (protocol XMLs) and phosphor-works/ (the
-# placement-host descriptors and the surface decoration packs).
+# installs: phosphorwayland/ (protocol XMLs), phosphor-works/ (the
+# placement-host descriptors and the surface decoration packs) and
+# phosphor-libs/ (pluau.d.luau, the tiling script type definitions).
 %{_datadir}/plasmazones/
 %{_datadir}/phosphor*/
 

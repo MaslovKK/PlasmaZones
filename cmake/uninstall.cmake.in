@@ -245,6 +245,10 @@ if(IS_DIRECTORY "${SURFACE_PACKS_DIR}")
 endif()
 
 set(PARENT_DIRS
+    # The library tree's own data and licence notices, which the manifest
+    # removed file by file.
+    "$ENV{DESTDIR}@KDE_INSTALL_FULL_DATADIR@/phosphor-libs"
+    "$ENV{DESTDIR}@KDE_INSTALL_FULL_DATADIR@/licenses/phosphor-libs"
     "$ENV{DESTDIR}@KDE_INSTALL_FULL_DATADIR@/phosphor-works/placement-hosts"
     "$ENV{DESTDIR}@KDE_INSTALL_FULL_DATADIR@/phosphor-works"
     "$ENV{DESTDIR}@KDE_INSTALL_FULL_QMLDIR@/org/kde/kcms"
