@@ -25,7 +25,7 @@
 #include "dbus/controladaptor.h"
 #include "dbus/overlayadaptor.h"
 #include "dbus/zonedetectionadaptor.h"
-#include "dbus/snapadaptor/snapadaptor.h"
+#include "runtime/services/snapservice/snapservice.h"
 #include "runtime/windowtracker/windowtracker.h"
 #include "runtime/dragresolver/dragresolver.h"
 #include "dbus/tilingadaptor/tilingadaptor.h"
@@ -1217,8 +1217,8 @@ void Daemon::onVirtualScreensReconfigured(const QString& physicalScreenId)
     // VS-aware via Utils::belongsToPhysicalScreen. The vs_reconfigure-tagged
     // variant suppresses the kwin-effect snap-assist continuation so users
     // don't get a thumbnail picker popping up after every VS swap/rotate.
-    if (m_snapAdaptor) {
-        m_snapAdaptor->resnapForVirtualScreenReconfigure(physicalScreenId);
+    if (m_snapService) {
+        m_snapService->resnapForVirtualScreenReconfigure(physicalScreenId);
     }
     // A survivor's new shape can also move a shape-keyed gap rule's verdict. The
     // resnap above just placed this output's windows under the current gaps, so
@@ -1291,8 +1291,8 @@ void Daemon::onVirtualScreenRegionsChanged(const QString& physicalScreenId)
     if (reshaped) {
         scheduleContextOverlayRefresh();
     }
-    if (m_snapAdaptor) {
-        m_snapAdaptor->resnapForVirtualScreenReconfigure(physicalScreenId);
+    if (m_snapService) {
+        m_snapService->resnapForVirtualScreenReconfigure(physicalScreenId);
     }
     // Same gap pass as the topology handler: this output's windows were just
     // placed under the current gaps, so only another screen's moved verdict is

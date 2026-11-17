@@ -37,7 +37,7 @@
 #include "core/interfaces/interfaces.h"
 #include <PhosphorZones/Layout.h>
 #include <PhosphorZones/Zone.h>
-#include "dbus/snapadaptor/snapadaptor.h"
+#include "runtime/services/snapservice/snapservice.h"
 #include "runtime/windowtracker/windowtracker.h"
 #include <PhosphorSnapEngine/SnapEngine.h>
 #include <PhosphorEngine/IPlacementEngine.h>
@@ -101,7 +101,7 @@ protected:
         m_wta->service()->setSnapEngine(m_snapEngine);
         m_wta->setEngines(m_snapEngine, nullptr, nullptr);
 
-        m_snapAdaptor = new SnapAdaptor(m_snapEngine, m_wta, m_settings, m_parent);
+        m_snapService = new SnapService(m_snapEngine, m_wta, m_settings, m_parent);
 
         m_testLayout = createTestLayout(3, m_layoutManager);
         m_layoutManager->addLayout(m_testLayout);
@@ -117,12 +117,12 @@ protected:
 
     void cleanupFixture()
     {
-        // SnapAdaptor is owned by m_parent (QDBusAbstractAdaptor parent)
+        // SnapService is owned by m_parent (QDBusAbstractAdaptor parent)
         // Clear engine before deleting to disconnect signals
-        if (m_snapAdaptor) {
-            m_snapAdaptor->clearEngine();
+        if (m_snapService) {
+            m_snapService->clearEngine();
         }
-        m_snapAdaptor = nullptr;
+        m_snapService = nullptr;
         if (m_registry) {
             m_wta->setWindowRegistry(nullptr);
             m_registry.reset();
@@ -180,7 +180,7 @@ protected:
     StubZoneDetectorConvenience* m_zoneDetector = nullptr;
     QObject* m_parent = nullptr;
     WindowTracker* m_wta = nullptr;
-    SnapAdaptor* m_snapAdaptor = nullptr;
+    SnapService* m_snapService = nullptr;
     SnapEngine* m_snapEngine = nullptr;
     PhosphorZones::Layout* m_testLayout = nullptr;
     QStringList m_zoneIds;

@@ -221,7 +221,7 @@ bool WindowTracker::shouldRestoreFloatedPosition(const QString& windowId, Phosph
     // The load-bearing ORDERING invariant: on every open path a STAMPING
     // resolver runs before either unstamped one, so the memo is seeded with a
     // ScreenId-stamped query. The snap path routes at
-    // src/dbus/snapadaptor/snaprestore.cpp (applyOpenDesktopRouting) BEFORE
+    // src/runtime/services/snapservice/snaprestore.cpp (applyOpenDesktopRouting) BEFORE
     // calling the engine's resolveWindowRestore, which is what reaches
     // placementZonesByRule and these predicates; the tiling path runs
     // applyOpenRoutingForTiling before the engine's windowOpened. All four

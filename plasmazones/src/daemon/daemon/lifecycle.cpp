@@ -31,7 +31,7 @@
 #include "runtime/services/autotileservice/autotileservice.h"
 #include "dbus/tilingadaptor/tilingadaptor.h"
 #include "runtime/services/scrollingservice/scrollingservice.h"
-#include "dbus/snapadaptor/snapadaptor.h"
+#include "runtime/services/snapservice/snapservice.h"
 #include "runtime/services/shaderservice.h"
 #include "dbus/compositorbridgeadaptor.h"
 #include "dbus/controladaptor.h"
@@ -414,7 +414,7 @@ void Daemon::stop()
     // The other raw-Qt-parented adaptors (LayoutAdaptor,
     // OverlayAdaptor, ZoneDetectionAdaptor, WindowTracker,
     // DBusScreenAdaptor, DragResolver, CompositorBridgeAdaptor,
-    // SnapAdaptor, TilingAdaptor, AutotileAdaptor, ScrollingService) all
+    // SnapService, TilingAdaptor, AutotileAdaptor, ScrollingService) all
     // ship destructors that don't
     // deref any borrowed pointer — they are `= default` or empty-body
     // (no member access); DBusScreenAdaptor's out-of-line body does
@@ -423,7 +423,7 @@ void Daemon::stop()
     // destructors" — confirmed by inspecting each header + cpp pair,
     // not header alone. Their borrowed pointers are still severed below
     // (the engine adaptors' clearEngine, and the WTA's, WDA's,
-    // TilingAdaptor's and SnapAdaptor's late-bound borrows), with the bus
+    // TilingAdaptor's and SnapService's late-bound borrows), with the bus
     // already unregistered above; none of them needs a detach() for its
     // DESTRUCTOR. If a future adaptor grows a dtor body that
     // derefs a borrowed member, add detach() to it AND wire the call here
@@ -566,8 +566,8 @@ void Daemon::stop()
     if (m_scrollingService) {
         m_scrollingService->clearEngine();
     }
-    if (m_snapAdaptor) {
-        m_snapAdaptor->clearEngine();
+    if (m_snapService) {
+        m_snapService->clearEngine();
     }
 
     // Null the WindowTracker's engine borrows for the same reason, and
@@ -623,13 +623,13 @@ void Daemon::stop()
     }
 
     // Drop the D-Bus borrowers' non-owning resolver / router / WTA pointers.
-    // Explicit symmetric clear across all three borrowers — SnapAdaptor's
+    // Explicit symmetric clear across all three borrowers — SnapService's
     // resolver is also nulled defensively by clearEngine() above, but doing
     // it here too keeps the teardown contract grep-discoverable and survives
     // a future refactor of clearEngine() that might stop touching the
     // resolver pointer.
-    if (m_snapAdaptor) {
-        m_snapAdaptor->setContextResolver(nullptr);
+    if (m_snapService) {
+        m_snapService->setContextResolver(nullptr);
     }
     if (m_dragResolver) {
         m_dragResolver->setContextResolver(nullptr);
@@ -639,7 +639,7 @@ void Daemon::stop()
         // m_screenModeRouter is destroyed on the running path below; null its
         // WTA borrow before that reset so nothing later in this teardown
         // derefs a freed router (the bus is already unregistered above).
-        // SnapAdaptor holds no router.
+        // SnapService holds no router.
         m_windowTracker->setScreenModeRouter(nullptr);
     }
     if (m_tilingAdaptor) {

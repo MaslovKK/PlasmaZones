@@ -505,7 +505,7 @@ void TilingAdaptor::dispatchOpenToClaimingEngine(const PhosphorProtocol::WindowO
     // SAME output, in the same mode (claimCrossScreenReopen; each engine
     // declines unless it runs the opening screen). Never onto another output,
     // never from the window's own record. Arrivals on snap-mode screens never
-    // reach this dispatch; SnapAdaptor::resolveWindowRestore restores them.
+    // reach this dispatch; SnapService::resolveWindowRestore restores them.
     // Suppressed (allowCrossScreenClaim=false) when a routing or placement
     // DIRECTIVE MATCHED for this window — keyed on the match, not on a
     // redirect having happened, so a rule pinning the window to the screen it

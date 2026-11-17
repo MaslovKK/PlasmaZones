@@ -1,10 +1,9 @@
 // SPDX-FileCopyrightText: 2026 fuddlesworth
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#include "snapadaptor.h"
+#include "snapservice.h"
 #include "runtime/windowtracker/windowtracker.h"
 #include "core/platform/logging.h"
-#include "dbus/dbushelpers.h"
 #include <PhosphorPlacement/WindowTrackingService.h>
 #include <PhosphorSnapEngine/SnapEngine.h>
 #include <PhosphorEngine/EngineTypes.h>
@@ -18,21 +17,21 @@ namespace PlasmaZones {
 // keyboard twin gates them (focusedVerbPermitted), then forwarded to SnapEngine.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-void SnapAdaptor::moveWindowToAdjacentZone(const QString& direction)
+void SnapService::moveWindowToAdjacentZone(const QString& direction)
 {
     if (focusedVerbPermitted(QString(), true)) {
         m_engine->moveFocusedInDirection(direction, NavigationContext{});
     }
 }
 
-void SnapAdaptor::focusAdjacentZone(const QString& direction)
+void SnapService::focusAdjacentZone(const QString& direction)
 {
     if (focusedVerbPermitted(QString(), false)) {
         m_engine->focusInDirection(direction, NavigationContext{});
     }
 }
 
-void SnapAdaptor::pushToEmptyZone(const QString& screenId)
+void SnapService::pushToEmptyZone(const QString& screenId)
 {
     if (screenId.isEmpty()) {
         if (focusedVerbPermitted(QString(), true)) {
@@ -73,21 +72,21 @@ void SnapAdaptor::pushToEmptyZone(const QString& screenId)
     moveWindowToZoneOnScreen(windowId, emptyZone, screen);
 }
 
-void SnapAdaptor::restoreWindowSize()
+void SnapService::restoreWindowSize()
 {
     if (focusedVerbPermitted(QString(), true)) {
         m_engine->restoreFocusedWindow(NavigationContext{});
     }
 }
 
-void SnapAdaptor::swapWindowWithAdjacentZone(const QString& direction)
+void SnapService::swapWindowWithAdjacentZone(const QString& direction)
 {
     if (focusedVerbPermitted(QString(), true)) {
         m_engine->swapFocusedInDirection(direction, NavigationContext{});
     }
 }
 
-void SnapAdaptor::snapToZoneByNumber(int zoneNumber, const QString& screenId)
+void SnapService::snapToZoneByNumber(int zoneNumber, const QString& screenId)
 {
     if (screenId.isEmpty()) {
         // Like the shortcut: the focused window's own screen when it is
@@ -111,7 +110,7 @@ void SnapAdaptor::snapToZoneByNumber(int zoneNumber, const QString& screenId)
     moveWindowToZoneNumberOnScreen(windowId, zoneNumber, screenId);
 }
 
-void SnapAdaptor::rotateWindowsInLayout(bool clockwise, const QString& screenId)
+void SnapService::rotateWindowsInLayout(bool clockwise, const QString& screenId)
 {
     if (!m_engine || !m_adaptor) {
         return;
@@ -126,7 +125,7 @@ void SnapAdaptor::rotateWindowsInLayout(bool clockwise, const QString& screenId)
     m_engine->rotateWindowsInLayout(clockwise, screen);
 }
 
-void SnapAdaptor::cycleWindowsInZone(bool forward)
+void SnapService::cycleWindowsInZone(bool forward)
 {
     if (focusedVerbPermitted(QString(), false)) {
         m_engine->cycleFocus(forward, NavigationContext{});
@@ -143,7 +142,7 @@ void SnapAdaptor::cycleWindowsInZone(bool forward)
 // (emitPlacementBatch), so they reach the effect in commit order and behind
 // any screens announce queued before them (#1151).
 // ═══════════════════════════════════════════════════════════════════════════════
-bool SnapAdaptor::commitBatch(const QVector<ZoneAssignmentEntry>& entries, const QString& action)
+bool SnapService::commitBatch(const QVector<ZoneAssignmentEntry>& entries, const QString& action)
 {
     if (!m_engine || !m_adaptor) {
         return false;
@@ -165,7 +164,7 @@ bool SnapAdaptor::commitBatch(const QVector<ZoneAssignmentEntry>& entries, const
 
 /// A batch whose every entry re-states a placement (the desktop carry, the
 /// re-apply on a switch) is relayed as "restate": no Snap Assist (F461).
-void SnapAdaptor::commitResnapBatch(const QVector<ZoneAssignmentEntry>& entries)
+void SnapService::commitResnapBatch(const QVector<ZoneAssignmentEntry>& entries)
 {
     const bool restatement = !entries.isEmpty() && std::all_of(entries.cbegin(), entries.cend(), [](const auto& e) {
         return e.restatement;
@@ -173,7 +172,7 @@ void SnapAdaptor::commitResnapBatch(const QVector<ZoneAssignmentEntry>& entries)
     commitBatch(entries, restatement ? QStringLiteral("restate") : QStringLiteral("resnap"));
 }
 
-QStringList SnapAdaptor::resolveSnapModeScreensForResnap(const QString& screenFilter) const
+QStringList SnapService::resolveSnapModeScreensForResnap(const QString& screenFilter) const
 {
     if (!m_adaptor) {
         return {};
@@ -181,14 +180,14 @@ QStringList SnapAdaptor::resolveSnapModeScreensForResnap(const QString& screenFi
     return m_adaptor->resolveSnapModeScreensForResnap(screenFilter);
 }
 
-void SnapAdaptor::resnapToNewLayout()
+void SnapService::resnapToNewLayout()
 {
     if (m_engine) {
         m_engine->resnapToNewLayout();
     }
 }
 
-void SnapAdaptor::resnapCurrentAssignments(const QString& screenFilter)
+void SnapService::resnapCurrentAssignments(const QString& screenFilter)
 {
     if (!m_engine || !m_adaptor) {
         return;
@@ -222,7 +221,7 @@ void SnapAdaptor::resnapCurrentAssignments(const QString& screenFilter)
     commitBatch(entries, QStringLiteral("resnap"));
 }
 
-void SnapAdaptor::reapplySnapZones(const QStringList& screens, bool restatement)
+void SnapService::reapplySnapZones(const QStringList& screens, bool restatement)
 {
     if (!m_engine) {
         return;
@@ -239,7 +238,7 @@ void SnapAdaptor::reapplySnapZones(const QStringList& screens, bool restatement)
     commitBatch(entries, restatement ? QStringLiteral("restate") : QStringLiteral("resnap"));
 }
 
-void SnapAdaptor::resnapFromAutotileOrder(const QStringList& autotileWindowOrder, const QString& screenId)
+void SnapService::resnapFromAutotileOrder(const QStringList& autotileWindowOrder, const QString& screenId)
 {
     qCDebug(lcDbusWindow) << "resnapFromAutotileOrder: count=" << autotileWindowOrder.size() << "screen=" << screenId;
 
@@ -265,7 +264,7 @@ void SnapAdaptor::resnapFromAutotileOrder(const QStringList& autotileWindowOrder
     }
 }
 
-void SnapAdaptor::resnapForVirtualScreenReconfigure(const QString& physicalScreenId)
+void SnapService::resnapForVirtualScreenReconfigure(const QString& physicalScreenId)
 {
     qCDebug(lcDbusWindow) << "resnapForVirtualScreenReconfigure: physId=" << physicalScreenId;
 
@@ -292,15 +291,10 @@ void SnapAdaptor::resnapForVirtualScreenReconfigure(const QString& physicalScree
     commitBatch(entries, QStringLiteral("vs_reconfigure"));
 }
 
-PhosphorProtocol::SnapAllResultList SnapAdaptor::calculateSnapAllWindows(const QStringList& windowIds,
+PhosphorProtocol::SnapAllResultList SnapService::calculateSnapAllWindows(const QStringList& windowIds,
                                                                          const QString& screenId)
 {
     qCDebug(lcDbusWindow) << "calculateSnapAllWindows: count=" << windowIds.size() << "screen=" << screenId;
-    // Compositor-only: it records each candidate's free frame, which a
-    // foreign caller could otherwise overwrite for any window.
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return {};
-    }
     if (!m_engine) {
         return {};
     }
@@ -314,7 +308,7 @@ PhosphorProtocol::SnapAllResultList SnapAdaptor::calculateSnapAllWindows(const Q
     return results;
 }
 
-void SnapAdaptor::snapAllWindows(const QString& screenId)
+void SnapService::snapAllWindows(const QString& screenId)
 {
     qCDebug(lcDbusWindow) << "snapAllWindows: screen=" << screenId;
     if (!m_engine || !m_adaptor) {
@@ -331,7 +325,7 @@ void SnapAdaptor::snapAllWindows(const QString& screenId)
     m_engine->snapAllWindows(screen);
 }
 
-void SnapAdaptor::applyEngineResnap(const QString& resnapData)
+void SnapService::applyEngineResnap(const QString& resnapData)
 {
     // Deserialize through the lib-side pair of serializeZoneAssignments — one
     // serializer, one deserializer, shared JsonKeys, so the two sides cannot
@@ -349,7 +343,7 @@ void SnapAdaptor::applyEngineResnap(const QString& resnapData)
     commitResnapBatch(entries);
 }
 
-void SnapAdaptor::handleBatchedResnap(const QString& resnapData)
+void SnapService::handleBatchedResnap(const QString& resnapData, bool restoresAdmitted)
 {
     if (!m_engine || !m_adaptor) {
         return;
@@ -366,9 +360,7 @@ void SnapAdaptor::handleBatchedResnap(const QString& resnapData)
     // A restore entry unsnaps the window, floats it on the named screen and
     // moves it to the entry's rect, none of which a snap gate checks, so it is
     // taken only from the registered compositor bridge (or a direct call),
-    // and only on a screen snapping runs.
-    const std::optional<QString> caller = DbusHelpers::busCallerOf(this, QLatin1StringView(__func__));
-    const bool restoresAdmitted = !caller || DbusHelpers::isBridgeCaller(this, *caller);
+    // which restoresAdmitted says, and only on a screen snapping runs.
     const int desktops = m_adaptor->desktopCount();
     QVector<ZoneAssignmentEntry> admitted;
     for (ZoneAssignmentEntry entry : entries) {

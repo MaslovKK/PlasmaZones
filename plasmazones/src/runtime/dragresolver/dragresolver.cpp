@@ -66,7 +66,7 @@ DragResolver::DragResolver(IOverlayService* overlay, PhosphorZones::IZoneDetecto
     // otherwise produce a silently-no-op (but D-Bus-callable) object
     // that crashes on the first slot dispatch instead of at
     // construction. qFatal aborts in both debug and release, matching
-    // the sibling WindowTracker + SnapAdaptor defensive
+    // the sibling WindowTracker + SnapService defensive
     // pattern, so a wiring regression is loud and immediate.
     if (!overlay || !detector || !layoutManager || !settings || !windowTracking) {
         qFatal(
@@ -75,7 +75,7 @@ DragResolver::DragResolver(IOverlayService* overlay, PhosphorZones::IZoneDetecto
             "— daemon-wiring bug",
             static_cast<void*>(overlay), static_cast<void*>(detector), static_cast<void*>(layoutManager),
             static_cast<void*>(settings), static_cast<void*>(windowTracking));
-        return; // See snapadaptor.cpp's matching `return` for the MSVC noreturn caveat.
+        return; // See snapservice.cpp's matching `return` for the MSVC noreturn caveat.
     }
 
     // Connect to layout change signals to invalidate cached zone geometry mid-drag

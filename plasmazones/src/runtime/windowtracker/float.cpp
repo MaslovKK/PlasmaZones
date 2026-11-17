@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 // toggleFloatForWindow, calculateUnfloatRestore, windowUnsnappedForFloat
-// moved to SnapAdaptor (src/dbus/snapadaptor/commit.cpp).
+// moved to SnapService (src/runtime/services/snapservice/commit.cpp).
 //
 // This file retains cross-mode float methods that stay on WTA:
 //   notifyDragOutUnsnap, getPreFloatZone, clearPreFloatZone,
@@ -253,9 +253,9 @@ void WindowTracker::notifyDragOutUnsnap(const QString& windowId)
         preSnapSize = preSnapSizeOn(windowId, screenId);
     }
 
-    // Delegate unsnap-for-float to the service directly (the SnapAdaptor
+    // Delegate unsnap-for-float to the service directly (the SnapService
     // method windowUnsnappedForFloat does the same thing, but this path
-    // doesn't need the SnapAdaptor detour for a WTS-level operation).
+    // doesn't need the SnapService detour for a WTS-level operation).
     m_service->unsnapForFloat(windowId);
     syncWindowFloating(windowId, true);
 

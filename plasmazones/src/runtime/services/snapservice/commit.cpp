@@ -1,11 +1,10 @@
 // SPDX-FileCopyrightText: 2026 fuddlesworth
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#include "snapadaptor.h"
+#include "snapservice.h"
 #include "runtime/windowtracker/windowtracker.h"
 #include "runtime/windowtracker/internal.h"
 #include "core/platform/logging.h"
-#include "dbus/dbushelpers.h"
 #include <PhosphorEngine/WindowPlacement.h>
 #include <PhosphorPlacement/WindowTrackingService.h>
 #include <PhosphorSnapEngine/SnapEngine.h>
@@ -15,25 +14,22 @@ namespace PlasmaZones {
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Snap confirmations from the compositor: only the registered bridge may make
-// them (DbusHelpers::admitCompositorReport, #1155), and each is checked by
+// them (SnapAdaptor runs DbusHelpers::admitCompositorReport, #1155), and each is checked by
 // validBusSnapTarget (busgate.cpp), then committed through the engine, which
 // owns the orchestration (clear floating and the auto-snapped flag, assign,
 // last-used tracking, the state-change signal). They confirm placements already
 // applied, so no policy gate.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-void SnapAdaptor::windowSnapped(const QString& windowId, const QString& zoneId, const QString& screenId)
+void SnapService::windowSnapped(const QString& windowId, const QString& zoneId, const QString& screenId)
 {
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return;
-    }
     if (!validateWindowId(windowId, QStringLiteral("track window snap"))) {
         return;
     }
     confirmSnap(windowId, zoneId, screenId);
 }
 
-bool SnapAdaptor::confirmSnap(const QString& windowId, const QString& zoneId, const QString& screenId)
+bool SnapService::confirmSnap(const QString& windowId, const QString& zoneId, const QString& screenId)
 {
     // A live window, a known screen and a zone its layout holds (F459).
     const std::optional<BusSnapTarget> target = validBusSnapTarget(windowId, {zoneId}, screenId);
@@ -45,11 +41,8 @@ bool SnapAdaptor::confirmSnap(const QString& windowId, const QString& zoneId, co
     return true;
 }
 
-void SnapAdaptor::windowSnappedMultiZone(const QString& windowId, const QStringList& zoneIds, const QString& screenId)
+void SnapService::windowSnappedMultiZone(const QString& windowId, const QStringList& zoneIds, const QString& screenId)
 {
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return;
-    }
     if (!validateWindowId(windowId, QStringLiteral("track multi-zone window snap"))) {
         return;
     }
@@ -62,11 +55,8 @@ void SnapAdaptor::windowSnappedMultiZone(const QString& windowId, const QStringL
                                   target->desktop);
 }
 
-void SnapAdaptor::windowUnsnapped(const QString& windowId)
+void SnapService::windowUnsnapped(const QString& windowId)
 {
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return;
-    }
     if (!validateWindowId(windowId, QStringLiteral("untrack window"))) {
         return;
     }
@@ -77,7 +67,7 @@ void SnapAdaptor::windowUnsnapped(const QString& windowId)
     releaseSnapSlotIfFree(windowId);
 }
 
-void SnapAdaptor::releaseSnapSlotIfFree(const QString& windowId)
+void SnapService::releaseSnapSlotIfFree(const QString& windowId)
 {
     // With no store holding a zone or the float bit for the window, the
     // record's snap slot goes too, or a reopen would restore the zone just left.
@@ -87,11 +77,8 @@ void SnapAdaptor::releaseSnapSlotIfFree(const QString& windowId)
     }
 }
 
-void SnapAdaptor::windowsSnappedBatch(const PhosphorProtocol::SnapConfirmationList& entries)
+void SnapService::windowsSnappedBatch(const PhosphorProtocol::SnapConfirmationList& entries)
 {
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return;
-    }
     qCInfo(lcDbusWindow) << "windowsSnappedBatch: processing" << entries.size() << "entries";
 
     for (const auto& entry : entries) {
@@ -121,11 +108,8 @@ void SnapAdaptor::windowsSnappedBatch(const PhosphorProtocol::SnapConfirmationLi
     }
 }
 
-void SnapAdaptor::recordSnapIntent(const QString& windowId, bool wasUserInitiated)
+void SnapService::recordSnapIntent(const QString& windowId, bool wasUserInitiated)
 {
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return;
-    }
     if (windowId.isEmpty()) {
         return;
     }
@@ -142,12 +126,12 @@ void SnapAdaptor::recordSnapIntent(const QString& windowId, bool wasUserInitiate
 // intent, then commit and ask the effect for the geometry (applyGeometryRequested).
 // ═══════════════════════════════════════════════════════════════════════════════
 
-void SnapAdaptor::moveWindowToZone(const QString& windowId, const QString& zoneId)
+void SnapService::moveWindowToZone(const QString& windowId, const QString& zoneId)
 {
     moveWindowToZoneOnScreen(windowId, zoneId, QString());
 }
 
-void SnapAdaptor::moveWindowToZoneOnScreen(const QString& windowId, const QString& zoneId, const QString& screenHint)
+void SnapService::moveWindowToZoneOnScreen(const QString& windowId, const QString& zoneId, const QString& screenHint)
 {
     if (!validateWindowId(windowId, QStringLiteral("moveWindowToZone"))) {
         return;
@@ -180,7 +164,7 @@ void SnapAdaptor::moveWindowToZoneOnScreen(const QString& windowId, const QStrin
     qCInfo(lcDbusWindow) << "moveWindowToZone:" << windowId << "-> zone" << zoneId << "on screen" << screenId;
 }
 
-void SnapAdaptor::swapWindowsById(const QString& windowId1, const QString& windowId2)
+void SnapService::swapWindowsById(const QString& windowId1, const QString& windowId2)
 {
     if (!validateWindowId(windowId1, QStringLiteral("swapWindowsById (window1)"))) {
         return;
@@ -278,7 +262,7 @@ void SnapAdaptor::swapWindowsById(const QString& windowId1, const QString& windo
 // whichever engine owns the screen.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-void SnapAdaptor::toggleFloatForWindow(const QString& windowId, const QString& screenId)
+void SnapService::toggleFloatForWindow(const QString& windowId, const QString& screenId)
 {
     qCInfo(lcDbusWindow) << "toggleFloatForWindow: windowId=" << windowId << "screen=" << screenId;
 
@@ -296,7 +280,7 @@ void SnapAdaptor::toggleFloatForWindow(const QString& windowId, const QString& s
     }
 }
 
-void SnapAdaptor::setWindowFloat(const QString& windowId, bool floating)
+void SnapService::setWindowFloat(const QString& windowId, bool floating)
 {
     if (!validateWindowId(windowId, QStringLiteral("set snap float"))) {
         return;
@@ -309,7 +293,7 @@ void SnapAdaptor::setWindowFloat(const QString& windowId, bool floating)
     }
 }
 
-PhosphorProtocol::UnfloatRestoreResult SnapAdaptor::calculateUnfloatRestore(const QString& windowId,
+PhosphorProtocol::UnfloatRestoreResult SnapService::calculateUnfloatRestore(const QString& windowId,
                                                                             const QString& screenId)
 {
     if (windowId.isEmpty()) {
@@ -345,14 +329,8 @@ PhosphorProtocol::UnfloatRestoreResult SnapAdaptor::calculateUnfloatRestore(cons
     };
 }
 
-void SnapAdaptor::windowUnsnappedForFloat(const QString& windowId)
+void SnapService::windowUnsnappedForFloat(const QString& windowId)
 {
-    // Compositor-only: from any other caller it unsnapped a window that its
-    // gated second half (setWindowFloat) could then refuse to float, leaving
-    // it in neither state.
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return;
-    }
     if (!validateWindowId(windowId, QStringLiteral("prepare float"))) {
         return;
     }
@@ -378,7 +356,7 @@ void SnapAdaptor::windowUnsnappedForFloat(const QString& windowId)
 // Private helpers
 // ═══════════════════════════════════════════════════════════════════════════════
 
-bool SnapAdaptor::validateWindowId(const QString& windowId, const QString& operation) const
+bool SnapService::validateWindowId(const QString& windowId, const QString& operation) const
 {
     if (windowId.isEmpty()) {
         qCWarning(lcDbusWindow) << "Cannot" << operation << "- empty window ID";

@@ -4,9 +4,9 @@
 // Snap-mode navigation forwarders (moveWindowToAdjacentZone, focusAdjacentZone,
 // swapWindowWithAdjacentZone, pushToEmptyZone, snapToZoneByNumber,
 // cycleWindowsInZone, restoreWindowSize, rotateWindowsInLayout) moved to
-// SnapAdaptor (src/dbus/snapadaptor/navigation.cpp).
+// SnapService (src/runtime/services/snapservice/navigation.cpp).
 //
-// resolveSnapModeScreensForResnap stays: SnapAdaptor's resnapCurrentAssignments,
+// resolveSnapModeScreensForResnap stays: SnapService's resnapCurrentAssignments,
 // reapplySnapZones and resnapForVirtualScreenReconfigure delegate to it through m_adaptor.
 //
 // requestMoveSpecificWindowToZone and reportNavigationFeedback stay — they are

@@ -240,12 +240,14 @@ set(plasmazones_core_SRCS
     dbus/tilingadaptor/mapmodel.cpp
     dbus/tilingadaptor/desktopreconcile.cpp
     dbus/tilingadaptor/tilingadaptor.h
-    dbus/snapadaptor/snapadaptor.cpp
-    dbus/snapadaptor/busgate.cpp
-    dbus/snapadaptor/commit.cpp
-    dbus/snapadaptor/snaprestore.cpp
-    dbus/snapadaptor/navigation.cpp
-    dbus/snapadaptor/snapadaptor.h
+    dbus/snapadaptor.cpp
+    dbus/snapadaptor.h
+    runtime/services/snapservice/snapservice.cpp
+    runtime/services/snapservice/busgate.cpp
+    runtime/services/snapservice/commit.cpp
+    runtime/services/snapservice/snaprestore.cpp
+    runtime/services/snapservice/navigation.cpp
+    runtime/services/snapservice/snapservice.h
     # TilingAlgorithm, TilingState, SplitTree, AlgorithmRegistry, scripted-algo
     # machinery live in phosphor-libs/libs/phosphor-tiles/. Consumers include canonical
     # <PhosphorTiles/...> headers directly; no forwarding shims remain.
@@ -343,13 +345,13 @@ target_link_libraries(plasmazones_core
         PhosphorRegistry::PhosphorRegistry
         # PhosphorRules: the unified LGPL rule engine. PUBLIC since
         # Phase 3 — config/settings.h owns a RuleStore for the per-mode
-        # disable lists, the RuleAdaptor exposes the store on D-Bus, and
+        # disable lists, the RuleService serves the store, and
         # config/configmigration.cpp builds rules during the v3→v4 conversion,
         # so consumers of plasmazones_core need the include path + link edge.
         PhosphorRules::PhosphorRules
         # Frozen-snapshot per-screen mode + disable/lock resolver. PUBLIC
-        # because D-Bus adaptors compiled into plasmazones_core
-        # (windowdragadaptor / windowtrackingadaptor / snapadaptor) hold
+        # because runtime classes compiled into plasmazones_core
+        # (DragResolver, WindowTracker, SnapService) hold
         # `PhosphorContext::IContextResolver*` members; consumers linking
         # plasmazones_core need the include path + link edge to read those.
         PhosphorContextResolver::PhosphorContextResolver

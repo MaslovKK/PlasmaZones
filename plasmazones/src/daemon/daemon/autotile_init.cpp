@@ -15,7 +15,7 @@
 #include "daemon/controllers/shortcutmanager.h"
 #include "daemon/controllers/unifiedlayoutcontroller.h"
 #include "daemon/overlayservice.h"
-#include "dbus/snapadaptor/snapadaptor.h"
+#include "runtime/services/snapservice/snapservice.h"
 #include "runtime/windowtracker/windowtracker.h"
 
 #include <PhosphorContext/ContextResolver.h>
@@ -633,7 +633,7 @@ void Daemon::toggleScreenMode(const QString& screenId, bool snappingAutotilePair
             // else arm CLEARS them, so moving a failed apply across that
             // boundary would discard the float half instead of replaying it.
             if (applied && m_layoutManager->resolveLayoutForScreen(screenId) && m_windowTracker
-                && m_windowTracker->service() && m_snapAdaptor) {
+                && m_windowTracker->service() && m_snapService) {
                 QSet<QString> engineManagedScreens;
                 if (m_screenModeRouter && m_screenManager) {
                     const auto parts = m_screenModeRouter->partitionByMode(m_screenManager->effectiveScreenIds());

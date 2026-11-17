@@ -237,7 +237,7 @@ public:
     /// it last heard: a desktop switch off a scrolling desktop re-applies snap
     /// zones and re-states single windows in the same pass that queues the
     /// announce, and sent first, those were judged as if the screen still
-    /// tiled (#1151). SnapAdaptor hands every zone batch and re-statement it
+    /// tiled (#1151). SnapService hands every zone batch and re-statement it
     /// emits through here. Runs after the held tile batches, in arrival
     /// order, and is swept by clearEngine with the announce. The work runs
     /// behind whichever announce goes out next, whether or not the effect
@@ -525,7 +525,7 @@ public Q_SLOTS:
 
     // floatWindow, unfloatWindow, toggleFocusedWindowFloat, toggleWindowFloat removed:
     // all float operations are now routed through the unified methods —
-    // org.phosphor_works.Placement.Snap.toggleFloatForWindow (SnapAdaptor) for toggle,
+    // org.phosphor_works.Placement.Snap.toggleFloatForWindow (SnapService) for toggle,
     // org.phosphor_works.Placement.WindowTracking.setWindowFloatingForScreen for directional.
 
 Q_SIGNALS:

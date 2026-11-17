@@ -45,7 +45,8 @@
 #include "runtime/services/autotileservice/autotileservice.h"
 #include "runtime/services/scrollingservice/scrollingservice.h"
 #include "dbus/scrollingadaptor.h"
-#include "dbus/snapadaptor/snapadaptor.h"
+#include "dbus/snapadaptor.h"
+#include "runtime/services/snapservice/snapservice.h"
 #include "dbus/shaderadaptor.h"
 #include "runtime/services/shaderservice.h"
 #include "dbus/compositorbridgeadaptor.h"
@@ -74,6 +75,8 @@ void Daemon::initCoreAdaptors()
     m_controlAdaptor = nullptr;
     delete m_snapAdaptor;
     m_snapAdaptor = nullptr;
+    delete m_snapService;
+    m_snapService = nullptr;
     delete m_autotileAdaptor;
     m_autotileAdaptor = nullptr;
     delete m_autotileService;

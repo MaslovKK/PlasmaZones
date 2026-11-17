@@ -644,7 +644,7 @@ private Q_SLOTS:
 
         int x = 0, y = 0, width = 0, height = 0;
         bool shouldSnap = false;
-        m_snapAdaptor->snapToLastZone(w, m_screenId, false, x, y, width, height, shouldSnap);
+        m_snapService->snapToLastZone(w, m_screenId, false, x, y, width, height, shouldSnap);
 
         QVERIFY(shouldSnap);
         QCOMPARE(m_snapEngine->zoneForWindow(w), m_zoneIds[1]);

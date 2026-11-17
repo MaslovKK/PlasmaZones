@@ -78,7 +78,7 @@
 #include "runtime/windowtracker/windowtracker.h"
 #include "runtime/dragresolver/dragresolver.h"
 #include "dbus/tilingadaptor/tilingadaptor.h"
-#include "dbus/snapadaptor/snapadaptor.h"
+#include "runtime/services/snapservice/snapservice.h"
 #include "dbus/shaderadaptor.h"
 #include "dbus/compositorbridgeadaptor.h"
 #include "dbus/controladaptor.h"

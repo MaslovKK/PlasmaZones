@@ -5,9 +5,9 @@
 
 #include "plasmazones_export.h"
 #include "core/types/types.h"
-#include <PhosphorProtocol/NavigationMarshalling.h>
-#include <PhosphorProtocol/WindowMarshalling.h>
-#include <QDBusAbstractAdaptor>
+#include <PhosphorProtocol/NavigationTypes.h>
+#include <PhosphorProtocol/WindowTypes.h>
+#include <QObject>
 #include <QHash>
 #include <QObject>
 #include <QRect>
@@ -30,9 +30,11 @@ class WindowTracker;
 class ISettings;
 
 /**
- * @brief D-Bus adaptor for snap-mode window placement
+ * @brief Snap-mode window placement: the service behind
+ *        org.phosphor_works.Placement.Snap
  *
- * Provides D-Bus interface: org.phosphor_works.Placement.Snap
+ * Bound to D-Bus by SnapAdaptor (dbus/snapadaptor.h), which also admits the
+ * compositor-only members.
  *
  * Owns the snap-specific D-Bus surface: commit/uncommit, snap-restore
  * (placement rule / emptyZone / lastZone / resolveWindowRestore),
@@ -54,14 +56,13 @@ class ISettings;
  *
  * @see SnapEngine, WindowTracker
  */
-class PLASMAZONES_EXPORT SnapAdaptor : public QDBusAbstractAdaptor
+class PLASMAZONES_EXPORT SnapService : public QObject
 {
     Q_OBJECT
-    Q_CLASSINFO("D-Bus Interface", "org.phosphor_works.Placement.Snap")
 
 public:
     /**
-     * @brief Construct a SnapAdaptor
+     * @brief Construct a SnapService
      *
      * Connects the SnapEngine signals listed in the class doc to the
      * WindowTracker for D-Bus relay; windowSnapStateChanged and
@@ -73,9 +74,9 @@ public:
      *        the restore and bus gates read; not owned
      * @param parent Parent QObject (must be the D-Bus-registered daemon)
      */
-    explicit SnapAdaptor(PhosphorSnapEngine::SnapEngine* engine, WindowTracker* adaptor, ISettings* settings,
+    explicit SnapService(PhosphorSnapEngine::SnapEngine* engine, WindowTracker* adaptor, ISettings* settings,
                          QObject* parent = nullptr);
-    ~SnapAdaptor() override = default;
+    ~SnapService() override = default;
 
     /**
      * @brief Clear the engine pointer during shutdown
@@ -127,8 +128,9 @@ public Q_SLOTS:
 
     // The confirmations, recordSnapIntent, the snap-restore slots,
     // calculateSnapAllWindows and windowUnsnappedForFloat are compositor-only
-    // (DbusHelpers::admitCompositorReport, #1155): any bus caller but the
-    // registered bridge is answered with AccessDenied and nothing runs.
+    // (SnapAdaptor runs DbusHelpers::admitCompositorReport, #1155): any bus
+    // caller but the registered bridge is answered with AccessDenied and
+    // nothing runs.
 
     /**
      * @brief Confirm a single-zone snap from the KWin effect (snap assist).
@@ -249,8 +251,12 @@ public Q_SLOTS:
      *        snap is (admitBusSnap) and dropped when it fails. A restore entry
      *        (unsnap and put back at a caller's rect) is taken only from the
      *        registered compositor bridge or a direct call
+     *
+     * @param restoresAdmitted Whether the caller may send restore entries.
+     *        True for a direct call; the binding that serves the call decides
+     *        for a remote one (SnapAdaptor admits only the bridge).
      */
-    void handleBatchedResnap(const QString& resnapData);
+    void handleBatchedResnap(const QString& resnapData, bool restoresAdmitted = true);
 
     // ═══════════════════════════════════════════════════════════════════════════
     // Snap-mode navigation D-Bus slots
@@ -369,8 +375,8 @@ public Q_SLOTS:
 
 public:
     // ═══════════════════════════════════════════════════════════════════════════
-    // Internal — plain `public:` (NOT Q_SLOTS, no Q_INVOKABLE) so
-    // QDBusAbstractAdaptor's introspection does not expose them on the bus.
+    // Internal — plain `public:` (NOT Q_SLOTS, no Q_INVOKABLE). SnapAdaptor
+    // forwards only what the interface XML names, so these are not on the bus.
     // Every caller is in-process and reaches these via direct C++ invocation
     // through the daemon (same pattern as
     // DragResolver::handleWindowClosed).

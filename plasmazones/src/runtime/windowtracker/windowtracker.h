@@ -174,7 +174,7 @@ public:
      * screens, SnapEngine for manual-zone screens. All must be set before
      * navigation/float D-Bus calls work.
      *
-     * SnapAdaptor's ctor relays most snap engine signals; this wires
+     * SnapService's ctor relays most snap engine signals; this wires
      * windowSnapStateChanged and windowFloatingClearedForSnap.
      *
      * @param snapEngine PlacementEngineBase for snap mode (not owned; a QPointer,
@@ -266,7 +266,7 @@ public:
     }
 
     // The SnapNavigationTargetResolver lives on SnapEngine (ensureTargetResolver);
-    // resnapForVirtualScreenReconfigure moved to SnapAdaptor.
+    // resnapForVirtualScreenReconfigure moved to SnapService.
 
 public Q_SLOTS:
     /**
@@ -309,7 +309,7 @@ public Q_SLOTS:
                            const QString& activity, int windowType, const QVariantMap& extended);
 
     // windowSnapped, windowSnappedMultiZone, windowUnsnapped, windowsSnappedBatch,
-    // recordSnapIntent moved to SnapAdaptor (org.phosphor_works.Placement.Snap D-Bus interface).
+    // recordSnapIntent moved to SnapService (org.phosphor_works.Placement.Snap D-Bus interface).
 
     /// A snapped window was dragged without the activation trigger and dropped
     /// on its own screen: unsnap it as a drag-out (floating, zone cleared).
@@ -336,7 +336,7 @@ public Q_SLOTS:
      */
     void setWindowSticky(const QString& windowId, bool sticky);
 
-    // windowUnsnappedForFloat moved to SnapAdaptor (org.phosphor_works.Placement.Snap D-Bus interface).
+    // windowUnsnappedForFloat moved to SnapService (org.phosphor_works.Placement.Snap D-Bus interface).
 
     /**
      * Get the zone to restore to when unfloating (if any).
@@ -361,7 +361,7 @@ public Q_SLOTS:
      */
     void clearPreFloatZone(const QString& windowId);
 
-    // calculateUnfloatRestore moved to SnapAdaptor (org.phosphor_works.Placement.Snap D-Bus interface).
+    // calculateUnfloatRestore moved to SnapService (org.phosphor_works.Placement.Snap D-Bus interface).
 
     /**
      * Store geometry before tiling (unified snap + autotile)
@@ -579,14 +579,14 @@ public Q_SLOTS:
      * Get the last zone a window was snapped to
      * @return PhosphorZones::Zone ID of last used zone, or empty string if none
      *
-     * No in-tree caller (snap-to-last-zone moved to SnapAdaptor) — kept as
+     * No in-tree caller (snap-to-last-zone moved to SnapService) — kept as
      * external contract surface, same policy as
      * TilingAdaptor::retileAllScreens.
      */
     QString getLastUsedZoneId();
 
     // snapToLastZone, recordSnapIntent, snapToAppRule, snapToEmptyZone and
-    // resolveWindowRestore moved to SnapAdaptor
+    // resolveWindowRestore moved to SnapService
     // (org.phosphor_works.Placement.Snap D-Bus interface).
 
     /**
@@ -611,7 +611,7 @@ public Q_SLOTS:
 
     // moveWindowToAdjacentZone, focusAdjacentZone, swapWindowWithAdjacentZone,
     // pushToEmptyZone, snapToZoneByNumber, cycleWindowsInZone, restoreWindowSize,
-    // rotateWindowsInLayout, moveWindowToZone, swapWindowsById moved to SnapAdaptor
+    // rotateWindowsInLayout, moveWindowToZone, swapWindowsById moved to SnapService
     // (org.phosphor_works.Placement.Snap D-Bus interface).
 
     /**
@@ -744,7 +744,7 @@ public Q_SLOTS:
      */
     PhosphorProtocol::ZoneGeometryRect getZoneGeometryForScreen(const QString& zoneId, const QString& screenId);
 
-    // handleBatchedResnap moved to SnapAdaptor.
+    // handleBatchedResnap moved to SnapService.
 
 public:
     // In-process members below. The bus surface is WindowTrackingAdaptor's,
@@ -1280,7 +1280,7 @@ public:
     /// @p screenId. The snap open chain resolves and claims on it.
     QString openRouteLandingScreen(const QString& windowId, const QString& screenId) const;
 
-    /// Whether the snap channel's open path (SnapAdaptor::resolveWindowRestore) already ran its first-placement
+    /// Whether the snap channel's open path (SnapService::resolveWindowRestore) already ran its first-placement
     /// pass for @p windowId's open: the landing screen, the placement claim and the RouteToScreen tail. Held until
     /// the window closes. The snap open path reads it to tell a pending sweep that IS the window's first snap
     /// placement from one re-driving a window that pass already placed. The routing latch cannot answer this:
@@ -1570,7 +1570,7 @@ Q_SIGNALS:
     /// context disabled, an output added, removed or moved. One emission per burst, a short debounce (F625).
     void pendingRestoresChanged();
 
-    // toggleFloatForWindow moved to SnapAdaptor (org.phosphor_works.Placement.Snap D-Bus interface).
+    // toggleFloatForWindow moved to SnapService (org.phosphor_works.Placement.Snap D-Bus interface).
 
 public Q_SLOTS:
     /**
@@ -1885,11 +1885,11 @@ public:
     /// Resolve a resnap filter (empty / physical / virtual screen id) into
     /// the concrete list of snap-mode screens the resnap should touch.
     /// Keeps only the screens snapping runs on (the shared ScreenModeRouter) whose
-    /// context is not disabled, and none when snapping is switched off. SnapAdaptor's
+    /// context is not disabled, and none when snapping is switched off. SnapService's
     /// resnapCurrentAssignments, reapplySnapZones and resnapForVirtualScreenReconfigure call it.
     QStringList resolveSnapModeScreensForResnap(const QString& screenFilter) const;
 
-    /// The screen id for a snap: the caller's (the effect, or SnapAdaptor's gate),
+    /// The screen id for a snap: the caller's (the effect, or SnapService's gate),
     /// else detectScreenForZone, else the cursor's then the focused window's last
     /// reported screen (the raw members, not the engine-probing accessors).
     QString resolveScreenForSnap(const QString& callerScreen, const QString& zoneId) const;
@@ -1982,7 +1982,7 @@ private:
     /// @p zoneId. A screen id, or empty when no screen's layout holds the zone.
     QString detectScreenForZone(const QString& zoneId) const;
 
-    // applySnapResult moved to SnapAdaptor.
+    // applySnapResult moved to SnapService.
 
     /**
      * @brief Test whether the given (screen, virtualDesktop, activity) tuple is currently disabled.

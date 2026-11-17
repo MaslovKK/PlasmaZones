@@ -30,7 +30,7 @@
  *     queued announce and the tile batches held with it, at once with none
  *     queued, and never for an announce clearEngine voided.
  *
- *  5. SnapAdaptor sends every snap batch and every re-statement through that
+ *  5. SnapService sends every snap batch and every re-statement through that
  *     sequencer (the settings reflow as well as the engine's own batches),
  *     and drops a held placement of a window another placement went out for
  *     in the meantime.
@@ -51,7 +51,7 @@
 
 #include "config/configdefaults.h"
 #include "config/configkeys.h"
-#include "dbus/snapadaptor/snapadaptor.h"
+#include "runtime/services/snapservice/snapservice.h"
 #include "dbus/tilingadaptor/tilingadaptor.h"
 #include "runtime/dragresolver/dragresolver.h"
 #include "runtime/windowtracker/windowtracker.h"
@@ -113,13 +113,13 @@ bool batchCarries(const QSignalSpy& spy, const QString& windowId)
     return false;
 }
 
-/// A SnapAdaptor over a FloatBackFixture whose announce sequencer holds every
+/// A SnapService over a FloatBackFixture whose announce sequencer holds every
 /// piece of work until the test runs it, as a queued screens announce does.
 struct HeldSnapFixture
 {
     HeldSnapFixture()
     {
-        adaptor = new SnapAdaptor(f.snap.get(), f.wta, &f.settings, &adaptorParent);
+        adaptor = new SnapService(f.snap.get(), f.wta, &f.settings, &adaptorParent);
         adaptor->setAnnounceSequencer([this](std::function<void()> work) {
             held.append(std::move(work));
         });
@@ -138,7 +138,7 @@ struct HeldSnapFixture
 
     FloatBackFixture f;
     QObject adaptorParent; // dies before the fixture's engine and adaptor
-    SnapAdaptor* adaptor = nullptr; // parent-owned
+    SnapService* adaptor = nullptr; // parent-owned
     QList<std::function<void()>> held;
 };
 

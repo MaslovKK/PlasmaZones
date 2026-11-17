@@ -1,14 +1,13 @@
 // SPDX-FileCopyrightText: 2026 fuddlesworth
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#include "snapadaptor.h"
+#include "snapservice.h"
 #include "runtime/windowtracker/windowtracker.h"
 #include "core/interfaces/interfaces.h"
 #include "core/platform/logging.h"
 #include <PhosphorPlacement/WindowTrackingService.h>
 #include <PhosphorScreens/Manager.h>
 #include "core/interfaces/isettings.h"
-#include "dbus/dbushelpers.h"
 #include <PhosphorContext/ContextResolver.h>
 #include <PhosphorSnapEngine/SnapEngine.h>
 #include <PhosphorSnapEngine/SnapState.h>
@@ -59,17 +58,14 @@ bool isSnapReadyOrWarn(PhosphorPlacement::WindowTrackingService* service, const 
 // The snap-restore slots answer a window's open and commit the snap they
 // answer (applySnapResult), spending the window's placement record on the
 // way, so they are the compositor's to call: only the registered bridge may
-// (DbusHelpers::admitCompositorReport, #1155). Any other caller is answered
+// (SnapAdaptor runs DbusHelpers::admitCompositorReport, #1155). Any other caller is answered
 // with AccessDenied and nothing runs.
 
-void SnapAdaptor::snapToLastZone(const QString& windowId, const QString& windowScreenId, bool sticky, int& snapX,
+void SnapService::snapToLastZone(const QString& windowId, const QString& windowScreenId, bool sticky, int& snapX,
                                  int& snapY, int& snapWidth, int& snapHeight, bool& shouldSnap)
 {
     snapX = snapY = snapWidth = snapHeight = 0;
     shouldSnap = false;
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return;
-    }
 
     // Empty windowId or screen is a precondition violation that the sibling
     // slots (snapToAppRule, snapToEmptyZone, resolveWindowRestore) all guard;
@@ -104,14 +100,11 @@ void SnapAdaptor::snapToLastZone(const QString& windowId, const QString& windowS
     qCInfo(lcDbusWindow) << "Snapping new window" << windowId << "to last used zone" << result.zoneId;
 }
 
-void SnapAdaptor::snapToAppRule(const QString& windowId, const QString& windowScreenId, bool sticky, int& snapX,
+void SnapService::snapToAppRule(const QString& windowId, const QString& windowScreenId, bool sticky, int& snapX,
                                 int& snapY, int& snapWidth, int& snapHeight, bool& shouldSnap)
 {
     snapX = snapY = snapWidth = snapHeight = 0;
     shouldSnap = false;
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return;
-    }
 
     if (windowId.isEmpty() || windowScreenId.isEmpty()) {
         return;
@@ -140,14 +133,11 @@ void SnapAdaptor::snapToAppRule(const QString& windowId, const QString& windowSc
     qCInfo(lcDbusWindow) << "Placement rule snapping window" << windowId << "to zone" << result.zoneId;
 }
 
-void SnapAdaptor::snapToEmptyZone(const QString& windowId, const QString& windowScreenId, bool sticky, int& snapX,
+void SnapService::snapToEmptyZone(const QString& windowId, const QString& windowScreenId, bool sticky, int& snapX,
                                   int& snapY, int& snapWidth, int& snapHeight, bool& shouldSnap)
 {
     snapX = snapY = snapWidth = snapHeight = 0;
     shouldSnap = false;
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return;
-    }
 
     if (windowId.isEmpty() || windowScreenId.isEmpty()) {
         return;
@@ -182,7 +172,7 @@ void SnapAdaptor::snapToEmptyZone(const QString& windowId, const QString& window
 // unified WindowPlacementStore via resolveWindowRestore. The old D-Bus slot had
 // no remaining caller (the effect uses resolveWindowRestore).
 
-void SnapAdaptor::resolveWindowRestore(const QString& windowId, const QString& screenId, bool sticky, int windowKind,
+void SnapService::resolveWindowRestore(const QString& windowId, const QString& screenId, bool sticky, int windowKind,
                                        int restoreReason, int minWidth, int minHeight, int& snapX, int& snapY,
                                        int& snapWidth, int& snapHeight, bool& shouldSnap)
 {
@@ -192,11 +182,6 @@ void SnapAdaptor::resolveWindowRestore(const QString& windowId, const QString& s
     // cross-screen tiling reclaim, which the reopen contract removed.
     Q_UNUSED(minWidth)
     Q_UNUSED(minHeight)
-    // It also claims the window's placement record and can adopt a pending
-    // evacuee float, both the compositor's to trigger.
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return;
-    }
 
     if (windowId.isEmpty() || screenId.isEmpty()) {
         return;
@@ -427,7 +412,7 @@ void SnapAdaptor::resolveWindowRestore(const QString& windowId, const QString& s
     // whether the window snaps.
 }
 
-bool SnapAdaptor::snapPermittedForContext(const QString& windowId, const QString& screenId, int virtualDesktop) const
+bool SnapService::snapPermittedForContext(const QString& windowId, const QString& screenId, int virtualDesktop) const
 {
     // Global snapping kill-switch — see discussion #461 item 2. Every answer
     // this facade's slots give funnels through here, so a single gate
@@ -475,7 +460,7 @@ bool SnapAdaptor::snapPermittedForContext(const QString& windowId, const QString
     return true;
 }
 
-bool SnapAdaptor::applySnapResult(const SnapResult& result, const QString& windowId, int& snapX, int& snapY,
+bool SnapService::applySnapResult(const SnapResult& result, const QString& windowId, int& snapX, int& snapY,
                                   int& snapWidth, int& snapHeight, bool& shouldSnap, SnapIntent intent)
 {
     snapX = snapY = snapWidth = snapHeight = 0;

@@ -120,6 +120,7 @@ class ContextResolver;
 
 namespace PlasmaZones {
 class SettingsConfigStore;
+class SnapService;
 class SnapAdaptor;
 class ShaderRegistry;
 } // namespace PlasmaZones

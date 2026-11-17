@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 fuddlesworth
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#include "snapadaptor.h"
+#include "snapservice.h"
 #include "runtime/windowtracker/windowtracker.h"
 #include <PhosphorSnapEngine/SnapEngine.h>
 #include "core/platform/logging.h"
@@ -10,15 +10,15 @@
 
 namespace PlasmaZones {
 
-SnapAdaptor::SnapAdaptor(PhosphorSnapEngine::SnapEngine* engine, WindowTracker* adaptor, ISettings* settings,
+SnapService::SnapService(PhosphorSnapEngine::SnapEngine* engine, WindowTracker* adaptor, ISettings* settings,
                          QObject* parent)
-    : QDBusAbstractAdaptor(parent)
+    : QObject(parent)
     , m_engine(engine)
     , m_adaptor(adaptor)
     , m_settings(settings)
 {
     // Engine + adaptor + settings are mandatory — a misordered Daemon
-    // wiring that constructs SnapAdaptor before its dependencies would
+    // wiring that constructs SnapService before its dependencies would
     // otherwise produce a silently-no-op D-Bus object that swallows every
     // method call. qFatal aborts unambiguously in both debug and release
     // builds, matching the sibling WindowTracker's defensive
@@ -26,7 +26,7 @@ SnapAdaptor::SnapAdaptor(PhosphorSnapEngine::SnapEngine* engine, WindowTracker* 
     // not at the first D-Bus call.
     if (!m_engine || !m_adaptor || !m_settings) {
         qFatal(
-            "SnapAdaptor: null dependency at construction "
+            "SnapService: null dependency at construction "
             "(engine=%p, adaptor=%p, settings=%p) — daemon-wiring bug",
             static_cast<void*>(m_engine), static_cast<void*>(m_adaptor), static_cast<void*>(m_settings));
         return; // QMessageLogger::fatal IS [[noreturn]] on every non-MSVC build via
@@ -91,7 +91,7 @@ SnapAdaptor::SnapAdaptor(PhosphorSnapEngine::SnapEngine* engine, WindowTracker* 
     // as they are. The bus slot of the same shape, handleBatchedResnap, checks
     // an external caller's entries first.
     m_connections.append(connect(m_engine, &PhosphorSnapEngine::SnapEngine::resnapToNewLayoutRequested, this,
-                                 &SnapAdaptor::applyEngineResnap));
+                                 &SnapService::applyEngineResnap));
 
     // Batched geometry application: rotate / resnap / snap-all paths build
     // a PhosphorProtocol::WindowGeometryList and emit it here. WTA's applyGeometriesBatch
@@ -125,10 +125,10 @@ SnapAdaptor::SnapAdaptor(PhosphorSnapEngine::SnapEngine* engine, WindowTracker* 
     m_connections.append(connect(m_engine, &PhosphorSnapEngine::SnapEngine::activateWindowRequested, adaptor,
                                  &WindowTracker::activateWindowRequested));
 
-    qCDebug(lcDbusWindow) << "SnapAdaptor initialized with" << m_connections.size() << "signal connections";
+    qCDebug(lcDbusWindow) << "SnapService initialized with" << m_connections.size() << "signal connections";
 }
 
-void SnapAdaptor::clearEngine()
+void SnapService::clearEngine()
 {
     // Targeted disconnects — removes only the connections this class
     // wired in the constructor. Safe to call even if engine/adaptor
@@ -143,7 +143,7 @@ void SnapAdaptor::clearEngine()
     m_settings = nullptr;
     // Clear the late-bound context resolver too — symmetric with the
     // other late-bound deps above. A late-arriving D-Bus call that landed
-    // between clearEngine() and ~SnapAdaptor would otherwise dereference
+    // between clearEngine() and ~SnapService would otherwise dereference
     // a possibly-stale pointer; the existing per-slot null guards now
     // catch the cleared state instead.
     m_contextResolver = nullptr;
@@ -154,7 +154,7 @@ void SnapAdaptor::clearEngine()
     m_heldPlacementSerial.clear();
 }
 
-quint64 SnapAdaptor::holdPlacement(const QStringList& windowIds)
+quint64 SnapService::holdPlacement(const QStringList& windowIds)
 {
     const quint64 serial = ++m_lastHeldSerial;
     for (const QString& windowId : windowIds) {
@@ -163,7 +163,7 @@ quint64 SnapAdaptor::holdPlacement(const QStringList& windowIds)
     return serial;
 }
 
-QSet<QString> SnapAdaptor::releaseHeldPlacement(const QStringList& windowIds, quint64 serial)
+QSet<QString> SnapService::releaseHeldPlacement(const QStringList& windowIds, quint64 serial)
 {
     QSet<QString> current;
     for (const QString& windowId : windowIds) {
@@ -177,7 +177,7 @@ QSet<QString> SnapAdaptor::releaseHeldPlacement(const QStringList& windowIds, qu
     return current;
 }
 
-void SnapAdaptor::supersedeHeldPlacements(const QStringList& windowIds)
+void SnapService::supersedeHeldPlacements(const QStringList& windowIds)
 {
     if (m_heldPlacementSerial.isEmpty()) {
         return;
@@ -187,7 +187,7 @@ void SnapAdaptor::supersedeHeldPlacements(const QStringList& windowIds)
     }
 }
 
-void SnapAdaptor::emitPlacementBatch(PhosphorProtocol::WindowGeometryList geometries, const QString& action)
+void SnapService::emitPlacementBatch(PhosphorProtocol::WindowGeometryList geometries, const QString& action)
 {
     if (!m_adaptor) {
         return;
@@ -204,7 +204,7 @@ void SnapAdaptor::emitPlacementBatch(PhosphorProtocol::WindowGeometryList geomet
     }
     const quint64 serial = holdPlacement(windowIds);
     m_announceSequencer(
-        [guard = QPointer<SnapAdaptor>(this), geometries = std::move(geometries), windowIds, action, serial]() {
+        [guard = QPointer<SnapService>(this), geometries = std::move(geometries), windowIds, action, serial]() {
             if (!guard || !guard->m_adaptor) {
                 return;
             }
@@ -226,7 +226,7 @@ void SnapAdaptor::emitPlacementBatch(PhosphorProtocol::WindowGeometryList geomet
         });
 }
 
-void SnapAdaptor::emitRestatement(const QString& windowId, const QRect& geometry, const QString& zoneId,
+void SnapService::emitRestatement(const QString& windowId, const QRect& geometry, const QString& zoneId,
                                   const QString& screenId)
 {
     if (!m_adaptor) {
@@ -243,7 +243,7 @@ void SnapAdaptor::emitRestatement(const QString& windowId, const QRect& geometry
         return;
     }
     const quint64 serial = holdPlacement({windowId});
-    m_announceSequencer([guard = QPointer<SnapAdaptor>(this), emitNow, windowId, geometry, zoneId, screenId, serial]() {
+    m_announceSequencer([guard = QPointer<SnapService>(this), emitNow, windowId, geometry, zoneId, screenId, serial]() {
         if (!guard || !guard->m_adaptor || guard->releaseHeldPlacement({windowId}, serial).isEmpty()) {
             return;
         }

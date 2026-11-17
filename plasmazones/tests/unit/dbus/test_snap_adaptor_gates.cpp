@@ -3,7 +3,7 @@
 
 /**
  * @file test_snap_adaptor_gates.cpp
- * @brief The bus snap gate (SnapAdaptor::admitBusSnap): a D-Bus snap of one
+ * @brief The bus snap gate (SnapService::admitBusSnap): a D-Bus snap of one
  *        window lands only where a keyboard snap could, on the window's own
  *        desktop, and Control.snapWindowToZone resolves its screen the same
  *        way (F20, F142, F179, F21, F22, F26, F85). The focused-window verbs
@@ -17,7 +17,8 @@
 #include "wta_float_back_fixture.h"
 #include "helpers/VirtualScreenTestHelpers.h"
 #include "dbus/controladaptor.h"
-#include "dbus/snapadaptor/snapadaptor.h"
+#include "runtime/services/snapservice/snapservice.h"
+#include "dbus/snapadaptor.h"
 #include "helpers/BusPeer.h"
 #include "helpers/ScreenDisablingResolver.h"
 
@@ -41,7 +42,7 @@ struct GateFixture : FloatBackFixture
     explicit GateFixture(PhosphorWorkspaces::VirtualDesktopManager* vdm = nullptr)
         : FloatBackFixture(vdm)
     {
-        adaptor = new SnapAdaptor(snap.get(), wta, &settings, &parent);
+        adaptor = new SnapService(snap.get(), wta, &settings, &parent);
         adaptor->setContextResolver(&resolver);
         layouts->assignLayout(kLeft, 1, QString(), layout);
         layouts->assignLayout(kRight, 1, QString(), layout);
@@ -77,7 +78,7 @@ struct GateFixture : FloatBackFixture
         return new ControlAdaptor(wta, adaptor, layouts, nullptr, nullptr, nullptr, nullptr, nullptr, &parent);
     }
 
-    SnapAdaptor* adaptor = nullptr; // parent-owned
+    SnapService* adaptor = nullptr; // parent-owned
     ScreenDisablingResolver resolver;
 };
 
@@ -834,7 +835,8 @@ private Q_SLOTS:
             // Exported through a host as Daemon exports its adaptors, so a bus
             // call's context reaches the adaptor. No bridge is registered.
             PlasmaZones::TestHelpers::BusHost host;
-            auto* exported = new SnapAdaptor(f.snap.get(), f.wta, &f.settings, &host);
+            auto* exported = new SnapService(f.snap.get(), f.wta, &f.settings, &host);
+            new SnapAdaptor(exported, &host);
             const auto detach = qScopeGuard([exported] {
                 exported->clearEngine();
             });

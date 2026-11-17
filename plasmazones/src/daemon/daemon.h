@@ -106,7 +106,7 @@ public:
     /**
      * @brief Frozen-snapshot per-screen mode + disable/lock cascade façade.
      *
-     * Borrowed by the three D-Bus adaptors (SnapAdaptor, WindowTracker,
+     * Borrowed by the three D-Bus adaptors (SnapService, WindowTracker,
      * DragResolver) and the daemon's own navigation / OSD / overlay paths
      * so the cascade `(modeFor → currentDesktop → currentActivity →
      * isContextDisabled → isContextLocked)` resolves through one call instead of
@@ -823,7 +823,7 @@ private:
      *        gap-rule verdict moved since @ref m_snapGapTracker last recorded it.
      *
      * The rule-driven twin of the settings gap restatement (m_gapResnapTimer):
-     * a no-OSD SnapAdaptor::reapplySnapZones batch, scoped to the screens whose
+     * a no-OSD SnapService::reapplySnapZones batch, scoped to the screens whose
      * verdict moved. reapplySnapZones itself keeps it to the screens snapping
      * runs on. Screens in @p alreadyPlaced are recorded without a restatement,
      * for a caller that has just put their windows back under the current
@@ -1495,7 +1495,8 @@ private:
     /// Held as a member rather than reconstructed per-call so navigation
     /// handlers don't need to know about its dependencies.
     std::unique_ptr<PhosphorScreens::VirtualScreenSwapper> m_virtualScreenSwapper;
-    SnapAdaptor* m_snapAdaptor = nullptr;
+    SnapService* m_snapService = nullptr;
+    SnapAdaptor* m_snapAdaptor = nullptr; // D-Bus binding of m_snapService, deleted before it
     TilingAdaptor* m_tilingAdaptor = nullptr;
     /// Autotile-engine wire surface (org.phosphor_works.Placement.Autotile) — algorithm
     /// selection, master ops, and autotile config; lifecycle traffic rides

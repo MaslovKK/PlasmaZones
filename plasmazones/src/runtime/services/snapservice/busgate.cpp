@@ -1,12 +1,12 @@
 // SPDX-FileCopyrightText: 2026 fuddlesworth
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-// SnapAdaptor: the one gate a bus-requested snap of a single window passes.
+// SnapService: the one gate a bus-requested snap of a single window passes.
 // A D-Bus caller can name any window, zone and screen; a keyboard snap can
 // only act where snapping runs. This decides where a bus snap lands and
 // refuses it unless a keyboard snap could make the same move (F20).
 
-#include "snapadaptor.h"
+#include "snapservice.h"
 #include "runtime/windowtracker/windowtracker.h"
 #include "runtime/windowtracker/internal.h"
 #include "core/interfaces/interfaces.h"
@@ -22,7 +22,7 @@
 
 namespace PlasmaZones {
 
-std::optional<int> SnapAdaptor::landingDesktop(const QString& windowId, const QString& screenId,
+std::optional<int> SnapService::landingDesktop(const QString& windowId, const QString& screenId,
                                                int pinnedDesktop) const
 {
     const int shown = WindowTrackingInternal::shownDesktop(*m_adaptor, screenId);
@@ -39,7 +39,7 @@ std::optional<int> SnapAdaptor::landingDesktop(const QString& windowId, const QS
     return WindowTrackingInternal::desktopShowing(set, shown);
 }
 
-std::optional<SnapAdaptor::BusSnapTarget> SnapAdaptor::validBusSnapTarget(const QString& windowId,
+std::optional<SnapService::BusSnapTarget> SnapService::validBusSnapTarget(const QString& windowId,
                                                                           const QStringList& zoneIds,
                                                                           const QString& screenHint,
                                                                           int pinnedDesktop) const
@@ -101,7 +101,7 @@ std::optional<SnapAdaptor::BusSnapTarget> SnapAdaptor::validBusSnapTarget(const 
     return BusSnapTarget{screen, *desktop};
 }
 
-std::optional<SnapAdaptor::BusSnapTarget> SnapAdaptor::admitBusSnap(const QString& windowId, const QStringList& zoneIds,
+std::optional<SnapService::BusSnapTarget> SnapService::admitBusSnap(const QString& windowId, const QStringList& zoneIds,
                                                                     const QString& screenHint, int pinnedDesktop) const
 {
     // A snap of the window being dragged would commit a zone the drop then
@@ -129,7 +129,7 @@ std::optional<SnapAdaptor::BusSnapTarget> SnapAdaptor::admitBusSnap(const QStrin
     return target;
 }
 
-bool SnapAdaptor::focusedVerbPermitted(const QString& screenHint, bool placesWindow) const
+bool SnapService::focusedVerbPermitted(const QString& screenHint, bool placesWindow) const
 {
     if (!m_engine || !m_adaptor) {
         return false;
@@ -163,7 +163,7 @@ bool SnapAdaptor::focusedVerbPermitted(const QString& screenHint, bool placesWin
     return !placesWindow || snapPermittedForContext(windowId, screen, 0);
 }
 
-QString SnapAdaptor::admitBusFloat(const QString& windowId, const QString& screenHint) const
+QString SnapService::admitBusFloat(const QString& windowId, const QString& screenHint) const
 {
     if (!m_engine || !m_adaptor) {
         return QString();
@@ -197,7 +197,7 @@ QString SnapAdaptor::admitBusFloat(const QString& windowId, const QString& scree
     return snapPermittedForContext(windowId, screen, 0) ? screen : QString();
 }
 
-void SnapAdaptor::moveWindowToZoneNumberOnScreen(const QString& windowId, int zoneNumber, const QString& screenHint)
+void SnapService::moveWindowToZoneNumberOnScreen(const QString& windowId, int zoneNumber, const QString& screenHint)
 {
     if (!m_adaptor || !m_adaptor->service() || windowId.isEmpty() || zoneNumber < 1) {
         return;

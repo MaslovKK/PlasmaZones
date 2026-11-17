@@ -63,7 +63,7 @@
 #include "dbus/overlayadaptor.h"
 #include "dbus/settingsadaptor/settingsadaptor.h"
 #include "dbus/shaderadaptor.h"
-#include "dbus/snapadaptor/snapadaptor.h"
+#include "dbus/snapadaptor.h"
 #include "dbus/windowdragadaptor.h"
 #include "dbus/ruleadaptor.h"
 #include "dbus/windowtrackingadaptor.h"

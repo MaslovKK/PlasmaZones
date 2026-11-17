@@ -31,7 +31,8 @@
 #include "dbus/tilingadaptor/tilingadaptor.h"
 #include "runtime/services/scrollingservice/scrollingservice.h"
 #include "dbus/scrollingadaptor.h"
-#include "dbus/snapadaptor/snapadaptor.h"
+#include "dbus/snapadaptor.h"
+#include "runtime/services/snapservice/snapservice.h"
 #include "dbus/controladaptor.h"
 #include "runtime/services/ruleservice.h"
 
@@ -299,7 +300,7 @@ void Daemon::initEnginesAndWiring()
     // pattern the daemon already uses for cross-cutting deps.
     m_dragResolver->setContextResolver(m_contextResolver.get());
     m_windowTracker->setContextResolver(m_contextResolver.get());
-    // m_snapAdaptor is constructed below at the engine-adaptor block; its
+    // m_snapService is constructed below at the engine-adaptor block; its
     // contextResolver wire lives there.
 
     connect(autotileEngine, &PhosphorEngine::PlacementEngineBase::settingsPersistRequested, this, [this]() {
@@ -931,15 +932,16 @@ void Daemon::initEnginesAndWiring()
         return runningModeForContext(screenId, desktop, activity) == PhosphorZones::AssignmentEntry::Autotile;
     });
 
-    // Create the engine services and their D-Bus adaptors. SnapAdaptor and the Autotile and Scrolling
+    // Create the engine services and their D-Bus adaptors. SnapService and the Autotile and Scrolling
     // services take their engine and connect its relays in their constructors; TilingAdaptor takes
     // none, and its engine relays are connected here.
     // stop() → init() re-entry: the previous cycle's WHOLE adaptor set
     // (engine and core) is deleted in one dependency-ordered preamble at the
     // top of initCoreAdaptors(), which init() always runs immediately before
     // this function — so these members are null here on a re-cycle.
-    m_snapAdaptor = new SnapAdaptor(snapEngine, m_windowTracker, m_settings.get(), this);
-    m_snapAdaptor->setContextResolver(m_contextResolver.get());
+    m_snapService = new SnapService(snapEngine, m_windowTracker, m_settings.get(), this);
+    m_snapAdaptor = new SnapAdaptor(m_snapService, this);
+    m_snapService->setContextResolver(m_contextResolver.get());
     // (No cross-screen tiling reclaim hangs off the snap channel any more: under
     // the reopen contract a window arriving on a snap screen is restored only
     // from a record on that output, so no engine pulls it to another one.)
@@ -954,8 +956,8 @@ void Daemon::initEnginesAndWiring()
     // Every zone batch the snap adaptor emits, not only the snap engine's own
     // (the settings reflows, the bus resnaps and the virtual-screen resnap
     // too), and every re-statement of one window, trail a queued screens
-    // announce (#1151). See SnapAdaptor::setAnnounceSequencer.
-    m_snapAdaptor->setAnnounceSequencer(
+    // announce (#1151). See SnapService::setAnnounceSequencer.
+    m_snapService->setAnnounceSequencer(
         [tiling = QPointer<TilingAdaptor>(m_tilingAdaptor)](std::function<void()> work) {
             if (tiling) {
                 tiling->runBehindScreensAnnounce(std::move(work));
@@ -1229,7 +1231,7 @@ void Daemon::initEnginesAndWiring()
     // Control adaptor (the convenience API for third-party integrations): a member
     // so stop() can detach() it before the unique_ptr members it borrows are destroyed.
     m_controlAdaptor =
-        new ControlAdaptor(m_windowTracker, m_snapAdaptor, m_layoutManager.get(), autotileEngine, m_screenManager.get(),
+        new ControlAdaptor(m_windowTracker, m_snapService, m_layoutManager.get(), autotileEngine, m_screenManager.get(),
                            m_compositorBridge, m_scrollEngine.get(), m_screenModeRouter.get(), this);
     // Control.toggleAutotileForScreen runs the mode-toggle shortcut's switch.
     m_controlAdaptor->setModeToggleHandler([this](const QString& screenId) {

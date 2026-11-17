@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #include "controladaptor.h"
-#include "dbus/snapadaptor/snapadaptor.h"
+#include "runtime/services/snapservice/snapservice.h"
 #include "runtime/windowtracker/windowtracker.h"
 #include "compositorbridgeadaptor.h"
 #include <PhosphorZones/LayoutRegistry.h>
@@ -25,7 +25,7 @@
 
 namespace PlasmaZones {
 
-ControlAdaptor::ControlAdaptor(WindowTracker* wta, SnapAdaptor* snapAdaptor,
+ControlAdaptor::ControlAdaptor(WindowTracker* wta, SnapService* snapAdaptor,
                                PhosphorZones::LayoutRegistry* layoutManager,
                                PhosphorEngine::IPlacementEngine* autotileEngine,
                                PhosphorScreens::ScreenManager* screenManager, CompositorBridgeAdaptor* compositorBridge,
@@ -33,7 +33,7 @@ ControlAdaptor::ControlAdaptor(WindowTracker* wta, SnapAdaptor* snapAdaptor,
                                QObject* parent)
     : QDBusAbstractAdaptor(parent)
     , m_wta(wta)
-    , m_snapAdaptor(snapAdaptor)
+    , m_snapService(snapAdaptor)
     , m_layoutManager(layoutManager)
     , m_autotileEngine(autotileEngine)
     , m_screenManager(screenManager)
@@ -55,8 +55,8 @@ void ControlAdaptor::snapWindowToZone(const QString& windowId, int zoneNumber, c
     // screen id or a connector name (a split monitor's connector resolves to
     // the virtual screen the window is in), or of the window's own screen when
     // it names none (F22, F26), and snapped there through the bus gate.
-    if (m_snapAdaptor) {
-        m_snapAdaptor->moveWindowToZoneNumberOnScreen(windowId, zoneNumber, screenId);
+    if (m_snapService) {
+        m_snapService->moveWindowToZoneNumberOnScreen(windowId, zoneNumber, screenId);
     }
 }
 
@@ -143,7 +143,7 @@ QString ControlAdaptor::getFullState()
 void ControlAdaptor::detach()
 {
     m_wta = nullptr;
-    m_snapAdaptor = nullptr;
+    m_snapService = nullptr;
     m_layoutManager = nullptr;
     m_autotileEngine = nullptr;
     m_screenManager = nullptr;

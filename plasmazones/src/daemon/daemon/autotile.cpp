@@ -18,7 +18,7 @@
 #include <PhosphorContext/ContextResolver.h>
 #include "config/settings.h"
 #include "dbus/layoutadaptor/layoutadaptor.h"
-#include "dbus/snapadaptor/snapadaptor.h"
+#include "runtime/services/snapservice/snapservice.h"
 #include "runtime/dragresolver/dragresolver.h"
 #include "runtime/windowtracker/internal.h"
 #include "runtime/windowtracker/windowtracker.h"
@@ -836,7 +836,7 @@ void Daemon::restateSnapGapChanges(const QSet<QString>& alreadyPlaced)
 {
     // Nothing is recorded when nothing can restate: the move stays in the
     // tracker for the next pass instead of being taken and lost.
-    if (!m_snapAdaptor || !m_screenManager || !m_layoutManager || m_shuttingDown) {
+    if (!m_snapService || !m_screenManager || !m_layoutManager || m_shuttingDown) {
         return;
     }
     const QStringList moved =
@@ -856,7 +856,7 @@ void Daemon::restateSnapGapChanges(const QSet<QString>& alreadyPlaced)
     // A re-statement batch like the settings gap path (m_gapResnapTimer): no OSD,
     // no Snap Assist. reapplySnapZones keeps it to the screens snapping runs on,
     // so a tiled screen's frozen snap zones are left as memory (F469).
-    m_snapAdaptor->reapplySnapZones(toRestate, /*restatement=*/true);
+    m_snapService->reapplySnapZones(toRestate, /*restatement=*/true);
 }
 
 SnapGapTracker::Verdict Daemon::snapGapVerdict(const QString& screenId) const
