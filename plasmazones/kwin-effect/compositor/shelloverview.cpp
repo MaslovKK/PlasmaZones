@@ -30,7 +30,7 @@ bool navigable(KWin::EffectWindow* window)
 {
     return window && !window->isDeleted() && !window->isSkipSwitcher()
         && (window->isNormalWindow() || window->isDialog())
-        && !window->windowClass().contains(QLatin1String("phosphor-shell"))
+        && !window->windowClass().contains(QLatin1String("org.phosphor_works.Lambent"))
         && !window->windowClass().contains(QLatin1String("plasmazonesd"));
 }
 }
@@ -163,7 +163,7 @@ bool ShellOverview::onOutput(KWin::LogicalOutput* output) const
 bool ShellOverview::appliesTo(KWin::EffectWindow* window) const
 {
     return window && onOutput(window->screen()) && (window->isNormalWindow() || window->isDialog())
-        && !window->windowClass().contains(QLatin1String("phosphor-shell"))
+        && !window->windowClass().contains(QLatin1String("org.phosphor_works.Lambent"))
         && !window->windowClass().contains(QLatin1String("plasmazones"));
 }
 QPointF ShellOverview::visualOffset(KWin::EffectWindow* window, bool animated) const

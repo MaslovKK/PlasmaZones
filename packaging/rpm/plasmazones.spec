@@ -343,10 +343,7 @@ echo ""
 # plasmazones-editor / -report / -settings / -shader-validate).
 # plasmazones-shader-render shares the prefix but never reaches the
 # buildroot: it needs BUILD_TOOLS=ON plus INSTALL_SHADER_RENDER_TOOL=ON
-# and both default to OFF. phosphor-shell is
-# deliberately NOT matched: it is gated behind the BUILD_PHOSPHOR_SHELL
-# CMake option (work in progress, default OFF), so packaging builds
-# never produce it and listing it explicitly would fail rpmbuild.
+# and both default to OFF.
 %{_bindir}/plasmazones*
 
 # Component libraries — every Phosphor component library plus the
@@ -407,8 +404,7 @@ echo ""
 
 # Runtime data — application data plus the Phosphor data trees the build
 # installs: phosphorwayland/ (protocol XMLs) and phosphor-works/ (the
-# placement-host descriptors). phosphor-shell/ would match too, but the
-# shell is not built here (see the executables note above).
+# placement-host descriptors).
 %{_datadir}/plasmazones/
 %{_datadir}/phosphor*/
 

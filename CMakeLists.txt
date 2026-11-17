@@ -191,16 +191,14 @@ add_compile_definitions(QT_NO_CAST_FROM_ASCII)
 # phosphor-libs) and links it in either mode when it is installed.
 option(USE_KDE_FRAMEWORKS "Build with KDE Frameworks integration" ON)
 
-# Opt-in build for the in-progress phosphor-shell desktop shell and its
-# supporting libraries, the phosphor-shell-libs repository at the commit
-# cmake/PlasmaZonesDependencies.cmake pins. Also builds the phosphor-shell
-# binary and phosphorctl, and the bundled shell QML tree under
-# phosphor-shell/shell/. Default OFF so
-# packaging / downstream installs of PlasmaZones don't pick up shell
-# artefacts before the shell ships. Enable explicitly for shell
-# development:
+# Opt-in build of PlasmaZones' integration with Lambent, the Phosphor desktop
+# shell (phosphor-works/Lambent): the shell appearance adapter, the shell
+# decoration plugin and the shell decoration settings pages. They link
+# phosphor-shell-libs, at the commit cmake/PlasmaZonesDependencies.cmake pins.
+# Default OFF so packaging and downstream installs of PlasmaZones don't pick it
+# up before the shell ships. Enable explicitly for shell work:
 #   cmake -DBUILD_PHOSPHOR_SHELL=ON
-option(BUILD_PHOSPHOR_SHELL "Build the phosphor-shell desktop shell (work in progress)" OFF)
+option(BUILD_PHOSPHOR_SHELL "Build the integration with the Lambent shell (work in progress)" OFF)
 
 # The shell tier is exempt from the portable Qt-only invariant: the bar and
 # power modules hard-require KF6 Kirigami (icon resolution through
@@ -291,9 +289,6 @@ file(GLOB_RECURSE ALL_CLANG_FORMAT_SOURCE_FILES
     ${CMAKE_SOURCE_DIR}/plasmazones/src/*.cpp
     ${CMAKE_SOURCE_DIR}/plasmazones/src/*.h
     ${CMAKE_SOURCE_DIR}/plasmazones/src/*.hpp
-    ${CMAKE_SOURCE_DIR}/phosphor-shell/cli/*.cpp
-    ${CMAKE_SOURCE_DIR}/phosphor-shell/cli/*.h
-    ${CMAKE_SOURCE_DIR}/phosphor-shell/cli/*.hpp
     ${CMAKE_SOURCE_DIR}/plasmazones/kcm/*.cpp
     ${CMAKE_SOURCE_DIR}/plasmazones/kcm/*.h
     ${CMAKE_SOURCE_DIR}/plasmazones/kcm/*.hpp
@@ -302,9 +297,6 @@ file(GLOB_RECURSE ALL_CLANG_FORMAT_SOURCE_FILES
     ${CMAKE_SOURCE_DIR}/plasmazones/kwin-effect/*.hpp
     ${CMAKE_SOURCE_DIR}/plasmazones/tests/*.cpp
     ${CMAKE_SOURCE_DIR}/plasmazones/tests/*.h
-    ${CMAKE_SOURCE_DIR}/phosphor-shell/*.cpp
-    ${CMAKE_SOURCE_DIR}/phosphor-shell/*.h
-    ${CMAKE_SOURCE_DIR}/phosphor-shell/*.hpp
     # Built only with -DBUILD_TOOLS=ON, but this glob is filesystem-based
     # rather than target-based, so the entry is unconditional. Without it
     # the clang-format target skipped shader-render and
@@ -320,9 +312,7 @@ kde_clang_format(${ALL_CLANG_FORMAT_SOURCE_FILES})
 find_program(QMLFORMAT qmlformat)
 file(GLOB_RECURSE ALL_QML_FILES
     ${CMAKE_SOURCE_DIR}/plasmazones/src/*.qml
-    ${CMAKE_SOURCE_DIR}/phosphor-shell/cli/*.qml
     ${CMAKE_SOURCE_DIR}/plasmazones/kcm/*.qml
-    ${CMAKE_SOURCE_DIR}/phosphor-shell/*.qml
 )
 if(QMLFORMAT AND ALL_QML_FILES)
     # Run qmlformat via helper script; per-file failures are ignored (one bad QML won't fail target)
@@ -363,25 +353,14 @@ include_directories("${CMAKE_BINARY_DIR}/generated")
 # ═══════════════════════════════════════════════════════════════════════════════
 # Tiers
 # ═══════════════════════════════════════════════════════════════════════════════
-# The tree is split into two product tiers, each a directory with its own
-# CMakeLists.txt and, in the moon workspace, its own project:
-#
-#   phosphor-shell/      the phosphor-shell binary, phosphorctl and the shell
-#                        QML tree, gated behind BUILD_PHOSPHOR_SHELL
-#   plasmazones/         the PlasmaZones daemon, editor, settings, KCM, KWin
-#                        effect, bundled data and tests
-#
-# Both build on phosphor-libs, added above. The shell tier builds on the
-# phosphor-shell-libs repository too, added just before it, and plasmazones
-# links its PhosphorTheme when the shell is on. Every tier CMakeLists is
-# entered from here, so the shared Qt/KF6 setup above applies to all of them.
-# Order follows the dependency chain: the shell libraries and the shell, then
-# plasmazones. Target-based linking resolves at generate time, so the order is
-# documentation, not a constraint. The engine QML firewall that used to sit here
-# runs inside phosphor-libs, next to the engines it guards.
+# The tree is one product tier, plasmazones/: the PlasmaZones daemon, editor,
+# settings, KCM, KWin effect, bundled data and tests. It builds on
+# phosphor-libs, added above, and with BUILD_PHOSPHOR_SHELL also on
+# phosphor-shell-libs, added here. The shell itself is the Lambent repository.
+# The engine QML firewall runs inside phosphor-libs, next to the engines it
+# guards.
 if(BUILD_PHOSPHOR_SHELL)
     plasmazones_add_phosphor_shell_libs()
-    add_subdirectory(phosphor-shell)
 endif()
 
 add_subdirectory(plasmazones)

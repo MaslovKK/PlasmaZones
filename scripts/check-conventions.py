@@ -302,11 +302,11 @@ LICENSE_UNGOVERNED = re.compile(r"^plasmazones/data/")
 def expected_license(path: str) -> str | None:
     if LICENSE_UNGOVERNED.search(path):
         return None
-    # The app tiers: plasmazones (daemon, editor, settings, KCM, KWin effect,
-    # tools, tests) and phosphor-shell (binary, CLI, shell QML, tests), plus
-    # the repo-level scripts. The LGPL libraries live in the phosphor-libs and
-    # phosphor-shell-libs repositories, which check their own headers.
-    if path.startswith(("plasmazones/", "phosphor-shell/", "scripts/")):
+    # The app tier, plasmazones (daemon, editor, settings, KCM, KWin effect,
+    # tools, tests), plus the repo-level scripts. The LGPL libraries live in
+    # the phosphor-libs and phosphor-shell-libs repositories and the shell in
+    # Lambent, which check their own headers.
+    if path.startswith(("plasmazones/", "scripts/")):
         return GPL3
     return None
 

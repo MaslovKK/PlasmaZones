@@ -7,14 +7,13 @@
 # from the commits cmake/PlasmaZonesDependencies.cmake pins. CMake stays the build system inside each tier;
 # moon orders the tiers and runs only the affected ones. It does NOT cache
 # the build and test results: those tasks set `cache: false` because the
-# four tiers share one build directory (see .moon/tasks/cmake.yml), and
+# tiers share one build directory (see .moon/tasks/cmake.yml), and
 # ccache remains the compile cache. See .moon/tasks/cmake.yml for the
 # shared task shapes.
 $schema: 'https://moonrepo.dev/schemas/workspace.json'
 
 projects:
   repo: '.'
-  phosphor-shell: 'phosphor-shell'
   plasmazones: 'plasmazones'
 
 vcs:
@@ -23,18 +22,9 @@ vcs:
   provider: 'github'
 
 constraints:
-  # moon refuses an application depending on an application, which is the
-  # product order this workspace enforces: phosphor-shell and plasmazones are
-  # both applications and neither may list the other in dependsOn. The shell
-  # used to link three plasmazones targets for its surface decoration; those
-  # now live in phosphor-libs' phosphor-surface-quick.
-  #
-  # What this does NOT police: runtime data reads that no dependsOn records.
-  # The shell tests read plasmazones/data/surface. phosphor-shell/moon.yml
-  # carries a workspace-relative test input for it instead, because a
-  # dependsOn in that direction would cycle. Those are input edges for
-  # affected-ness, not layer edges, so enforcement stays meaningful for the
-  # link graph while they remain.
+  # moon refuses an application depending on an application. With the shell
+  # in the Lambent repository, plasmazones is the only application here, and
+  # the constraint stays on so a second one cannot quietly depend on it.
   enforceLayerRelationships: true
 
 hasher:

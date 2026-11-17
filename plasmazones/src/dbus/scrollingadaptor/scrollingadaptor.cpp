@@ -110,7 +110,7 @@ ScrollingAdaptor::ScrollingAdaptor(PhosphorScrollEngine::ScrollEngine* engine, Q
     // placement map, placementmap_p.h) would run on every tick, while both
     // readers of this signal coalesce. The settings reader folds every wake-up onto a settle
     // timer and re-reads once, and the shell's placement map
-    // (libs/phosphor-shell placementmap.cpp) does the same and keeps one
+    // (placementmap.cpp in phosphor-shell-libs) does the same and keeps one
     // stripModelJson read in flight at a time, so the cost per tick here is a
     // payload-free bus message, not a relayout.
     connect(m_engine, &PhosphorEngine::PlacementEngineBase::placementChanged, this, [this](const QString& screenId) {

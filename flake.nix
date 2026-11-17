@@ -96,7 +96,6 @@
             # every tier-graph tweak.
             ./.moon
             ./moon.yml
-            ./phosphor-shell/moon.yml
             ./plasmazones/moon.yml
             ./AGENTS.md
             # .agents holds only symlinks INTO .claude/skills, so excluding it

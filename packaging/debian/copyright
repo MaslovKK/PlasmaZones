@@ -50,10 +50,6 @@ Files: plasmazones/src/editor/org.phosphor_works.PlasmaZones.Editor.metainfo.xml
 Copyright: 2026 fuddlesworth <fuddlesworth@users.noreply.github.com>
 License: CC0-1.0
 
-Files: docs/phosphor-shell-design/lambent-icon/*
-Copyright: 2026 fuddlesworth <fuddlesworth@users.noreply.github.com>
-License: CC-BY-SA-4.0
-
 # Bundled shader packs. PlasmaZones-original shaders are LGPL so a third-party
 # pack or tool can build on them; data/overlays is still GPL throughout and is
 # covered by the Files: * stanza above. DEP-5 is last-match-wins, so the
@@ -105,7 +101,7 @@ License: GPL-3.0-or-later
 # They sit in their own stanza after the LGPL data stanza so last-match-wins
 # still resolves them to GPL-3.
 #
-# frosted-glass/effect.frag describes itself as a port of the phosphor-shell
+# frosted-glass/effect.frag describes itself as a port of Lambent's
 # frosted panel shader but carries no second SPDX-FileCopyrightText, so no holder
 # is invented for it here: that is a question about its header, not about this
 # file. glass/effect.frag DOES carry one now, and takes its own stanza below.
