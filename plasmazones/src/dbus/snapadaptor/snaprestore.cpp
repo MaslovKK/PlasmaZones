@@ -440,7 +440,7 @@ bool SnapAdaptor::snapPermittedForContext(const QString& windowId, const QString
         return false;
     }
 
-    // Disabled-context gate. The interactive drag path (WindowDragAdaptor)
+    // Disabled-context gate. The interactive drag path (DragResolver)
     // and autotile (Daemon::updateEngineScreens) already refuse to place
     // windows on a monitor / desktop / activity the user marked disabled.
     // The auto-snap-on-open restore path did not, so windows still snapped on

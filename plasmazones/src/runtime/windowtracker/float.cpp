@@ -260,7 +260,7 @@ void WindowTracker::notifyDragOutUnsnap(const QString& windowId)
     syncWindowFloating(windowId, true);
 
     // Restore pre-snap size (not position — window stays where the user dropped it).
-    // This mirrors the activated-drag path in WindowDragAdaptor::dragStopped. A
+    // This mirrors the activated-drag path in DragResolver::dragStopped. A
     // matched SetRestoreSizeOnUnsnap rule overrides the global setting per window.
     // Dimension guard mirrors the drop.cpp twin: a degenerate stored rect
     // produces a RestoreSize outcome that validates to "requires non-zero

@@ -35,12 +35,19 @@ struct DropProxy
     QString owner;
 };
 
+/// What DragResolver::registerDropProxy did with a registration.
+enum class DropProxyRegistration {
+    Registered, ///< Stored: the screen's proxy is now this one.
+    Rejected, ///< Malformed, or identical to the stored one: the earlier proxy stands.
+    RefusedOwner, ///< Another live peer owns the screen's proxy.
+};
+
 /**
  * @brief The drop proxies registered on the drag adaptor, one per screen.
  *
- * Pure bookkeeping plus a hit-test, kept apart from WindowDragAdaptor so the
+ * Pure bookkeeping plus a hit-test, kept apart from DragResolver so the
  * wire shape (PhosphorProtocol::Service::DropProxyKey) and the cell lookup
- * are testable without a drag session. The adaptor consults resolve() on
+ * are testable without a drag session. The resolver consults resolve() on
  * every snap-path cursor tick and treats a Cell answer as the cursor being
  * over that real zone.
  */

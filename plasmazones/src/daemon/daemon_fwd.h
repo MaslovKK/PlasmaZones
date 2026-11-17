@@ -93,6 +93,7 @@ class OverlayAdaptor;
 class ZoneDetectionAdaptor;
 class WindowTracker;
 class WindowTrackingAdaptor;
+class DragResolver;
 class WindowDragAdaptor;
 class RuleAdaptor;
 class UnifiedLayoutController;

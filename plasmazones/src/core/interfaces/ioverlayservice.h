@@ -317,7 +317,7 @@ Q_SIGNALS:
 
     /**
      * @brief Emitted when Snap Assist overlay is dismissed (by selection, Escape, or any other means).
-     * WindowDragAdaptor subscribes to unregister the KGlobalAccel Escape shortcut.
+     * DragResolver subscribes to unregister the KGlobalAccel Escape shortcut.
      */
     void snapAssistDismissed();
 

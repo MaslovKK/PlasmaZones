@@ -209,7 +209,7 @@ void OverlayService::showSnapAssist(const QString& screenId, const PhosphorProto
     //
     // The GRAB RELEASE is unconditional. hideLayoutPicker emits layoutPickerDismissed BEFORE
     // it calls hideSlot (deliberately, and it says so there), the connection is direct, and
-    // WindowDragAdaptor::releaseCancelOverlayShortcutIfIdle keeps the shared Escape grab only
+    // DragResolver::releaseCancelOverlayShortcutIfIdle keeps the shared Escape grab only
     // while isLayoutPickerVisible() || isSnapAssistVisible(). Neither is latched at this
     // point, so the grab is dropped on EVERY cross-modal dismiss, live shell included, and
     // snapAssistShown re-binds it at the tail of this function.
@@ -638,7 +638,7 @@ void OverlayService::hideSnapAssist()
     // onSnapAssistSlotHideCompleted) or asynchronously (animator's
     // settle): in both cases "dismissed" arrives first.
     //
-    // snapAssistDismissed → WindowDragAdaptor::onSnapAssistDismissed →
+    // snapAssistDismissed → DragResolver::onSnapAssistDismissed →
     // releaseCancelOverlayShortcutIfIdle(), which drops the shared Escape
     // grab only when no other overlay (e.g. the layout picker) still
     // holds it - the conditionality is load-bearing for bail-path safety.

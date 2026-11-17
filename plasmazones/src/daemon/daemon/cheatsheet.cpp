@@ -16,7 +16,7 @@
 #include "core/platform/logging.h"
 #include "daemon/overlayservice.h"
 #include "daemon/controllers/shellcheatsheetbridge.h"
-#include "dbus/windowdragadaptor/windowdragadaptor.h"
+#include "runtime/dragresolver/dragresolver.h"
 #include "helpers.h"
 #include "phosphor_i18n.h"
 
@@ -58,7 +58,7 @@ QString cheatsheetModeString(PhosphorZones::AssignmentEntry::Mode mode)
 void Daemon::toggleCheatsheet()
 {
     if (m_shuttingDown || !m_overlayService || !m_shortcutManager
-        || (m_windowDragAdaptor && m_windowDragAdaptor->isDragInFlight())) {
+        || (m_dragResolver && m_dragResolver->isDragInFlight())) {
         return;
     }
     const QString screenId = resolveCursorScreenId(m_screenManager.get(), m_windowTracker);
@@ -105,7 +105,7 @@ void Daemon::showCheatsheetOnScreen(const QString& screenId)
     // the dismiss grab bound
     // below would never fire, and the sheet would also overlap the live
     // drag surfaces. The user can re-press after dropping the window.
-    if (m_windowDragAdaptor && m_windowDragAdaptor->isDragInFlight()) {
+    if (m_dragResolver && m_dragResolver->isDragInFlight()) {
         qCDebug(lcDaemon) << "Cheatsheet: suppressed during interactive drag";
         return;
     }

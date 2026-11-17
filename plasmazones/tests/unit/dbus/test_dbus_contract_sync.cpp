@@ -64,7 +64,7 @@
 #include "dbus/settingsadaptor/settingsadaptor.h"
 #include "dbus/shaderadaptor.h"
 #include "dbus/snapadaptor/snapadaptor.h"
-#include "dbus/windowdragadaptor/windowdragadaptor.h"
+#include "dbus/windowdragadaptor.h"
 #include "dbus/ruleadaptor.h"
 #include "dbus/windowtrackingadaptor.h"
 #include "dbus/zonedetectionadaptor.h"
@@ -622,7 +622,7 @@ private Q_SLOTS:
         // clearForCompositorReconnect is a documented off-contract bus
         // method: the effect invokes it cross-process at shutdown, but it is
         // deliberately absent from the published XML (see its doc comment in
-        // windowdragadaptor.h — it must STAY a slot).
+        // windowdragadaptor.h, where it must STAY a slot).
         verifyContract(WindowDragAdaptor::staticMetaObject, QString(Iface::WindowDrag), {},
                        {QStringLiteral("clearForCompositorReconnect")});
     }

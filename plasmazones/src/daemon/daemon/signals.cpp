@@ -15,7 +15,7 @@
 // (TilingAdaptor::onTrackedWindowDestroyed / pruneStaleFloatBroadcasts) —
 // daemon.h forward declares TilingAdaptor only.
 #include "dbus/tilingadaptor/tilingadaptor.h"
-#include "dbus/windowdragadaptor/windowdragadaptor.h"
+#include "runtime/dragresolver/dragresolver.h"
 #include "runtime/windowtracker/lifecyclerelay.h"
 #include "runtime/windowtracker/windowtracker.h"
 
@@ -119,7 +119,7 @@ void Daemon::connectLayoutSignals()
     // Also sync the unified controller's cycling index when the assignment
     // affects the current desktop — needed for D-Bus/KCM batch operations.
     // Do NOT touch setActiveLayout here — applyEntry and the drop-time
-    // cross-layout switch in WindowDragAdaptor (drop.cpp) handle active
+    // cross-layout switch in DragResolver (drop.cpp) handle active
     // layout themselves, and calling it here with QSignalBlocker steals
     // the activeLayoutChanged transition, leaving the resnap buffer
     // empty. Desktop switches sync active layout via syncModeFromAssignments().
@@ -363,7 +363,7 @@ void Daemon::connectLayoutSignals()
     // No handler for OverlayService::manualLayoutSelected: the zone-selector
     // slot is input-transparent by design (ZoneSelectorContent's
     // `interactive: false`) and the QML hover path that used to emit this is
-    // gone. Cross-layout commits happen at drop time inside WindowDragAdaptor
+    // gone. Cross-layout commits happen at drop time inside DragResolver
     // (drop.cpp), which calls assignLayout + setActiveLayout directly when
     // the user releases the drag on a zone in a different layout. Routing
     // through a hover-driven handler would resnap mid-interaction, which is
@@ -490,19 +490,19 @@ void Daemon::connectOverlaySignals()
                                               }
                                           });
 
-    // Mid-drag close cleanup: WindowDragAdaptor holds transient drag state
+    // Mid-drag close cleanup: DragResolver holds transient drag state
     // (m_draggedWindowId, m_pendingSnapDragWindowId, m_snapAssistPendingWindowId,
     // overlay refs) that must be torn down if the dragged window closes before
     // endDrag fires. The canonical close path runs through WTA::windowClosed
     // (called by the kwin-effect's notifyWindowClosed); we fan that out
     // in-process here instead of re-exposing a D-Bus surface no external
     // caller was wiring up.
-    if (m_windowDragAdaptor) {
+    if (m_dragResolver) {
         // PMF slot, so Qt::UniqueConnection is available here (unlike the
         // lambda connections above) and keeps a restart from fanning each
         // close out twice.
-        connect(m_windowTracker->lifecycleRelay(), &WindowLifecycleRelay::windowClosed, m_windowDragAdaptor,
-                &WindowDragAdaptor::handleWindowClosed, Qt::UniqueConnection);
+        connect(m_windowTracker->lifecycleRelay(), &WindowLifecycleRelay::windowClosed, m_dragResolver,
+                &DragResolver::handleWindowClosed, Qt::UniqueConnection);
     }
     if (m_tilingAdaptor) {
         // Same fan-out for TilingAdaptor's per-window caches: the effect

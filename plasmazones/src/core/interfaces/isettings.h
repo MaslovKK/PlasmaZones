@@ -167,7 +167,7 @@ public:
     virtual void setAutotileDragInsertGraceMs(int ms) = 0;
 
     // Scrolling twins: hold-to-activate list for live re-inserting a dragged
-    // window into the scroll strip (WindowDragAdaptor reads them per drag,
+    // window into the scroll strip (DragResolver reads them per drag,
     // beside the autotile pair above).
     virtual QVariantList scrollingDragInsertTriggers() const = 0;
     virtual void setScrollingDragInsertTriggers(const QVariantList& triggers) = 0;

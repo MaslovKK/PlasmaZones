@@ -112,7 +112,7 @@ void SettingsAdaptor::initializeRegistryAutotile()
     auto* concrete = qobject_cast<Settings*>(m_settings);
 
     // Autotile drag-insert triggers list (multi-bind). Consumers: the
-    // daemon's own WindowDragAdaptor::beginDrag per-drag trigger cache is
+    // daemon's own DragResolver::beginDrag per-drag trigger cache is
     // the authoritative one (which combos count as "insert held" per tick),
     // and the KWin effect also fetches the list to OR a held insert trigger
     // into its tick-forwarding gate (detectActivationAndGrab).

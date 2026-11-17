@@ -1,11 +1,8 @@
 // SPDX-FileCopyrightText: 2026 fuddlesworth
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#include "windowdragadaptor.h"
-#include "dbus/dbushelpers.h"
+#include "dragresolver.h"
 #include <PhosphorIdentity/VirtualScreenId.h>
-#include <QDBusConnection>
-#include <QDBusServiceWatcher>
 #include <QScreen>
 #include <QUuid>
 #include <PhosphorZones/Layout.h>
@@ -27,7 +24,7 @@
 
 namespace PlasmaZones {
 
-void WindowDragAdaptor::handleZoneSpanModifier(int x, int y)
+void DragResolver::handleZoneSpanModifier(int x, int y)
 {
     QScreen* screen = nullptr;
     QString screenId;
@@ -100,7 +97,7 @@ void WindowDragAdaptor::handleZoneSpanModifier(int x, int y)
     }
 }
 
-void WindowDragAdaptor::handleMultiZoneModifier(int x, int y)
+void DragResolver::handleMultiZoneModifier(int x, int y)
 {
     QScreen* screen = nullptr;
     QString screenId;
@@ -183,8 +180,8 @@ void WindowDragAdaptor::handleMultiZoneModifier(int x, int y)
     }
 }
 
-void WindowDragAdaptor::applySingleZoneTarget(PhosphorZones::Zone* zone, QScreen* screen, const QString& screenId,
-                                              PhosphorZones::Layout* layout)
+void DragResolver::applySingleZoneTarget(PhosphorZones::Zone* zone, QScreen* screen, const QString& screenId,
+                                         PhosphorZones::Layout* layout)
 {
     const QString zoneId = zone->id().toString();
     if (zoneId != m_currentZoneId || screenId != m_currentZoneScreenId || m_isMultiZoneMode) {
@@ -201,7 +198,7 @@ void WindowDragAdaptor::applySingleZoneTarget(PhosphorZones::Zone* zone, QScreen
     }
 }
 
-void WindowDragAdaptor::clearZoneTarget()
+void DragResolver::clearZoneTarget()
 {
     // No zone under the cursor: drop the target only when there was one, so
     // an idle tick does not re-clear the overlay every frame.
@@ -217,8 +214,8 @@ void WindowDragAdaptor::clearZoneTarget()
     }
 }
 
-DropProxyRegistry::Resolution WindowDragAdaptor::resolveDropProxyAt(QScreen* screen, const QString& screenId, int x,
-                                                                    int y) const
+DropProxyRegistry::Resolution DragResolver::resolveDropProxyAt(QScreen* screen, const QString& screenId, int x,
+                                                               int y) const
 {
     if (!screen || m_dropProxies.count() == 0) {
         return {};
@@ -231,77 +228,55 @@ DropProxyRegistry::Resolution WindowDragAdaptor::resolveDropProxyAt(QScreen* scr
     return m_dropProxies.resolve(physicalId, QPoint(x, y) - screen->geometry().topLeft());
 }
 
-void WindowDragAdaptor::watchDropProxyOwner(const QString& service)
+void DragResolver::dropProxyOwnerGone(const QString& owner)
 {
-    // At most ONE watcher per peer, never one per registration. The shell
-    // re-sends registerDropProxy whenever the miniature's JSON changes — every
-    // bar geometry or cell-rect change (PlacementMapScreen::sendDropProxy) —
-    // so allocating here per call would add a bus match rule per geometry
-    // change and leak them for the daemon's lifetime. (An unchanged repaint
-    // sends nothing: the shell suppresses an identical payload.)
-    if (m_dropProxyWatchers.contains(service)) {
-        return;
+    // The registry owns the screen-equivalence rule and stores the owner in
+    // the same slot as the proxy, so this cannot retire a proxy that now
+    // belongs to a different peer under an alternate spelling of the same
+    // output.
+    const QStringList dropped = m_dropProxies.unregisterProxiesOwnedBy(owner);
+    for (const QString& screenId : dropped) {
+        qCInfo(lcDbusWindow) << "drop proxy owner" << owner << "went away; retired the proxy on" << screenId;
     }
-    auto* watcher = new QDBusServiceWatcher(service, QDBusConnection::sessionBus(),
-                                            QDBusServiceWatcher::WatchForUnregistration, this);
-    QObject::connect(watcher, &QDBusServiceWatcher::serviceUnregistered, this, [this](const QString& gone) {
-        // The registry owns the screen-equivalence rule and stores the owner
-        // in the same slot as the proxy, so this cannot retire a proxy that
-        // now belongs to a different peer under an alternate spelling of the
-        // same output.
-        const QStringList dropped = m_dropProxies.unregisterProxiesOwnedBy(gone);
-        for (const QString& screenId : dropped) {
-            qCInfo(lcDbusWindow) << "drop proxy owner" << gone << "went away; retired the proxy on" << screenId;
-        }
-        if (auto* stale = m_dropProxyWatchers.take(gone)) {
-            stale->deleteLater();
-        }
-    });
-    m_dropProxyWatchers.insert(service, watcher);
 }
 
-void WindowDragAdaptor::registerDropProxy(const QString& screenId, const QString& proxyJson)
+DropProxyRegistration DragResolver::registerDropProxy(const QString& screenId, const QString& proxyJson,
+                                                      const QString& owner)
 {
     // A proxy outlives every individual drag, so it is tied to the life of the
-    // peer that asked for it. Direct (non-D-Bus) calls — the unit tests invoke
-    // this slot through QMetaObject — have no peer, and register unowned.
-    const QString sender = DbusHelpers::busCaller(this);
-    // A proxy another live peer registered is that peer's to replace: a
-    // second peer could otherwise retarget every snap drop on the screen to
-    // zones of its choosing. A peer that dies loses its proxies through the
-    // watcher below, so a restarted shell registers into an empty slot.
-    const QString owner = m_dropProxies.ownerOf(screenId);
-    if (!sender.isEmpty() && !owner.isEmpty() && owner != sender) {
-        qCWarning(lcDbusWindow) << "registerDropProxy: refusing" << sender << "- the proxy on" << screenId
-                                << "belongs to" << owner;
-        DbusHelpers::sendBusError(this, QDBusError::AccessDenied,
-                                  QStringLiteral("The drop proxy on this screen belongs to another peer"));
-        return;
+    // peer that asked for it. A caller with no peer (the unit tests, the
+    // daemon) registers unowned.
+    //
+    // A proxy another live peer registered is that peer's to replace: a second
+    // peer could otherwise retarget every snap drop on the screen to zones of
+    // its choosing. A peer that dies loses its proxies through
+    // dropProxyOwnerGone, so a restarted shell registers into an empty slot.
+    const QString current = m_dropProxies.ownerOf(screenId);
+    if (!owner.isEmpty() && !current.isEmpty() && current != owner) {
+        qCWarning(lcDbusWindow) << "registerDropProxy: refusing" << owner << "- the proxy on" << screenId
+                                << "belongs to" << current;
+        return DropProxyRegistration::RefusedOwner;
     }
-    if (!m_dropProxies.registerProxy(screenId, proxyJson, sender)) {
-        return;
+    if (!m_dropProxies.registerProxy(screenId, proxyJson, owner)) {
+        return DropProxyRegistration::Rejected;
     }
     qCDebug(lcDbusWindow) << "registerDropProxy: screen" << screenId;
-    if (!sender.isEmpty()) {
-        watchDropProxyOwner(sender);
-    }
+    return DropProxyRegistration::Registered;
 }
 
-void WindowDragAdaptor::unregisterDropProxy(const QString& screenId)
+bool DragResolver::unregisterDropProxy(const QString& screenId, const QString& owner)
 {
-    // Only the peer that registered a proxy drops it over the bus: any other
-    // could otherwise switch the shell's placement map off as a drop target.
-    // A direct call (no bus peer) and an unowned proxy are not checked.
-    const QString sender = DbusHelpers::busCaller(this);
-    const QString owner = m_dropProxies.ownerOf(screenId);
-    if (!sender.isEmpty() && !owner.isEmpty() && owner != sender) {
-        qCWarning(lcDbusWindow) << "unregisterDropProxy: refusing" << sender << "- the proxy on" << screenId
-                                << "belongs to" << owner;
-        DbusHelpers::sendBusError(this, QDBusError::AccessDenied,
-                                  QStringLiteral("The drop proxy on this screen belongs to another peer"));
-        return;
+    // Only the peer that registered a proxy drops it: any other could
+    // otherwise switch the shell's placement map off as a drop target. A
+    // caller with no peer and an unowned proxy are not checked.
+    const QString current = m_dropProxies.ownerOf(screenId);
+    if (!owner.isEmpty() && !current.isEmpty() && current != owner) {
+        qCWarning(lcDbusWindow) << "unregisterDropProxy: refusing" << owner << "- the proxy on" << screenId
+                                << "belongs to" << current;
+        return false;
     }
     m_dropProxies.unregisterProxy(screenId);
+    return true;
 }
 
 } // namespace PlasmaZones

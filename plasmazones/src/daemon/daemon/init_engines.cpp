@@ -25,7 +25,7 @@
 #include "dbus/layoutadaptor/layoutadaptor.h"
 #include "dbus/settingsadaptor/settingsadaptor.h"
 #include "runtime/windowtracker/windowtracker.h"
-#include "dbus/windowdragadaptor/windowdragadaptor.h"
+#include "runtime/dragresolver/dragresolver.h"
 #include "dbus/autotileadaptor/autotileadaptor.h"
 #include "dbus/tilingadaptor/tilingadaptor.h"
 #include "dbus/scrollingadaptor/scrollingadaptor.h"
@@ -295,7 +295,7 @@ void Daemon::initEnginesAndWiring()
     // resolver only exists now. The setters mirror setAutotileEngine /
     // setShortcutRegistrar / setScreenModeRouter — same late-binding
     // pattern the daemon already uses for cross-cutting deps.
-    m_windowDragAdaptor->setContextResolver(m_contextResolver.get());
+    m_dragResolver->setContextResolver(m_contextResolver.get());
     m_windowTracker->setContextResolver(m_contextResolver.get());
     // m_snapAdaptor is constructed below at the engine-adaptor block; its
     // contextResolver wire lives there.
@@ -318,8 +318,8 @@ void Daemon::initEnginesAndWiring()
     // The drag adaptor borrows both tiling engines through IPlacementEngine: isActiveOnScreen,
     // screenForTrackedWindow, the drag-insert preview and selector, the interactive-drag mark
     // and the scroll engine's min-size relay.
-    m_windowDragAdaptor->setAutotileEngine(m_autotileEngine.get());
-    m_windowDragAdaptor->setScrollEngine(m_scrollEngine.get());
+    m_dragResolver->setAutotileEngine(m_autotileEngine.get());
+    m_dragResolver->setScrollEngine(m_scrollEngine.get());
 
     // SnapEngine owns its per-(screen,desktop,activity) snap stores (symmetric with
     // AutotileEngine/TilingState). Wire the WTS facade through the engine's resolver

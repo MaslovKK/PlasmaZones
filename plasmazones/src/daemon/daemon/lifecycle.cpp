@@ -27,7 +27,7 @@
 #include "dbus/zonedetectionadaptor.h"
 #include "runtime/windowtracker/windowtracker.h"
 #include "dbus/windowtrackingadaptor.h"
-#include "dbus/windowdragadaptor/windowdragadaptor.h"
+#include "runtime/dragresolver/dragresolver.h"
 #include "dbus/autotileadaptor/autotileadaptor.h"
 #include "dbus/tilingadaptor/tilingadaptor.h"
 #include "dbus/scrollingadaptor/scrollingadaptor.h"
@@ -240,17 +240,17 @@ void Daemon::stop()
     // otherwise reach member destruction with the adaptor still holding pointers to the
     // about-to-die engines and ShortcutManager. The setters are null-safe and
     // idempotent, so running this on an already-stopped daemon costs nothing.
-    if (m_windowDragAdaptor) {
+    if (m_dragResolver) {
         // Cancel a live preview BEFORE dropping the engine borrows. The
         // adaptor reaches the engines only through those two pointers, so
         // nulling them first strands any preview: the engine keeps the window
         // detached with its restoration state held, and nothing left can
         // commit or cancel it. A stop() mid-drag is reachable from a settings
         // reload or a shutdown that races a drag.
-        m_windowDragAdaptor->cancelDragInsertPreviews();
-        m_windowDragAdaptor->setAutotileEngine(nullptr);
-        m_windowDragAdaptor->setScrollEngine(nullptr);
-        m_windowDragAdaptor->setShortcutRegistrar(nullptr);
+        m_dragResolver->cancelDragInsertPreviews();
+        m_dragResolver->setAutotileEngine(nullptr);
+        m_dragResolver->setScrollEngine(nullptr);
+        m_dragResolver->setShortcutRegistrar(nullptr);
     }
 
     // Null the QML static registry / manager pointers BEFORE the m_running
@@ -413,7 +413,7 @@ void Daemon::stop()
     //
     // The other raw-Qt-parented adaptors (LayoutAdaptor,
     // OverlayAdaptor, ZoneDetectionAdaptor, WindowTracker,
-    // DBusScreenAdaptor, WindowDragAdaptor, CompositorBridgeAdaptor,
+    // DBusScreenAdaptor, DragResolver, CompositorBridgeAdaptor,
     // SnapAdaptor, TilingAdaptor, AutotileAdaptor, ScrollingAdaptor) all
     // ship destructors that don't
     // deref any borrowed pointer — they are `= default` or empty-body
@@ -631,8 +631,8 @@ void Daemon::stop()
     if (m_snapAdaptor) {
         m_snapAdaptor->setContextResolver(nullptr);
     }
-    if (m_windowDragAdaptor) {
-        m_windowDragAdaptor->setContextResolver(nullptr);
+    if (m_dragResolver) {
+        m_dragResolver->setContextResolver(nullptr);
     }
     if (m_windowTracker) {
         m_windowTracker->setContextResolver(nullptr);

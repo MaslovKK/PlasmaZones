@@ -27,7 +27,7 @@
 #include "dbus/zonedetectionadaptor.h"
 #include "dbus/snapadaptor/snapadaptor.h"
 #include "runtime/windowtracker/windowtracker.h"
-#include "dbus/windowdragadaptor/windowdragadaptor.h"
+#include "runtime/dragresolver/dragresolver.h"
 #include "dbus/tilingadaptor/tilingadaptor.h"
 #include <PhosphorEngine/DesktopRemap.h>
 #include <PhosphorEngine/PlacementEngineBase.h>
@@ -345,8 +345,8 @@ void Daemon::connectScreenSignals()
                 // longer holds. Scoped to the output that changed, keyed on
                 // its identifier the way the removal path is, so a rotation of
                 // monitor A leaves monitor B's preview alone.
-                if (m_windowDragAdaptor) {
-                    m_windowDragAdaptor->cancelDragInsertPreviewsForScreen(screen.identifier);
+                if (m_dragResolver) {
+                    m_dragResolver->cancelDragInsertPreviewsForScreen(screen.identifier);
                 }
                 m_geometryUpdatePending = true;
                 m_geometryUpdateTimer.start();
@@ -558,8 +558,8 @@ void Daemon::onCompositorPixelSizeChanged(const QString& connectorName)
     // Same cancel-before-context-change rule as the screenGeometryChanged
     // handler: the reconcile below can re-derive the output's engine and
     // reshape the strip a live drag-insert preview was detached into.
-    if (m_windowDragAdaptor) {
-        m_windowDragAdaptor->cancelDragInsertPreviewsForScreen(physId);
+    if (m_dragResolver) {
+        m_dragResolver->cancelDragInsertPreviewsForScreen(physId);
     }
     // Synchronous: see the declaration for the announce this has to beat.
     reconcileActiveAssignments();
@@ -618,8 +618,8 @@ void Daemon::connectDesktopActivity()
                 // per-output): a desktop flip on monitor A must not snap
                 // monitor B's live preview back mid-drag. The activity twin
                 // below stays unconditional — an activity switch is global.
-                if (m_windowDragAdaptor) {
-                    m_windowDragAdaptor->cancelDragInsertPreviewsForScreen(screenId);
+                if (m_dragResolver) {
+                    m_dragResolver->cancelDragInsertPreviewsForScreen(screenId);
                 }
                 // [SEQ B] Pin screens where all autotiled windows are sticky BEFORE
                 // changing the desktop context, so currentKeyForScreen() still
@@ -781,7 +781,7 @@ void Daemon::connectDesktopActivity()
     });
 
     // Set initial virtual desktop on components that maintain their own copy
-    // (WindowDragAdaptor reads from PhosphorZones::LayoutRegistry directly via resolveLayoutForScreen())
+    // (DragResolver reads from PhosphorZones::LayoutRegistry directly via resolveLayoutForScreen())
     const int initialDesktop = currentDesktop();
     m_overlayService->setCurrentVirtualDesktop(initialDesktop);
     m_layoutManager->setCurrentVirtualDesktop(initialDesktop);
@@ -844,8 +844,8 @@ void Daemon::connectDesktopActivity()
                     // any active drag-insert preview before the engines' activity
                     // changes. Unconditional on purpose: an activity switch is
                     // global, unlike the per-output desktop switch above.
-                    if (m_windowDragAdaptor) {
-                        m_windowDragAdaptor->cancelDragInsertPreviews();
+                    if (m_dragResolver) {
+                        m_dragResolver->cancelDragInsertPreviews();
                     }
                     // Pin sticky screens before changing activity context. The
                     // release half runs after the switch below: activity is
@@ -1122,8 +1122,8 @@ void Daemon::onVirtualScreensReconfigured(const QString& physicalScreenId)
     // captured keys nothing resolves, and neither its commit nor its cancel
     // can put the window anywhere. Scoped to the reconfigured output because
     // samePhysical covers the physical id and every virtual child of it.
-    if (m_windowDragAdaptor) {
-        m_windowDragAdaptor->cancelDragInsertPreviewsForScreen(physicalScreenId);
+    if (m_dragResolver) {
+        m_dragResolver->cancelDragInsertPreviewsForScreen(physicalScreenId);
     }
 
     // Recalculate zone geometries inline for the affected screens FIRST so
@@ -1281,8 +1281,8 @@ void Daemon::onVirtualScreenRegionsChanged(const QString& physicalScreenId)
         // Same cancel-before-context-change rule as the topology handler
         // above: the re-derive below can move the output's screens between
         // engines under a live drag-insert preview.
-        if (m_windowDragAdaptor) {
-            m_windowDragAdaptor->cancelDragInsertPreviewsForScreen(physicalScreenId);
+        if (m_dragResolver) {
+            m_dragResolver->cancelDragInsertPreviewsForScreen(physicalScreenId);
         }
         updateEngineScreens();
         flushPendingSnapZoneRestores();

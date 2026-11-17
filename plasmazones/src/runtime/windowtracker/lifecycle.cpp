@@ -553,7 +553,7 @@ void WindowTracker::windowClosed(const QString& windowId, int windowKind, const 
         m_windowRegistry->remove(instanceId);
     }
 
-    // WindowDragAdaptor's drag teardown and TilingAdaptor::onTrackedWindowDestroyed
+    // DragResolver's drag teardown and TilingAdaptor::onTrackedWindowDestroyed
     // run off this in-process relay, after the teardown above so they see the
     // post-close state. A relay, not an adaptor signal, so it stays off the bus.
     Q_EMIT m_lifecycleRelay->windowClosed(windowId);

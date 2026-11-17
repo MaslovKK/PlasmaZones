@@ -1043,7 +1043,7 @@ public:
     /// it is unsnapped. A matched SetRestoreSizeOnUnsnap rule wins, otherwise the
     /// global `restoreOriginalSizeOnUnsnap` setting decides. Consulted on the
     /// drag-out / drop / cursor-left-zones unsnap paths (the latter two live in
-    /// WindowDragAdaptor and call through here), so this is public.
+    /// DragResolver and call through here), so this is public.
     bool shouldRestoreSizeOnUnsnap(const QString& windowId);
 
     /// Resolve whether an unfloat with no remembered pre-float zone should

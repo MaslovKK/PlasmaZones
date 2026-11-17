@@ -14,7 +14,7 @@ namespace PlasmaZones {
 /**
  * @brief Computed layout dimensions for the zone selector popup
  *
- * Shared between OverlayService (QML window sizing) and WindowDragAdaptor
+ * Shared between OverlayService (QML window sizing) and DragResolver
  * (trigger edge detection). Computed from ZoneSelectorConfig + screen geometry.
  */
 struct ZoneSelectorLayout

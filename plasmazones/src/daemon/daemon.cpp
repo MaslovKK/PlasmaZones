@@ -76,7 +76,7 @@
 #include "dbus/overlayadaptor.h"
 #include "dbus/zonedetectionadaptor.h"
 #include "runtime/windowtracker/windowtracker.h"
-#include "dbus/windowdragadaptor/windowdragadaptor.h"
+#include "runtime/dragresolver/dragresolver.h"
 #include "dbus/tilingadaptor/tilingadaptor.h"
 #include "dbus/snapadaptor/snapadaptor.h"
 #include "dbus/shaderadaptor.h"

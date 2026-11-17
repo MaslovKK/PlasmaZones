@@ -1,11 +1,10 @@
 // SPDX-FileCopyrightText: 2026 fuddlesworth
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#include "windowdragadaptor.h"
+#include "dragresolver.h"
 #include "dragactivation.h"
 #include "runtime/windowtracker/windowtracker.h"
 #include "runtime/windowtracker/internal.h"
-#include "dbus/snapadaptor/snapadaptor.h"
 #include <PhosphorSnapEngine/SnapEngine.h>
 #include <PhosphorEngine/PlacementEngineBase.h>
 #include "core/interfaces/interfaces.h"
@@ -26,10 +25,10 @@
 
 namespace PlasmaZones {
 
-void WindowDragAdaptor::dragStopped(const QString& windowId, int cursorX, int cursorY, int modifiers, int mouseButtons,
-                                    int& snapX, int& snapY, int& snapWidth, int& snapHeight, bool& shouldApplyGeometry,
-                                    QString& releaseScreenIdOut, bool& restoreSizeOnlyOut, bool& snapAssistRequestedOut,
-                                    QString& resolvedZoneIdOut)
+void DragResolver::dragStopped(const QString& windowId, int cursorX, int cursorY, int modifiers, int mouseButtons,
+                               int& snapX, int& snapY, int& snapWidth, int& snapHeight, bool& shouldApplyGeometry,
+                               QString& releaseScreenIdOut, bool& restoreSizeOnlyOut, bool& snapAssistRequestedOut,
+                               QString& resolvedZoneIdOut)
 {
     // Initialize output parameters
     // shouldApplyGeometry: true = KWin should set window to (snapX, snapY, snapWidth, snapHeight)
@@ -650,7 +649,7 @@ void WindowDragAdaptor::dragStopped(const QString& windowId, int cursorX, int cu
     resetDragState();
 }
 
-void WindowDragAdaptor::computeAndEmitSnapAssist()
+void DragResolver::computeAndEmitSnapAssist()
 {
     // Consume pending state — cleared regardless of whether we emit, so a
     // follow-up drag never sees stale IDs.

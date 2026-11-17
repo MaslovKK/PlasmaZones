@@ -373,7 +373,7 @@ public:
     // QDBusAbstractAdaptor's introspection does not expose them on the bus.
     // Every caller is in-process and reaches these via direct C++ invocation
     // through the daemon (same pattern as
-    // WindowDragAdaptor::handleWindowClosed).
+    // DragResolver::handleWindowClosed).
     // ═══════════════════════════════════════════════════════════════════════════
 
     /**

@@ -370,7 +370,7 @@ void OverlayService::syncPassiveShellSurfaceState(const QString& effectiveId)
     // content) so a mid-drag trigger thrash does not churn the shell's
     // wl_surface map state. The slot transitions to !isVisible only when
     // hide() dismisses it (dismissOverlayWindow), which drag end does
-    // through WindowDragAdaptor::hideOverlayAndSelector - that is the
+    // through DragResolver::hideOverlayAndSelector - that is the
     // right edge for the shell to actually unmap when no other slot is up.
     //
     // The same rule covers single-monitor mode: the outputs the cursor is

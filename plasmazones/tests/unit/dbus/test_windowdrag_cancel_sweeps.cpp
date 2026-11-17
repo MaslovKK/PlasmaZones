@@ -9,7 +9,7 @@
  *
  * Seams that previously had no test:
  *
- *  1. WindowDragAdaptor's LIVE sweep derives dragStillActive from
+ *  1. DragResolver's LIVE sweep derives dragStillActive from
  *     isDragSessionActive() — replacing the derivation with a constant false
  *     used to leave the whole suite green while the mid-drag cancel resized
  *     the window in the user's hand.
@@ -53,7 +53,7 @@
 #include "config/configkeys.h"
 #include "dbus/snapadaptor/snapadaptor.h"
 #include "dbus/tilingadaptor/tilingadaptor.h"
-#include "dbus/windowdragadaptor/windowdragadaptor.h"
+#include "runtime/dragresolver/dragresolver.h"
 #include "runtime/windowtracker/windowtracker.h"
 
 #include "helpers/AutotileTestHelpers.h"
@@ -151,7 +151,7 @@ class TestWindowDragCancelSweeps : public QObject
 private:
     static constexpr auto Screen = "eDP-1";
 
-    /// The full dependency set WindowDragAdaptor's ctor qFatals without,
+    /// The full dependency set DragResolver's ctor qFatals without,
     /// plus an autotile engine seeded with three windows and forced zones.
     struct Fixture
     {
@@ -164,7 +164,7 @@ private:
             registry->setLayoutDirectory(layoutDir);
 
             wta = new WindowTracker(registry.get(), &detector, nullptr, &settings, nullptr, nullptr, &parent);
-            adaptor = new WindowDragAdaptor(&overlay, &detector, registry.get(), nullptr, &settings, wta, &parent);
+            adaptor = new DragResolver(&overlay, &detector, registry.get(), nullptr, &settings, wta, &parent);
 
             engine =
                 std::make_unique<AutotileEngine>(nullptr, nullptr, nullptr, PlasmaZones::TestHelpers::testRegistry());
@@ -190,7 +190,7 @@ private:
         std::unique_ptr<PhosphorRules::RuleStore> store;
         std::unique_ptr<PhosphorZones::LayoutRegistry> registry;
         WindowTracker* wta = nullptr; // parent-owned
-        WindowDragAdaptor* adaptor = nullptr; // parent-owned
+        DragResolver* adaptor = nullptr; // parent-owned
         std::unique_ptr<AutotileEngine> engine;
     };
 

@@ -388,7 +388,7 @@ void ZoneSelectorController::selectLayout(const QString& layoutId)
     Q_EMIT layoutSelected(layoutId);
 
     // PhosphorZones::Layout application is handled by whoever connects to layoutSelected().
-    // For zone-selector drag-drop the commit happens in WindowDragAdaptor's drop path
+    // For zone-selector drag-drop the commit happens in DragResolver's drop path
     // (drop.cpp), which calls assignLayout + setActiveLayout directly using
     // OverlayService::selectedLayoutId()/selectedZoneIndex(). Do NOT call
     // m_layoutManager->setActiveLayout() here — it bypasses the unified layout
@@ -455,7 +455,7 @@ void ZoneSelectorController::onProximityCheckTimeout()
 void ZoneSelectorController::updateProximity()
 {
     // Note: Proximity-based triggering during drag is handled by
-    // WindowDragAdaptor::isNearTriggerEdge(), which uses per-screen resolved config.
+    // DragResolver::isNearTriggerEdge(), which uses per-screen resolved config.
     // This method provides QML property updates for direct cursor-position use cases.
 
     if (m_hasCursorPosition) {

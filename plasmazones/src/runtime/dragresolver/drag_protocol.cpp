@@ -10,7 +10,7 @@
 // state machine doesn't need to be rewritten. They're no longer exposed
 // on the D-Bus surface.
 
-#include "windowdragadaptor.h"
+#include "dragresolver.h"
 #include "runtime/windowtracker/windowtracker.h"
 #include <PhosphorSnapEngine/SnapEngine.h>
 #include "core/interfaces/interfaces.h"
@@ -18,7 +18,6 @@
 #include <PhosphorZones/LayoutRegistry.h>
 #include "core/interfaces/settings_interfaces.h"
 #include "core/platform/logging.h"
-#include "dbus/dbushelpers.h"
 #include <PhosphorEngine/IPlacementEngine.h>
 #include <PhosphorScreens/ScreenIdentity.h>
 #include <QGuiApplication>
@@ -26,11 +25,12 @@
 
 namespace PlasmaZones {
 
-PhosphorProtocol::DragPolicy
-WindowDragAdaptor::computeDragPolicy(const ISettings* settings, const PhosphorEngine::IPlacementEngine* autotileEngine,
-                                     const PhosphorEngine::IPlacementEngine* scrollEngine, const QString& windowId,
-                                     const QString& screenId, const PhosphorContext::IContextResolver* resolver,
-                                     bool reorderMode, bool activeLayoutSuppressed)
+PhosphorProtocol::DragPolicy DragResolver::computeDragPolicy(const ISettings* settings,
+                                                             const PhosphorEngine::IPlacementEngine* autotileEngine,
+                                                             const PhosphorEngine::IPlacementEngine* scrollEngine,
+                                                             const QString& windowId, const QString& screenId,
+                                                             const PhosphorContext::IContextResolver* resolver,
+                                                             bool reorderMode, bool activeLayoutSuppressed)
 {
     PhosphorProtocol::DragPolicy policy;
     policy.screenId = screenId;
@@ -164,8 +164,8 @@ WindowDragAdaptor::computeDragPolicy(const ISettings* settings, const PhosphorEn
     return policy;
 }
 
-bool WindowDragAdaptor::resolveReorderMode(const PhosphorZones::LayoutRegistry* layoutManager,
-                                           const ISettings* settings, const QString& screenId)
+bool DragResolver::resolveReorderMode(const PhosphorZones::LayoutRegistry* layoutManager, const ISettings* settings,
+                                      const QString& screenId)
 {
     // A matched context SetDragBehavior rule wins over the global setting for this
     // screen; resolved through the layout registry (which the static
@@ -188,12 +188,12 @@ bool WindowDragAdaptor::resolveReorderMode(const PhosphorZones::LayoutRegistry* 
     return settings && settings->autotileDragBehavior() == AutotileDragBehavior::Reorder;
 }
 
-bool WindowDragAdaptor::effectiveReorderMode(const QString& screenId) const
+bool DragResolver::effectiveReorderMode(const QString& screenId) const
 {
     return resolveReorderMode(m_layoutManager, m_settings, screenId);
 }
 
-bool WindowDragAdaptor::isActiveLayoutSuppressedForScreen(const QString& screenId) const
+bool DragResolver::isActiveLayoutSuppressedForScreen(const QString& screenId) const
 {
     // Per-drag memo: this sits on the ~30 Hz dragMoved path (twice per tick —
     // the policy recompute and prepareHandlerContext), and the underlying
@@ -222,7 +222,7 @@ bool WindowDragAdaptor::isActiveLayoutSuppressedForScreen(const QString& screenI
     return suppressed;
 }
 
-bool WindowDragAdaptor::isActiveLayoutSuppressedForScreen(const QString& screenId, int virtualDesktop) const
+bool DragResolver::isActiveLayoutSuppressedForScreen(const QString& screenId, int virtualDesktop) const
 {
     // Uncached desktop-explicit form. Its remaining caller is the one-arg
     // memo wrapper above; the deferred snap-assist build now calls the
@@ -241,13 +241,9 @@ bool WindowDragAdaptor::isActiveLayoutSuppressedForScreen(const QString& screenI
                                                             m_layoutManager->currentActivity());
 }
 
-PhosphorProtocol::DragPolicy WindowDragAdaptor::beginDrag(const QString& windowId, int frameX, int frameY,
-                                                          int frameWidth, int frameHeight, const QString& startScreenId,
-                                                          int mouseButtons)
+PhosphorProtocol::DragPolicy DragResolver::beginDrag(const QString& windowId, int frameX, int frameY, int frameWidth,
+                                                     int frameHeight, const QString& startScreenId, int mouseButtons)
 {
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return {};
-    }
     if (windowId.isEmpty()) {
         qCWarning(lcDbusWindow) << "beginDrag: empty windowId";
         return PhosphorProtocol::DragPolicy{};
@@ -493,7 +489,7 @@ PhosphorProtocol::DragPolicy WindowDragAdaptor::beginDrag(const QString& windowI
     return policy;
 }
 
-bool WindowDragAdaptor::activateSnapDragIfNeeded(int modifiers, int mouseButtons, int cursorX, int cursorY)
+bool DragResolver::activateSnapDragIfNeeded(int modifiers, int mouseButtons, int cursorX, int cursorY)
 {
     // Already active? nothing to do.
     if (!m_draggedWindowId.isEmpty()) {
@@ -646,7 +642,7 @@ bool WindowDragAdaptor::activateSnapDragIfNeeded(int modifiers, int mouseButtons
     return true;
 }
 
-void WindowDragAdaptor::clearPendingSnapDragState()
+void DragResolver::clearPendingSnapDragState()
 {
     m_pendingSnapDragWindowId.clear();
     m_pendingSnapDragCancelled = false;
@@ -678,14 +674,11 @@ void WindowDragAdaptor::clearPendingSnapDragState()
     cancelStaleDragInsertPreviews();
 }
 
-PhosphorProtocol::DragOutcome WindowDragAdaptor::endDrag(const QString& windowId, int cursorX, int cursorY,
-                                                         int modifiers, int mouseButtons, bool cancelled)
+PhosphorProtocol::DragOutcome DragResolver::endDrag(const QString& windowId, int cursorX, int cursorY, int modifiers,
+                                                    int mouseButtons, bool cancelled)
 {
     PhosphorProtocol::DragOutcome outcome;
     outcome.windowId = windowId;
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return outcome;
-    }
 
     if (windowId.isEmpty()) {
         qCWarning(lcDbusWindow) << "endDrag: empty windowId";
@@ -1008,18 +1001,14 @@ PhosphorProtocol::DragOutcome WindowDragAdaptor::endDrag(const QString& windowId
     // call for the next event loop iteration, which happens after Qt finishes
     // handing the PhosphorProtocol::DragOutcome off to the D-Bus marshaller.
     if (snapAssistRequested) {
-        QTimer::singleShot(0, this, &WindowDragAdaptor::computeAndEmitSnapAssist);
+        QTimer::singleShot(0, this, &DragResolver::computeAndEmitSnapAssist);
     }
 
     return outcome;
 }
 
-void WindowDragAdaptor::updateDragCursor(const QString& windowId, int cursorX, int cursorY, int modifiers,
-                                         int mouseButtons)
+void DragResolver::updateDragCursor(const QString& windowId, int cursorX, int cursorY, int modifiers, int mouseButtons)
 {
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return;
-    }
     if (windowId.isEmpty()) {
         return;
     }

@@ -204,18 +204,20 @@ set(plasmazones_core_SRCS
     runtime/windowtracker/shellsurface_desktop.cpp
     runtime/windowtracker/windowtracker.h
     runtime/windowtracker/internal.h
-    dbus/windowdragadaptor/windowdragadaptor.cpp
-    dbus/windowdragadaptor/selector_gate.cpp
-    dbus/windowdragadaptor/drag.cpp
-    dbus/windowdragadaptor/drag_protocol.cpp
-    dbus/windowdragadaptor/drop.cpp
-    dbus/windowdragadaptor/dragtimers.cpp
-    dbus/windowdragadaptor/dragzonespan.cpp
-    dbus/windowdragadaptor/dragactivation.cpp
-    dbus/windowdragadaptor/dragactivation.h
-    dbus/windowdragadaptor/dropproxy.cpp
-    dbus/windowdragadaptor/dropproxy.h
-    dbus/windowdragadaptor/windowdragadaptor.h
+    dbus/windowdragadaptor.cpp
+    dbus/windowdragadaptor.h
+    runtime/dragresolver/dragresolver.cpp
+    runtime/dragresolver/selector_gate.cpp
+    runtime/dragresolver/drag.cpp
+    runtime/dragresolver/drag_protocol.cpp
+    runtime/dragresolver/drop.cpp
+    runtime/dragresolver/dragtimers.cpp
+    runtime/dragresolver/dragzonespan.cpp
+    runtime/dragresolver/dragactivation.cpp
+    runtime/dragresolver/dragactivation.h
+    runtime/dragresolver/dropproxy.cpp
+    runtime/dragresolver/dropproxy.h
+    runtime/dragresolver/dragresolver.h
     dbus/scrollingadaptor/scrollingadaptor.cpp
     dbus/scrollingadaptor/scrollingadaptor.h
     dbus/autotileadaptor/autotileadaptor.cpp
@@ -274,12 +276,12 @@ generate_export_header(plasmazones_core
 #     declarations across these TUs
 set_source_files_properties(
     config/configdefaults.cpp
-    dbus/windowdragadaptor/drag.cpp
-    dbus/windowdragadaptor/drag_protocol.cpp
-    dbus/windowdragadaptor/drop.cpp
-    dbus/windowdragadaptor/dragtimers.cpp
-    dbus/windowdragadaptor/dragzonespan.cpp
-    dbus/windowdragadaptor/selector_gate.cpp
+    runtime/dragresolver/drag.cpp
+    runtime/dragresolver/drag_protocol.cpp
+    runtime/dragresolver/drop.cpp
+    runtime/dragresolver/dragtimers.cpp
+    runtime/dragresolver/dragzonespan.cpp
+    runtime/dragresolver/selector_gate.cpp
     PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON
 )
 # PhosphorShaders + PhosphorWayland headers are available via PUBLIC link dependencies

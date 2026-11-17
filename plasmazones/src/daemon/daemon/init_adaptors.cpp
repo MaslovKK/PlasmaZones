@@ -34,7 +34,8 @@
 #include "dbus/zonedetectionadaptor.h"
 #include "runtime/windowtracker/windowtracker.h"
 #include "dbus/windowtrackingadaptor.h"
-#include "dbus/windowdragadaptor/windowdragadaptor.h"
+#include "runtime/dragresolver/dragresolver.h"
+#include "dbus/windowdragadaptor.h"
 #include "dbus/tilingadaptor/tilingadaptor.h"
 // Needed as COMPLETE types, not just forward declarations: the re-entry
 // preamble below deletes them, and deleting through an incomplete type calls
@@ -81,8 +82,11 @@ void Daemon::initCoreAdaptors()
     m_tilingAdaptor = nullptr;
     delete m_scrollingAdaptor;
     m_scrollingAdaptor = nullptr;
+    // The binding before the resolver it forwards to.
     delete m_windowDragAdaptor;
     m_windowDragAdaptor = nullptr;
+    delete m_dragResolver;
+    m_dragResolver = nullptr;
     // The binding before the tracker it forwards to.
     delete m_windowTrackingAdaptor;
     m_windowTrackingAdaptor = nullptr;
@@ -257,19 +261,19 @@ void Daemon::initCoreAdaptors()
         return DbusHelpers::admitCompositorReport(adaptor, member);
     });
 
-    // Window drag adaptor - handles drag events from the KWin effect
-    // All drag logic (modifiers, zones, snapping) handled here
-    m_windowDragAdaptor = new WindowDragAdaptor(m_overlayService.get(), m_zoneDetector.get(), m_layoutManager.get(),
-                                                m_screenManager.get(), m_settings.get(), m_windowTracker, this);
+    // Window drag - handles drag events from the KWin effect, and its D-Bus binding.
+    // All drag logic (modifiers, zones, snapping) handled in the resolver.
+    m_dragResolver = new DragResolver(m_overlayService.get(), m_zoneDetector.get(), m_layoutManager.get(),
+                                      m_screenManager.get(), m_settings.get(), m_windowTracker, this);
+    m_windowDragAdaptor = new WindowDragAdaptor(m_dragResolver, this);
 
-    // PhosphorZones::Zone selector methods are called directly from WindowDragAdaptor; QDBusAbstractAdaptor
-    // signals are for D-Bus, not Qt connections.
+    // PhosphorZones::Zone selector methods are called directly from DragResolver.
 
     // Give the window drag adaptor access to the shortcut manager for
     // registering/unregistering the Escape cancel shortcut during drags.
     // Routed through the PhosphorShortcutsIntegration::IAdhocRegistrar interface so the underlying
     // Registry stays private to ShortcutManager.
-    m_windowDragAdaptor->setShortcutRegistrar(m_shortcutManager.get());
+    m_dragResolver->setShortcutRegistrar(m_shortcutManager.get());
 
     // When the compositor bridge re-registers (e.g. KWin reloaded the effect,
     // effect process restarted, or daemon itself restarted mid-drag), any drag
@@ -277,11 +281,11 @@ void Daemon::initCoreAdaptors()
     // no knowledge of the prior drag. Clear it eagerly so the next dragStarted
     // from the fresh effect lands on a clean slate instead of silently
     // colliding with a mismatched windowId in the next handler.
-    connect(m_compositorBridge, &CompositorBridgeAdaptor::bridgeRegistered, m_windowDragAdaptor,
+    connect(m_compositorBridge, &CompositorBridgeAdaptor::bridgeRegistered, m_dragResolver,
             [this](const QString& compositorName, const QString&, const QStringList&) {
                 qCInfo(lcDaemon) << "Compositor bridge registered (" << compositorName
                                  << ") — clearing any stale drag state held by daemon";
-                m_windowDragAdaptor->clearForCompositorReconnect();
+                m_dragResolver->clearForCompositorReconnect();
             });
     // The compositor's pixel-size reports are deliberately NOT cleared on a
     // (re-)registration, unlike the drag state above. A fresh effect re-sends
@@ -299,7 +303,7 @@ void Daemon::initCoreAdaptors()
     // alive but has no window control — drags and shortcuts silently do
     // nothing. Stop the watchdog as soon as the bridge registers; otherwise
     // warnCompositorBridgeMissing() fires once on timeout. Connecting to the
-    // adaptor (not m_windowDragAdaptor) so a re-registration also cancels it.
+    // bridge adaptor so a re-registration also cancels it.
     m_bridgeWatchdogTimer.setSingleShot(true);
     // Value-member timer, so it outlives stop(): sever before connecting or a
     // stop() → init() cycle stacks the timeout handler and a missing bridge

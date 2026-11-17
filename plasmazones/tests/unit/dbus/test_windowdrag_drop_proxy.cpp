@@ -3,7 +3,7 @@
 
 /**
  * @file test_windowdrag_drop_proxy.cpp
- * @brief The drop proxy of WindowDragAdaptor (registerDropProxy /
+ * @brief The drop proxy of DragResolver (registerDropProxy /
  * unregisterDropProxy, dropproxy.h): a shell-registered miniature of a
  * snapping screen's zones that a real drag can be dropped on.
  *
@@ -46,8 +46,9 @@
 
 #include "config/configdefaults.h"
 #include "core/types/enums.h"
-#include "dbus/windowdragadaptor/dropproxy.h"
-#include "dbus/windowdragadaptor/windowdragadaptor.h"
+#include "runtime/dragresolver/dropproxy.h"
+#include "runtime/dragresolver/dragresolver.h"
+#include "dbus/windowdragadaptor.h"
 #include "runtime/windowtracker/windowtracker.h"
 
 #include "helpers/BusPeer.h"
@@ -247,7 +248,7 @@ private Q_SLOTS:
         const QPoint inCell2 = screenGeom.topLeft() + QPoint(260, 60);
         const QPoint offProxy = screenGeom.topLeft() + QPoint(400, 300);
 
-        QSignalSpy geometrySpy(f.adaptor, &WindowDragAdaptor::zoneGeometryDuringDragChanged);
+        QSignalSpy geometrySpy(f.adaptor, &DragResolver::zoneGeometryDuringDragChanged);
 
         const PhosphorProtocol::DragPolicy policy =
             f.adaptor->beginDrag(windowId, screenGeom.x() + 400, screenGeom.y() + 300, 300, 200, f.screenId, 0);
@@ -308,6 +309,51 @@ private Q_SLOTS:
             f.adaptor->endDrag(windowId, inCell.x(), inCell.y(), static_cast<int>(Qt::ControlModifier), 0, false);
         QVERIFY(outcome.action != PhosphorProtocol::DragOutcome::ApplySnap);
         QVERIFY(outcome.zoneId.isEmpty());
+    }
+
+    // A proxy belongs to the peer that registered it. Another named peer can
+    // neither replace nor drop it, the owner leaving retires it, and the slot
+    // is then free for anyone. The owner is the resolver's argument, so the
+    // rules hold for every binding that names one, not only the bus.
+    void resolver_proxyOwnerRules()
+    {
+        Fixture f;
+        QVERIFY(f.screen);
+        const QRect screenGeom = f.screen->geometry();
+        const QString zone0 = f.layout->zones().at(0)->id().toString();
+        const QString zone1 = f.layout->zones().at(1)->id().toString();
+        const QString first = proxyJson(QRect(20, 20, 100, 90), {{zone0, QRect(20, 20, 100, 90)}});
+        const QString second = proxyJson(QRect(20, 20, 100, 90), {{zone1, QRect(20, 20, 100, 90)}});
+        const QString owner = QStringLiteral(":1.10");
+        const QString intruder = QStringLiteral(":1.20");
+
+        const QPoint inCell = screenGeom.topLeft() + QPoint(60, 60);
+        const int ctrl = static_cast<int>(Qt::ControlModifier);
+        int drops = 0;
+        const auto dropInCell = [&] {
+            const QString windowId = QStringLiteral("app|owner%1").arg(++drops);
+            f.adaptor->beginDrag(windowId, screenGeom.x() + 400, screenGeom.y() + 300, 300, 200, f.screenId, 0);
+            f.adaptor->updateDragCursor(windowId, inCell.x(), inCell.y(), ctrl, 0);
+            return f.adaptor->endDrag(windowId, inCell.x(), inCell.y(), ctrl, 0, false);
+        };
+
+        QCOMPARE(f.adaptor->registerDropProxy(f.screenId, first, owner), DropProxyRegistration::Registered);
+        QCOMPARE(f.adaptor->registerDropProxy(f.screenId, second, intruder), DropProxyRegistration::RefusedOwner);
+        QVERIFY(!f.adaptor->unregisterDropProxy(f.screenId, intruder));
+        PhosphorProtocol::DragOutcome outcome = dropInCell();
+        QCOMPARE(outcome.action, PhosphorProtocol::DragOutcome::ApplySnap);
+        QCOMPARE(outcome.zoneId, zone0);
+
+        // The owner replaces its own proxy.
+        QCOMPARE(f.adaptor->registerDropProxy(f.screenId, second, owner), DropProxyRegistration::Registered);
+        QCOMPARE(dropInCell().zoneId, zone1);
+
+        // Another peer's leaving retires nothing; the owner's leaving retires it.
+        f.adaptor->dropProxyOwnerGone(intruder);
+        QCOMPARE(dropInCell().action, PhosphorProtocol::DragOutcome::ApplySnap);
+        f.adaptor->dropProxyOwnerGone(owner);
+        QVERIFY(dropInCell().action != PhosphorProtocol::DragOutcome::ApplySnap);
+        QCOMPARE(f.adaptor->registerDropProxy(f.screenId, first, intruder), DropProxyRegistration::Registered);
     }
 
     // A proxy registered over the bus belongs to the peer that registered it,
@@ -441,7 +487,8 @@ private:
             wta->service()->setSnapState(snapEngine->snapState());
             wta->service()->setSnapEngine(snapEngine);
             wta->setEngines(snapEngine, nullptr, nullptr);
-            adaptor = new WindowDragAdaptor(&overlay, &detector, layoutManager, nullptr, &settings, wta, &parent);
+            adaptor = new DragResolver(&overlay, &detector, layoutManager, nullptr, &settings, wta, &parent);
+            binding = new WindowDragAdaptor(adaptor, &parent);
 
             layout = createTestLayout(3, layoutManager);
             layoutManager->addLayout(layout);
@@ -471,7 +518,8 @@ private:
         PhosphorZones::Layout* layout = nullptr;
         WindowTracker* wta = nullptr; // parent-owned
         PhosphorSnapEngine::SnapEngine* snapEngine = nullptr;
-        WindowDragAdaptor* adaptor = nullptr; // parent-owned
+        DragResolver* adaptor = nullptr; // parent-owned
+        WindowDragAdaptor* binding = nullptr; // parent-owned; the bus surface the peer calls
         QScreen* screen = nullptr;
         QString screenId;
     };

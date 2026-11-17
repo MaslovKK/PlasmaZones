@@ -1,14 +1,14 @@
 // SPDX-FileCopyrightText: 2026 fuddlesworth
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-// The zone-selector GATE concern of WindowDragAdaptor: which screens speak
+// The zone-selector GATE concern of DragResolver: which screens speak
 // the strip vocabulary (scrollSelectorScreen), whether this cursor tick
 // shows / keeps / hides the drag popup (checkZoneSelectorTrigger), and the
 // trigger-edge / keep-visible band math (isNearTriggerEdge). Split out of
-// windowdragadaptor.cpp by concern when it crossed the file-size ceiling,
+// dragresolver.cpp by concern when it crossed the file-size ceiling,
 // matching the existing drag.cpp / drag_protocol.cpp / drop.cpp split.
 
-#include "windowdragadaptor.h"
+#include "dragresolver.h"
 
 #include <QScreen>
 #include <cmath>
@@ -29,7 +29,7 @@
 
 namespace PlasmaZones {
 
-bool WindowDragAdaptor::scrollSelectorScreen(const QString& screenId) const
+bool DragResolver::scrollSelectorScreen(const QString& screenId) const
 {
     // Engine-direct twin of OverlayService::isStripSelectorScreen (which
     // routes through Daemon::dragInsertSelectorForScreen and the screen-mode
@@ -41,7 +41,7 @@ bool WindowDragAdaptor::scrollSelectorScreen(const QString& screenId) const
     return m_scrollEngine && m_scrollEngine->isActiveOnScreen(screenId) && m_scrollEngine->providesDragInsertSelector();
 }
 
-void WindowDragAdaptor::checkZoneSelectorTrigger(int cursorX, int cursorY)
+void DragResolver::checkZoneSelectorTrigger(int cursorX, int cursorY)
 {
     if (!m_settings) {
         return;
@@ -244,7 +244,7 @@ void WindowDragAdaptor::checkZoneSelectorTrigger(int cursorX, int cursorY)
     }
 }
 
-bool WindowDragAdaptor::isNearTriggerEdge(QScreen* screen, int cursorX, int cursorY, const QString& screenId) const
+bool DragResolver::isNearTriggerEdge(QScreen* screen, int cursorX, int cursorY, const QString& screenId) const
 {
     if (!m_settings || !screen) {
         return false;

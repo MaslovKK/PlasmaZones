@@ -19,7 +19,7 @@
 #include "config/settings.h"
 #include "dbus/layoutadaptor/layoutadaptor.h"
 #include "dbus/snapadaptor/snapadaptor.h"
-#include "dbus/windowdragadaptor/windowdragadaptor.h"
+#include "runtime/dragresolver/dragresolver.h"
 #include "runtime/windowtracker/internal.h"
 #include "runtime/windowtracker/windowtracker.h"
 #include <PhosphorEngine/PlacementEngineBase.h>
@@ -1519,7 +1519,7 @@ void Daemon::processPendingGeometryUpdates()
     // cap, and it is invalidated only by a pass that finds no session. A
     // real drag begun while the flag is still stranded is therefore not held
     // either, until a pass sees the flag clear.
-    if (m_windowDragAdaptor && m_windowDragAdaptor->isDragSessionActive()) {
+    if (m_dragResolver && m_dragResolver->isDragSessionActive()) {
         if (!m_geometryDeferralClock.isValid()) {
             m_geometryDeferralClock.start();
             m_geometryDeferralCapLogged = false;

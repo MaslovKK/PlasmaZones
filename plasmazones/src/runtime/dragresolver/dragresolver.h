@@ -5,9 +5,8 @@
 
 #include "plasmazones_export.h"
 #include "dropproxy.h"
-#include <PhosphorProtocol/DragMarshalling.h>
-#include <PhosphorProtocol/ZoneMarshalling.h>
-#include <QDBusAbstractAdaptor>
+#include <PhosphorProtocol/DragTypes.h>
+#include <PhosphorProtocol/ZoneTypes.h>
 #include <QElapsedTimer>
 #include <QHash>
 #include <QObject>
@@ -20,7 +19,6 @@
 #include <QVector>
 #include <memory>
 
-class QDBusServiceWatcher;
 class QScreen;
 class QTimer;
 
@@ -55,9 +53,7 @@ class ISettings;
 class WindowTracker;
 
 /**
- * @brief D-Bus adaptor for window drag handling
- *
- * Provides D-Bus interface: org.phosphor_works.Placement.WindowDrag
+ * @brief Window drag handling: the drag resolver
  *
  * Receives the KWin effect's drag reports (beginDrag, updateDragCursor,
  * endDrag) and handles:
@@ -67,24 +63,27 @@ class WindowTracker;
  * - Overlay visibility based on the triggers
  * - The drop outcome the effect applies (snap, size restore, float, no-op)
  *
- * registerDropProxy identifies the peer that registered a proxy through the
- * context of the object this adaptor is exported through
- * (DbusHelpers::busCaller), and drops the registration when that peer dies.
- * A proxy outlives every individual drag by design, so without owner
- * tracking a shell that crashes rather than unregistering would keep
- * hijacking snap drops over its old rect for the daemon's whole lifetime.
+ * registerDropProxy records the peer that registered a proxy, named by
+ * whoever serves the call (DragResolver names the bus caller), and
+ * dropProxyOwnerGone retires that peer's proxies when it dies. A proxy
+ * outlives every individual drag by design, so without owner tracking a
+ * shell that crashes rather than unregistering would keep hijacking snap
+ * drops over its old rect for the daemon's whole lifetime.
+ *
+ * Plain C++ and Qt signals. Served on the bus as
+ * org.phosphor_works.Placement.WindowDrag by DragResolver, which admits
+ * the compositor-only reports (#1155) and forwards. A direct call here is
+ * trusted.
  */
-class PLASMAZONES_EXPORT WindowDragAdaptor : public QDBusAbstractAdaptor
+class PLASMAZONES_EXPORT DragResolver : public QObject
 {
     Q_OBJECT
-    Q_CLASSINFO("D-Bus Interface", "org.phosphor_works.Placement.WindowDrag")
 
 public:
-    explicit WindowDragAdaptor(IOverlayService* overlay, PhosphorZones::IZoneDetector* detector,
-                               PhosphorZones::LayoutRegistry* layoutManager,
-                               PhosphorScreens::ScreenManager* screenManager, ISettings* settings,
-                               WindowTracker* windowTracking, QObject* parent = nullptr);
-    ~WindowDragAdaptor() override = default;
+    explicit DragResolver(IOverlayService* overlay, PhosphorZones::IZoneDetector* detector,
+                          PhosphorZones::LayoutRegistry* layoutManager, PhosphorScreens::ScreenManager* screenManager,
+                          ISettings* settings, WindowTracker* windowTracking, QObject* parent = nullptr);
+    ~DragResolver() override = default;
 
     /**
      * @brief Set the autotile engine for per-screen autotile checks
@@ -291,14 +290,21 @@ public Q_SLOTS:
      * screen's logical coordinates; a malformed proxy is refused and any earlier one
      * stands. One proxy per screen. On a tiling or scrolling screen the
      * proxy is accepted and ignored, since the snap path never runs there.
-     * Any bus peer may register a proxy on a screen that has none (the shell
-     * is not the compositor bridge, so the compositor gate cannot admit it),
-     * but a proxy another live peer registered is refused with AccessDenied.
+     * Any peer may register a proxy on a screen that has none (the shell is
+     * not the compositor bridge, so the compositor gate cannot admit it), but
+     * a proxy another live peer registered is refused.
+     *
+     * @param owner The registering peer, empty for a caller with none (the
+     *        daemon itself, a unit test): such a proxy is unowned. The binding
+     *        that serves the call names it and calls dropProxyOwnerGone when
+     *        that peer dies.
      */
-    void registerDropProxy(const QString& screenId, const QString& proxyJson);
-    /** Drop the proxy registered for @p screenId, if any. A bus peer other
-     *  than the one that registered it is refused with AccessDenied. */
-    void unregisterDropProxy(const QString& screenId);
+    DropProxyRegistration registerDropProxy(const QString& screenId, const QString& proxyJson,
+                                            const QString& owner = QString());
+    /** Drop the proxy registered for @p screenId, if any. A named @p owner
+     *  other than the one that registered it is refused (returns false); an
+     *  empty one, and an unowned proxy, are not checked. */
+    bool unregisterDropProxy(const QString& screenId, const QString& owner = QString());
 
     /** Forward mouse wheel delta to zone selector for scrolling during drag.
      *  Compositor-only (#1155): any other bus caller is answered AccessDenied. */
@@ -318,38 +324,33 @@ public Q_SLOTS:
      * dragStarted from the fresh connection must land on a clean slate.
      * Also hides any leftover overlay so stale visuals don't linger.
      *
-     * MUST stay under `public Q_SLOTS` — this is genuinely invoked
-     * cross-process. The effect fires it on shutdown via
+     * Genuinely invoked cross-process. The effect fires it on shutdown via
      * `PlasmaZonesEffect::clearDaemonCompositorState()`
      * (`ClientHelpers::sendOneWay(...WindowDrag, "clearForCompositorReconnect")`,
      * lifecycle.cpp) so the daemon drops stale drag/overlay state the
      * moment the effect tears down, not just on the next re-registration.
-     * It is NOT listed in `org.phosphor_works.Placement.WindowDrag.xml` (the XML is
-     * hand-maintained doc, not adaptor-generating), so the bus surface for
-     * this method comes solely from its `Q_SLOTS` placement: moving it to a
-     * plain `public:` member would silently remove it from the wire and the
-     * effect's fire-and-forget `sendOneWay` call would no-op without any
-     * error. The daemon also calls it in-process from `Daemon::init` via the
-     * `bridgeRegistered` signal, but that only covers re-registration, not
-     * the effect's explicit shutdown-time clear. Contrast `handleWindowClosed`
-     * below, which has no remote caller and is correctly a plain member.
+     * It is NOT listed in `org.phosphor_works.Placement.WindowDrag.xml`, so
+     * DragResolver must keep forwarding it as a slot: dropping it there
+     * would silently remove it from the wire and the effect's fire-and-forget
+     * `sendOneWay` call would no-op without any error. The daemon also calls
+     * it in-process from `Daemon::init` via the `bridgeRegistered` signal, but
+     * that only covers re-registration, not the effect's explicit
+     * shutdown-time clear.
      */
     void clearForCompositorReconnect();
 
 public:
+    /// Retire every proxy @p owner registered: that peer is gone. The binding
+    /// that names owners reports it (DragResolver watches the bus name).
+    void dropProxyOwnerGone(const QString& owner);
+
     /**
      * Called when a window is closed during or after a drag operation.
      * Connected to WindowLifecycleRelay::windowClosed, so the canonical close
      * path also tears down drag state when the closing window was in flight.
      *
-     * Declared as a public plain member function (NOT under Q_SLOTS):
-     * QDBusAbstractAdaptor's runtime introspection exposes every PUBLIC
-     * scriptable slot on the bus regardless of what the hand-maintained
-     * XML lists. Keeping this in `public Q_SLOTS` would re-expose
-     * `WindowDrag.handleWindowClosed` on the wire even after removing
-     * it from `org.phosphor_works.Placement.WindowDrag.xml`. Plain member-function
-     * placement keeps the in-process function-pointer-`connect()`
-     * target reachable while the bus surface truly matches the XML.
+     * Not on the bus: DragResolver does not forward it. The in-process
+     * function-pointer `connect()` reaches it directly.
      *
      * @param windowId Window ID that was closed
      */
@@ -357,12 +358,12 @@ public:
 
     /**
      * True while a drag this adaptor is ACTING ON is in flight. Plain public
-     * member (NOT a Q_SLOT) for the same reason as handleWindowClosed: it has
-     * no remote caller and must not surface on the bus. The daemon's
+     * member, not on the bus, like handleWindowClosed: it has no remote
+     * caller. The daemon's
      * cheatsheet toggle consults it — while the adaptor is acting on a drag
      * the kwin-effect holds a keyboard grab and routes Escape to cancelSnap
      * itself (grabbedKeyboardEvent, kwin-effect/plasmazoneseffect.cpp — the
-     * note in windowdragadaptor/drag.cpp only records why the daemon binds
+     * note in dragresolver/drag.cpp only records why the daemon binds
      * nothing), so a cheatsheet shown then
      * could never receive its own KGlobalAccel dismiss grab.
      *
@@ -714,17 +715,10 @@ private:
     void applySingleZoneTarget(PhosphorZones::Zone* zone, QScreen* screen, const QString& screenId,
                                PhosphorZones::Layout* layout);
     void clearZoneTarget();
-    // Watch a registering peer's bus name so its proxies retire when it dies,
-    // since a proxy outlives any single drag and a crashed shell would
-    // otherwise keep capturing snap drops. At most one watcher per peer: the
-    // shell re-registers on every miniature geometry change, so one per call
-    // would leak a bus match rule per repaint.
-    void watchDropProxyOwner(const QString& service);
+    // The owner of each proxy is stored by the registry itself, in the same
+    // slot as the proxy, so a retirement cannot disagree about which output
+    // it describes.
     DropProxyRegistry m_dropProxies;
-    // One watcher per registering bus name. The owner of each proxy is stored
-    // by the registry itself, in the same slot as the proxy, so the two cannot
-    // disagree about which output they describe.
-    QHash<QString, QDBusServiceWatcher*> m_dropProxyWatchers;
 
     IOverlayService* m_overlayService;
     PhosphorZones::IZoneDetector* m_zoneDetector;

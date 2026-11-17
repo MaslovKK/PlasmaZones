@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 fuddlesworth
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#include "windowdragadaptor.h"
+#include "dragresolver.h"
 #include "dragactivation.h"
 #include <QTimer>
 #include "core/interfaces/interfaces.h"
@@ -14,7 +14,7 @@
  * hold-mode release-grace expiry, and the scroll drop indicator those two
  * push.
  *
- * Split out of windowdragadaptor.cpp. The two timer families belong together:
+ * Split out of dragresolver.cpp. The two timer families belong together:
  * both are lazily created, both are stopped from teardown paths rather than by
  * their own callers, and both self-terminate from inside their own handler
  * rather than trusting a caller to have stopped them.
@@ -27,7 +27,7 @@ namespace PlasmaZones {
 // travels, because the engine integrates against the real elapsed time.
 static constexpr int kDragScrollTickMs = 16;
 
-void WindowDragAdaptor::ensureDragScrollTimerRunning(const QString& windowId)
+void DragResolver::ensureDragScrollTimerRunning(const QString& windowId)
 {
     if (!m_dragScrollTimer) {
         m_dragScrollTimer = new QTimer(this);
@@ -35,7 +35,7 @@ void WindowDragAdaptor::ensureDragScrollTimerRunning(const QString& windowId)
         // figure only sets how finely the strip is sampled, not how fast it
         // travels.
         m_dragScrollTimer->setInterval(kDragScrollTickMs);
-        connect(m_dragScrollTimer, &QTimer::timeout, this, &WindowDragAdaptor::advanceDragScroll);
+        connect(m_dragScrollTimer, &QTimer::timeout, this, &DragResolver::advanceDragScroll);
     }
     if (m_dragScrollWindowId != windowId) {
         // A different drag owns the timer now: restart the elapsed clock so
@@ -50,7 +50,7 @@ void WindowDragAdaptor::ensureDragScrollTimerRunning(const QString& windowId)
     }
 }
 
-void WindowDragAdaptor::stopDragScrollTimer()
+void DragResolver::stopDragScrollTimer()
 {
     if (m_dragScrollTimer) {
         m_dragScrollTimer->stop();
@@ -59,7 +59,7 @@ void WindowDragAdaptor::stopDragScrollTimer()
     m_dragScrollElapsed.invalidate();
 }
 
-void WindowDragAdaptor::armGraceExpiry(qint64 remainingMs)
+void DragResolver::armGraceExpiry(qint64 remainingMs)
 {
     if (!m_graceExpiryTimer) {
         m_graceExpiryTimer = new QTimer(this);
@@ -86,14 +86,14 @@ void WindowDragAdaptor::armGraceExpiry(qint64 remainingMs)
     }
 }
 
-void WindowDragAdaptor::stopGraceExpiry()
+void DragResolver::stopGraceExpiry()
 {
     if (m_graceExpiryTimer) {
         m_graceExpiryTimer->stop();
     }
 }
 
-void WindowDragAdaptor::advanceDragScroll()
+void DragResolver::advanceDragScroll()
 {
     PhosphorEngine::IPlacementEngine* engine = dragInsertPreviewEngine();
     // Self-terminating: several engine-side paths cancel a preview without
@@ -122,7 +122,7 @@ void WindowDragAdaptor::advanceDragScroll()
     pushScrollDropIndicator(screenId, engine->dragInsertIndicatorRect(screenId), /*animate=*/false);
 }
 
-void WindowDragAdaptor::pushScrollDropIndicator(const QString& screenId, const QRect& rect, bool animate)
+void DragResolver::pushScrollDropIndicator(const QString& screenId, const QRect& rect, bool animate)
 {
     if (!m_overlayService || screenId.isEmpty()) {
         return;
@@ -135,7 +135,7 @@ void WindowDragAdaptor::pushScrollDropIndicator(const QString& screenId, const Q
     // one can spell the same output as a connector name or an EDID id, and a
     // raw compare would read a spelling change as a screen change — pushing a
     // hide the very next line un-hides. Every sibling comparison in
-    // windowdragadaptor.cpp already uses it.
+    // dragresolver.cpp already uses it.
     if (!m_dropIndicatorScreenId.isEmpty()
         && !PhosphorScreens::ScreenIdentity::screensMatch(m_dropIndicatorScreenId, screenId)) {
         // The departing screen's hide is never animated: there is no target
@@ -150,7 +150,7 @@ void WindowDragAdaptor::pushScrollDropIndicator(const QString& screenId, const Q
     m_dropIndicatorScreenId = rect.isValid() ? screenId : QString();
 }
 
-void WindowDragAdaptor::clearScrollDropIndicator()
+void DragResolver::clearScrollDropIndicator()
 {
     if (m_dropIndicatorScreenId.isEmpty()) {
         return;

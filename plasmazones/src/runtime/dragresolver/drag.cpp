@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 fuddlesworth
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#include "windowdragadaptor.h"
+#include "dragresolver.h"
 #include "dragactivation.h"
 #include <QGuiApplication>
 #include <QScreen>
@@ -23,13 +23,12 @@
 #include "core/utils/utils.h"
 #include <PhosphorScreens/VirtualScreen.h>
 #include "core/types/constants.h"
-#include "dbus/dbushelpers.h"
 #include <PhosphorEngine/IPlacementEngine.h>
 #include <PhosphorScreens/ScreenIdentity.h>
 
 namespace PlasmaZones {
 
-void WindowDragAdaptor::dragStarted(const QString& windowId, double x, double y, double width, double height)
+void DragResolver::dragStarted(const QString& windowId, double x, double y, double width, double height)
 {
     if (windowId.isEmpty()) {
         qCWarning(lcDbusWindow) << "dragStarted: empty windowId";
@@ -180,7 +179,7 @@ void WindowDragAdaptor::dragStarted(const QString& windowId, double x, double y,
     }
 }
 
-PhosphorZones::Layout* WindowDragAdaptor::prepareHandlerContext(int x, int y, QScreen*& outScreen, QString& outScreenId)
+PhosphorZones::Layout* DragResolver::prepareHandlerContext(int x, int y, QScreen*& outScreen, QString& outScreenId)
 {
     // Resolve effective (virtual-aware) screen ID
     auto resolved = resolveScreenAt(QPointF(x, y));
@@ -315,7 +314,7 @@ PhosphorZones::Layout* WindowDragAdaptor::prepareHandlerContext(int x, int y, QS
     return layout;
 }
 
-void WindowDragAdaptor::hideOverlayAndClearZoneState()
+void DragResolver::hideOverlayAndClearZoneState()
 {
     // Fast path: if overlay isn't shown and zone state is already clear, skip all work.
     //
@@ -350,7 +349,7 @@ void WindowDragAdaptor::hideOverlayAndClearZoneState()
     m_overlayIdled = false;
 }
 
-void WindowDragAdaptor::clearOverlayForTriggerRelease()
+void DragResolver::clearOverlayForTriggerRelease()
 {
     // Mid-drag trigger release. The user let go of the activation modifier,
     // but the drag is still live — the overlay must visually go away, but the
@@ -400,7 +399,7 @@ void WindowDragAdaptor::clearOverlayForTriggerRelease()
     // NOTE: m_overlayShown intentionally left true — the window is still alive.
 }
 
-void WindowDragAdaptor::dragMoved(const QString& windowId, int cursorX, int cursorY, int modifiers, int mouseButtons)
+void DragResolver::dragMoved(const QString& windowId, int cursorX, int cursorY, int modifiers, int mouseButtons)
 {
     if (windowId != m_draggedWindowId) {
         return;
@@ -1066,13 +1065,8 @@ void WindowDragAdaptor::dragMoved(const QString& windowId, int cursorX, int curs
     }
 }
 
-void WindowDragAdaptor::selectorScrollWheel(int angleDeltaY)
+void DragResolver::selectorScrollWheel(int angleDeltaY)
 {
-    // A compositor report like beginDrag and the cursor ticks: only the
-    // registered bridge may send it over the bus (#1155).
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return;
-    }
     // An idle-time call must not scroll a popup that is not there.
     if (m_zoneSelectorShown && m_overlayService) {
         m_overlayService->scrollZoneSelector(angleDeltaY);

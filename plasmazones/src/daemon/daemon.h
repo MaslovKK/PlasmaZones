@@ -107,7 +107,7 @@ public:
      * @brief Frozen-snapshot per-screen mode + disable/lock cascade façade.
      *
      * Borrowed by the three D-Bus adaptors (SnapAdaptor, WindowTracker,
-     * WindowDragAdaptor) and the daemon's own navigation / OSD / overlay paths
+     * DragResolver) and the daemon's own navigation / OSD / overlay paths
      * so the cascade `(modeFor → currentDesktop → currentActivity →
      * isContextDisabled → isContextLocked)` resolves through one call instead of
      * being hand-stitched at each site. The pointer is non-null after `init()`
@@ -1378,7 +1378,10 @@ private:
     WindowTracker* m_windowTracker = nullptr;
     WindowTrackingAdaptor* m_windowTrackingAdaptor = nullptr; // D-Bus binding of m_windowTracker
     PhosphorScreens::DBusScreenAdaptor* m_screenAdaptor = nullptr;
-    WindowDragAdaptor* m_windowDragAdaptor = nullptr; // Window drag handling
+    // Window drag handling. A plain QObject child, not an adaptor: its bus
+    // surface is m_windowDragAdaptor, which is deleted before it.
+    DragResolver* m_dragResolver = nullptr;
+    WindowDragAdaptor* m_windowDragAdaptor = nullptr; // D-Bus binding of m_dragResolver
     // Held so stop() can invoke detach() before the unique_ptr members
     // those adaptors borrow from are destroyed. ~QObject runs AFTER all
     // unique_ptr member destructors, so without an explicit detach the

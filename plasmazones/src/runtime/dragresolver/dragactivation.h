@@ -13,7 +13,7 @@ namespace PlasmaZones {
  * @brief Pure, state-free resolver for the per-tick "should the snap overlay
  * be active right now" decision.
  *
- * Lives outside @c WindowDragAdaptor so the truth table can be exercised
+ * Lives outside @c DragResolver so the truth table can be exercised
  * directly in unit tests without standing up a drag adaptor + its compositor
  * dependencies. The adaptor calls this once per @c dragMoved tick with the
  * current input state and previous tick's latch state, and feeds the
@@ -28,7 +28,7 @@ namespace PlasmaZones {
  * in normal mode now deactivate it (hold mode → trigger held hides overlay;
  * toggle mode → tap to toggle off the implicitly-on overlay). @p triggerHeld
  * MUST be computed from the non-sentinel entries only (see
- * @c WindowDragAdaptor::anyTriggerHeld with @c SentinelMatch::SkipAll) —
+ * @c DragResolver::anyTriggerHeld with @c SentinelMatch::SkipAll) —
  * the sentinel matches every tick by definition, which would otherwise make
  * inversion read as "always held" and the overlay never show.
  */

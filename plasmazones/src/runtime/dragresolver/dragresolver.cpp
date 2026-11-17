@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 fuddlesworth
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#include "windowdragadaptor.h"
+#include "dragresolver.h"
 
 #include <PhosphorCompositor/TriggerParser.h>
 
@@ -27,7 +27,6 @@
 #include "core/types/zoneselectorlayout.h"
 #include "core/platform/logging.h"
 #include "core/utils/utils.h"
-#include "dbus/dbushelpers.h"
 #include <PhosphorScreens/VirtualScreen.h>
 #include "core/types/constants.h"
 #include "config/settings.h"
@@ -46,11 +45,10 @@ namespace PlasmaZones {
 // conversion at the Integration::IAdhocRegistrar boundary (QString accepts it implicitly).
 static constexpr auto kCancelOverlayId = QLatin1String("cancel_overlay_during_drag");
 
-WindowDragAdaptor::WindowDragAdaptor(IOverlayService* overlay, PhosphorZones::IZoneDetector* detector,
-                                     PhosphorZones::LayoutRegistry* layoutManager,
-                                     PhosphorScreens::ScreenManager* screenManager, ISettings* settings,
-                                     WindowTracker* windowTracking, QObject* parent)
-    : QDBusAbstractAdaptor(parent)
+DragResolver::DragResolver(IOverlayService* overlay, PhosphorZones::IZoneDetector* detector,
+                           PhosphorZones::LayoutRegistry* layoutManager, PhosphorScreens::ScreenManager* screenManager,
+                           ISettings* settings, WindowTracker* windowTracking, QObject* parent)
+    : QObject(parent)
     , m_overlayService(overlay)
     , m_zoneDetector(detector)
     , m_layoutManager(layoutManager)
@@ -64,7 +62,7 @@ WindowDragAdaptor::WindowDragAdaptor(IOverlayService* overlay, PhosphorZones::IZ
     // and the scale reads answer zero, which a layout reads as the scale of
     // its last recalculation, since GeometryUtils::screenScale consults its
     // QScreen argument only through a manager) — a misordered Daemon wiring that
-    // constructs WindowDragAdaptor before its dependencies would
+    // constructs DragResolver before its dependencies would
     // otherwise produce a silently-no-op (but D-Bus-callable) object
     // that crashes on the first slot dispatch instead of at
     // construction. qFatal aborts in both debug and release, matching
@@ -72,7 +70,7 @@ WindowDragAdaptor::WindowDragAdaptor(IOverlayService* overlay, PhosphorZones::IZ
     // pattern, so a wiring regression is loud and immediate.
     if (!overlay || !detector || !layoutManager || !settings || !windowTracking) {
         qFatal(
-            "WindowDragAdaptor: null dependency at construction "
+            "DragResolver: null dependency at construction "
             "(overlay=%p, detector=%p, layoutManager=%p, settings=%p, windowTracking=%p) "
             "— daemon-wiring bug",
             static_cast<void*>(overlay), static_cast<void*>(detector), static_cast<void*>(layoutManager),
@@ -83,8 +81,7 @@ WindowDragAdaptor::WindowDragAdaptor(IOverlayService* overlay, PhosphorZones::IZ
     // Connect to layout change signals to invalidate cached zone geometry mid-drag
     // Uses PhosphorZones::LayoutRegistry (concrete) because PhosphorZones::LayoutRegistry is a pure interface without
     // signals
-    connect(m_layoutManager, &PhosphorZones::LayoutRegistry::activeLayoutChanged, this,
-            &WindowDragAdaptor::onLayoutChanged);
+    connect(m_layoutManager, &PhosphorZones::LayoutRegistry::activeLayoutChanged, this, &DragResolver::onLayoutChanged);
     connect(m_layoutManager, &PhosphorZones::LayoutRegistry::layoutAssigned, this,
             [this](const QString&, int, PhosphorZones::Layout*) {
                 onLayoutChanged();
@@ -100,20 +97,20 @@ WindowDragAdaptor::WindowDragAdaptor(IOverlayService* overlay, PhosphorZones::IZ
 
     // When snap assist is dismissed (selection, timeout, etc.), unregister the Escape shortcut
     // that shortcuts_wiring.cpp's snapAssistShown handler bound for the snap assist phase
-    connect(overlay, &IOverlayService::snapAssistDismissed, this, &WindowDragAdaptor::onSnapAssistDismissed);
+    connect(overlay, &IOverlayService::snapAssistDismissed, this, &DragResolver::onSnapAssistDismissed);
 }
 
-QScreen* WindowDragAdaptor::screenAtPoint(int x, int y) const
+QScreen* DragResolver::screenAtPoint(int x, int y) const
 {
     return Utils::findScreenAtPosition(x, y);
 }
 
-QString WindowDragAdaptor::effectiveScreenIdAt(int x, int y) const
+QString DragResolver::effectiveScreenIdAt(int x, int y) const
 {
     return Utils::effectiveScreenIdAt(m_screenManager, QPoint(x, y));
 }
 
-WindowDragAdaptor::ScreenResolution WindowDragAdaptor::resolveScreenAt(const QPointF& globalPos) const
+DragResolver::ScreenResolution DragResolver::resolveScreenAt(const QPointF& globalPos) const
 {
     ScreenResolution result;
     result.screenId = effectiveScreenIdAt(qRound(globalPos.x()), qRound(globalPos.y()));
@@ -139,7 +136,7 @@ WindowDragAdaptor::ScreenResolution WindowDragAdaptor::resolveScreenAt(const QPo
     return result;
 }
 
-bool WindowDragAdaptor::checkModifier(int modifierSetting, Qt::KeyboardModifiers mods) const
+bool DragResolver::checkModifier(int modifierSetting, Qt::KeyboardModifiers mods) const
 {
     // Delegated rather than duplicated. This switch used to be a second copy
     // of TriggerParser::checkModifier kept in step by hand, which is a cost
@@ -149,7 +146,7 @@ bool WindowDragAdaptor::checkModifier(int modifierSetting, Qt::KeyboardModifiers
     return PhosphorCompositor::TriggerParser::checkModifier(modifierSetting, mods);
 }
 
-bool WindowDragAdaptor::anyTriggerHeld(const QVariantList& triggers, Qt::KeyboardModifiers mods, int mouseButtons) const
+bool DragResolver::anyTriggerHeld(const QVariantList& triggers, Qt::KeyboardModifiers mods, int mouseButtons) const
 {
     for (const auto& t : triggers) {
         const auto map = t.toMap();
@@ -165,7 +162,7 @@ bool WindowDragAdaptor::anyTriggerHeld(const QVariantList& triggers, Qt::Keyboar
     return false;
 }
 
-QVector<WindowDragAdaptor::ParsedTrigger> WindowDragAdaptor::parseTriggers(const QVariantList& triggers)
+QVector<DragResolver::ParsedTrigger> DragResolver::parseTriggers(const QVariantList& triggers)
 {
     QVector<ParsedTrigger> result;
     result.reserve(triggers.size());
@@ -179,20 +176,20 @@ QVector<WindowDragAdaptor::ParsedTrigger> WindowDragAdaptor::parseTriggers(const
     return result;
 }
 
-bool WindowDragAdaptor::hasBareAlwaysActive(const QVector<ParsedTrigger>& triggers)
+bool DragResolver::hasBareAlwaysActive(const QVector<ParsedTrigger>& triggers)
 {
     return std::any_of(triggers.cbegin(), triggers.cend(), [](const ParsedTrigger& pt) {
         return pt.modifier == static_cast<int>(DragModifier::AlwaysActive) && pt.mouseButton == 0;
     });
 }
 
-Qt::KeyboardModifiers WindowDragAdaptor::resolveReportedModifiers(int modifiers)
+Qt::KeyboardModifiers DragResolver::resolveReportedModifiers(int modifiers)
 {
     return modifiers != 0 ? static_cast<Qt::KeyboardModifiers>(modifiers) : QGuiApplication::queryKeyboardModifiers();
 }
 
-bool WindowDragAdaptor::anyTriggerHeld(const QVector<ParsedTrigger>& triggers, Qt::KeyboardModifiers mods,
-                                       int mouseButtons, SentinelMatch sentinels) const
+bool DragResolver::anyTriggerHeld(const QVector<ParsedTrigger>& triggers, Qt::KeyboardModifiers mods, int mouseButtons,
+                                  SentinelMatch sentinels) const
 {
     const int alwaysActive = static_cast<int>(DragModifier::AlwaysActive);
     for (const auto& pt : triggers) {
@@ -207,8 +204,8 @@ bool WindowDragAdaptor::anyTriggerHeld(const QVector<ParsedTrigger>& triggers, Q
     return false;
 }
 
-QRectF WindowDragAdaptor::computeCombinedZoneGeometry(const QVector<PhosphorZones::Zone*>& zones, QScreen* screen,
-                                                      PhosphorZones::Layout* layout, const QString& screenId) const
+QRectF DragResolver::computeCombinedZoneGeometry(const QVector<PhosphorZones::Zone*>& zones, QScreen* screen,
+                                                 PhosphorZones::Layout* layout, const QString& screenId) const
 {
     if (zones.isEmpty()) {
         return QRectF();
@@ -222,7 +219,7 @@ QRectF WindowDragAdaptor::computeCombinedZoneGeometry(const QVector<PhosphorZone
     return combined;
 }
 
-QStringList WindowDragAdaptor::zoneIdsToStringList(const QVector<QUuid>& ids)
+QStringList DragResolver::zoneIdsToStringList(const QVector<QUuid>& ids)
 {
     QStringList result;
     result.reserve(ids.size());
@@ -232,7 +229,7 @@ QStringList WindowDragAdaptor::zoneIdsToStringList(const QVector<QUuid>& ids)
     return result;
 }
 
-PhosphorEngine::IPlacementEngine* WindowDragAdaptor::dragInsertEngineFor(const QString& screenId) const
+PhosphorEngine::IPlacementEngine* DragResolver::dragInsertEngineFor(const QString& screenId) const
 {
     if (screenId.isEmpty()) {
         return nullptr;
@@ -246,7 +243,7 @@ PhosphorEngine::IPlacementEngine* WindowDragAdaptor::dragInsertEngineFor(const Q
     return nullptr;
 }
 
-PhosphorEngine::IPlacementEngine* WindowDragAdaptor::dragInsertPreviewEngine() const
+PhosphorEngine::IPlacementEngine* DragResolver::dragInsertPreviewEngine() const
 {
     if (m_autotileEngine && m_autotileEngine->hasDragInsertPreview()) {
         return m_autotileEngine;
@@ -257,7 +254,7 @@ PhosphorEngine::IPlacementEngine* WindowDragAdaptor::dragInsertPreviewEngine() c
     return nullptr;
 }
 
-QSize WindowDragAdaptor::dragInsertAdoptedMinSize(const QString& windowId) const
+QSize DragResolver::dragInsertAdoptedMinSize(const QString& windowId) const
 {
     if (windowId.isEmpty()) {
         return {};
@@ -278,7 +275,7 @@ QSize WindowDragAdaptor::dragInsertAdoptedMinSize(const QString& windowId) const
     return {};
 }
 
-QSize WindowDragAdaptor::dragInsertClientSize() const
+QSize DragResolver::dragInsertClientSize() const
 {
     // The engine readers run on an active drag (dragMoved, and the drop's
     // settle), whose frame dragStarted or beginDrag's bypass arm recorded. The
@@ -316,7 +313,7 @@ QSize WindowDragAdaptor::dragInsertClientSize() const
     return beginFrame.size();
 }
 
-bool WindowDragAdaptor::dragClientSizeBelowMinimum() const
+bool DragResolver::dragClientSizeBelowMinimum() const
 {
     const QSize clientSize = dragInsertClientSize();
     if (!m_settings || !clientSize.isValid()) {
@@ -327,7 +324,7 @@ bool WindowDragAdaptor::dragClientSizeBelowMinimum() const
     return (minW > 0 && clientSize.width() < minW) || (minH > 0 && clientSize.height() < minH);
 }
 
-bool WindowDragAdaptor::effectiveDragReorderModeFor(const QString& screenId) const
+bool DragResolver::effectiveDragReorderModeFor(const QString& screenId) const
 {
     if (screenId.isEmpty()) {
         return false;
@@ -348,7 +345,7 @@ bool WindowDragAdaptor::effectiveDragReorderModeFor(const QString& screenId) con
     return false;
 }
 
-void WindowDragAdaptor::cancelDragInsertIfActive()
+void DragResolver::cancelDragInsertIfActive()
 {
     // Stopped FIRST, matching settleDragInsertPreviewAt: no scroll tick may
     // land between the decision to end the preview and the teardown below.
@@ -381,12 +378,12 @@ void WindowDragAdaptor::cancelDragInsertIfActive()
     clearScrollDropIndicator();
 }
 
-void WindowDragAdaptor::cancelDragInsertPreviews()
+void DragResolver::cancelDragInsertPreviews()
 {
     cancelDragInsertIfActive();
 }
 
-void WindowDragAdaptor::cancelStaleDragInsertPreviews()
+void DragResolver::cancelStaleDragInsertPreviews()
 {
     // Mark FIRST, cancels second — the cancels' snap-back retiles run
     // synchronously inside cancelDragInsertPreview, and a mark still
@@ -410,7 +407,7 @@ void WindowDragAdaptor::cancelStaleDragInsertPreviews()
     clearScrollDropIndicator();
 }
 
-void WindowDragAdaptor::setEngineInteractiveDragWindow(const QString& windowId)
+void DragResolver::setEngineInteractiveDragWindow(const QString& windowId)
 {
     // Both engines, always: each keeps the dragged window modeled as a tile
     // in its own way (the scroll strip's DETACH-ONCE slot, autotile's tiled
@@ -431,7 +428,7 @@ void WindowDragAdaptor::setEngineInteractiveDragWindow(const QString& windowId)
     }
 }
 
-void WindowDragAdaptor::cancelDragInsertPreviewsForScreen(const QString& screenId)
+void DragResolver::cancelDragInsertPreviewsForScreen(const QString& screenId)
 {
     if (screenId.isEmpty()) {
         return;
@@ -485,7 +482,7 @@ void WindowDragAdaptor::cancelDragInsertPreviewsForScreen(const QString& screenI
     }
 }
 
-bool WindowDragAdaptor::settleDragInsertPreviewAt(int cursorX, int cursorY, const QString& windowId)
+bool DragResolver::settleDragInsertPreviewAt(int cursorX, int cursorY, const QString& windowId)
 {
     PhosphorEngine::IPlacementEngine* engine = dragInsertPreviewEngine();
     const QString releaseScreenId = resolveScreenAt(QPointF(cursorX, cursorY)).screenId;
@@ -633,11 +630,8 @@ bool WindowDragAdaptor::settleDragInsertPreviewAt(int cursorX, int cursorY, cons
     return true;
 }
 
-void WindowDragAdaptor::cancelSnap()
+void DragResolver::cancelSnap()
 {
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return;
-    }
     // Layout picker takes precedence: Escape on a visible picker should
     // dismiss the picker, not also cancel any underlying drag. KGlobalAccel
     // routes one action per key, so the picker-open path piggybacks on this
@@ -723,7 +717,7 @@ void WindowDragAdaptor::cancelSnap()
     m_snapAssistPendingActivity.clear();
 }
 
-void WindowDragAdaptor::handleWindowClosed(const QString& windowId)
+void DragResolver::handleWindowClosed(const QString& windowId)
 {
     if (windowId.isEmpty()) {
         return;
@@ -785,7 +779,7 @@ void WindowDragAdaptor::handleWindowClosed(const QString& windowId)
     // is the only work this slot owns.
 }
 
-void WindowDragAdaptor::registerCancelOverlayShortcut()
+void DragResolver::registerCancelOverlayShortcut()
 {
     if (!m_shortcutRegistrar) {
         return;
@@ -796,7 +790,7 @@ void WindowDragAdaptor::registerCancelOverlayShortcut()
                                                });
 }
 
-void WindowDragAdaptor::unregisterCancelOverlayShortcut()
+void DragResolver::unregisterCancelOverlayShortcut()
 {
     if (!m_shortcutRegistrar) {
         return;
@@ -810,7 +804,7 @@ void WindowDragAdaptor::unregisterCancelOverlayShortcut()
     m_shortcutRegistrar->unregisterAdhocShortcut(kCancelOverlayId);
 }
 
-void WindowDragAdaptor::releaseCancelOverlayShortcutIfIdle()
+void DragResolver::releaseCancelOverlayShortcutIfIdle()
 {
     // kCancelOverlayId is the SHARED Escape grab. It is bound on behalf of the
     // layout picker (shortcuts_wiring.cpp, layoutPickerRequested) and the snap-assist
@@ -839,8 +833,8 @@ constexpr auto kLayoutPickerReturnId = QLatin1String("layout_picker_confirm_retu
 constexpr auto kLayoutPickerEnterId = QLatin1String("layout_picker_confirm_enter");
 } // namespace
 
-void WindowDragAdaptor::ensureLayoutPickerNavShortcutsRegistered(std::function<void(int, int)> moveCb,
-                                                                 std::function<void()> confirmCb)
+void DragResolver::ensureLayoutPickerNavShortcutsRegistered(std::function<void(int, int)> moveCb,
+                                                            std::function<void()> confirmCb)
 {
     if (!m_shortcutRegistrar || !moveCb || !confirmCb) {
         return;
@@ -872,7 +866,7 @@ void WindowDragAdaptor::ensureLayoutPickerNavShortcutsRegistered(std::function<v
     });
 }
 
-void WindowDragAdaptor::releaseLayoutPickerNavShortcuts()
+void DragResolver::releaseLayoutPickerNavShortcuts()
 {
     if (!m_shortcutRegistrar) {
         return;
@@ -882,7 +876,7 @@ void WindowDragAdaptor::releaseLayoutPickerNavShortcuts()
                                                    QString(kLayoutPickerReturnId), QString(kLayoutPickerEnterId)});
 }
 
-void WindowDragAdaptor::hideOverlayAndSelector()
+void DragResolver::hideOverlayAndSelector()
 {
     // Drag-end: hide the zone overlay for real, so the per-screen overlay
     // shell can unmap once its hide leg completes.
@@ -922,11 +916,8 @@ void WindowDragAdaptor::hideOverlayAndSelector()
     }
 }
 
-void WindowDragAdaptor::clearForCompositorReconnect()
+void DragResolver::clearForCompositorReconnect()
 {
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return;
-    }
     hideOverlayAndClearZoneState();
     // A live drag-insert preview belongs to the dead session too, and nothing
     // else here reaches it. hideOverlayAndClearZoneState() does NOT cover it:
@@ -1009,7 +1000,7 @@ void WindowDragAdaptor::clearForCompositorReconnect()
     releaseLayoutPickerNavShortcuts();
 }
 
-void WindowDragAdaptor::resetDragState(bool keepEscapeShortcut)
+void DragResolver::resetDragState(bool keepEscapeShortcut)
 {
     // Scoped to exactly one endDrag. Every teardown path routes through here,
     // so the flag cannot survive into the next drag and suppress a real commit.
@@ -1088,22 +1079,21 @@ void WindowDragAdaptor::resetDragState(bool keepEscapeShortcut)
     // computeAndEmitSnapAssist consumes-and-clears the IDs after reading.
 }
 
-bool WindowDragAdaptor::windowFillsOutput(const QString& windowId) const
+bool DragResolver::windowFillsOutput(const QString& windowId) const
 {
     const auto* registry =
         m_windowTracking && m_windowTracking->service() ? m_windowTracking->service()->windowRegistry() : nullptr;
     return registry && registry->fillsOutputState(windowId).value_or(false);
 }
 
-std::optional<QSize> WindowDragAdaptor::preSnapSizeFor(const QString& windowId, const QString& screenId) const
+std::optional<QSize> DragResolver::preSnapSizeFor(const QString& windowId, const QString& screenId) const
 {
     // One rule for every drag-out path, the tracking adaptor's pending and
     // tiling-screen drops included.
     return m_windowTracking ? m_windowTracking->preSnapSizeOn(windowId, screenId) : std::nullopt;
 }
 
-void WindowDragAdaptor::tryStorePreSnapGeometry(const QString& windowId, const QRect& originalGeometry,
-                                                bool fillsOutput)
+void DragResolver::tryStorePreSnapGeometry(const QString& windowId, const QRect& originalGeometry, bool fillsOutput)
 {
     // Store pre-snap geometry for restore on unsnap/float (first-only: overwrite=false).
     // Single float-back store: the unified placement record's shared free geometry.
@@ -1119,7 +1109,7 @@ void WindowDragAdaptor::tryStorePreSnapGeometry(const QString& windowId, const Q
     }
 }
 
-void WindowDragAdaptor::onLayoutChanged()
+void DragResolver::onLayoutChanged()
 {
     // An assignment write can flip a screen's suppression verdict, so the
     // per-drag memo must not outlive it (#724). Cleared unconditionally: the
@@ -1157,7 +1147,7 @@ void WindowDragAdaptor::onLayoutChanged()
     }
 }
 
-void WindowDragAdaptor::onSnapAssistDismissed()
+void DragResolver::onSnapAssistDismissed()
 {
     // Snap assist is already hidden by the time this fires, so the shared
     // Escape grab (kCancelOverlayId) can be dropped — unless the layout picker

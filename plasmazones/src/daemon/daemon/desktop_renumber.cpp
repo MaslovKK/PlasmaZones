@@ -10,7 +10,7 @@
 #include "daemon/overlayservice.h"
 #include "core/platform/logging.h"
 #include "dbus/tilingadaptor/tilingadaptor.h"
-#include "dbus/windowdragadaptor/windowdragadaptor.h"
+#include "runtime/dragresolver/dragresolver.h"
 #include "runtime/windowtracker/windowtracker.h"
 #include <PhosphorEngine/DesktopRemap.h>
 #include <PhosphorEngine/WindowPlacementStore.h>
@@ -154,8 +154,8 @@ void Daemon::onDesktopsRenumbered(const PhosphorEngine::DesktopRemap& remap)
     // state through a create-if-missing lookup, so a cancel arriving after the
     // prune would resurrect a state for the desktop that just went away. Ahead
     // of every engine change, the remaps' prunes included.
-    if (m_windowDragAdaptor) {
-        m_windowDragAdaptor->cancelDragInsertPreviews();
+    if (m_dragResolver) {
+        m_dragResolver->cancelDragInsertPreviews();
     }
     // KWin has already moved a removed desktop's windows to its successor, and
     // the effect may have re-announced them there, but every engine still
@@ -316,8 +316,8 @@ void Daemon::onDesktopCountChanged(int newCount)
     // resolves its state via a create-if-missing lookup, so a cancel arriving
     // AFTER the prune would resurrect a state for the deleted desktop (the two
     // context-switch handlers carry the same ordering).
-    if (m_windowDragAdaptor) {
-        m_windowDragAdaptor->cancelDragInsertPreviews();
+    if (m_dragResolver) {
+        m_dragResolver->cancelDragInsertPreviews();
     }
 
     // Desktop numbers are 1-based. Any state with desktop > newCount is
@@ -377,8 +377,8 @@ void Daemon::onActivitiesChanged()
     // Same cancel-before-prune ordering as desktopCountChanged: an
     // after-the-fact cancel would re-create state for a removed activity
     // through autotile's create-if-missing lookup.
-    if (m_windowDragAdaptor) {
-        m_windowDragAdaptor->cancelDragInsertPreviews();
+    if (m_dragResolver) {
+        m_dragResolver->cancelDragInsertPreviews();
     }
 
     // All three engines carry their own per-(screen,desktop,activity) stores,
