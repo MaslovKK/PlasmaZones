@@ -7,9 +7,19 @@ layer: 'library'
 stack: 'systems'
 tags: ['cmake']
 
-dependsOn:
-  - 'phosphor-libs'
 
 project:
   name: 'Phosphor shell libraries'
   description: 'Theme and popout foundation, the Phosphor.* QML surfaces and the per-domain system service libraries behind the shell.'
+
+tasks:
+  # These libraries build on the phosphor-libs commit
+  # cmake/PlasmaZonesDependencies.cmake pins, which is not a project in this
+  # workspace, so the pin file is the input that marks this tier affected when
+  # the pin moves.
+  build:
+    inputs:
+      - '/cmake/PlasmaZonesDependencies.cmake'
+  test:
+    inputs:
+      - '/cmake/PlasmaZonesDependencies.cmake'

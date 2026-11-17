@@ -493,13 +493,11 @@ def _license_tree_failures(partition_readable) -> list[str]:
     # (path, identifier in the header, must it be reported?)
     cases = [
         # A library tree with a GPL-3 header is the defect the LGPL arm exists to catch.
-        ("phosphor-libs/libs/phosphor-x/src/a.cpp", gpl3, True),
-        ("phosphor-libs/libs/phosphor-x/src/a.cpp", lgpl, False),
+        ("phosphor-shell-libs/libs/phosphor-x/src/a.cpp", gpl3, True),
+        ("phosphor-shell-libs/libs/phosphor-x/src/a.cpp", lgpl, False),
         # A library's own TESTS follow the library, not the app-tier rule.
-        ("phosphor-libs/libs/phosphor-x/tests/test_a.cpp", gpl3, True),
-        ("phosphor-libs/libs/phosphor-x/tests/test_a.cpp", lgpl, False),
-        # The shell-libs tree takes the same arm.
-        ("phosphor-shell-libs/libs/phosphor-y/src/b.cpp", gpl3, True),
+        ("phosphor-shell-libs/libs/phosphor-x/tests/test_a.cpp", gpl3, True),
+        ("phosphor-shell-libs/libs/phosphor-x/tests/test_a.cpp", lgpl, False),
         # The app tier is the mirror: LGPL there is the defect.
         ("plasmazones/src/a.cpp", lgpl, True),
         ("plasmazones/src/a.cpp", gpl3, False),
@@ -507,18 +505,10 @@ def _license_tree_failures(partition_readable) -> list[str]:
         ("scripts/x.py", lgpl, True),
         # The shell-libs EXAMPLES are app-tier, unlike its libs.
         ("phosphor-shell-libs/examples/demo/c.cpp", lgpl, True),
-        # The two data trees are deliberately ungoverned: the licence follows the
+        # The data tree is deliberately ungoverned: the licence follows the
         # incorporated content, so neither identifier may be reported.
         ("plasmazones/data/surface/glass/effect.frag", gpl3, False),
         ("plasmazones/data/surface/glass/effect.frag", lgpl, False),
-        # FORWARD COVER, not a pin. The `phosphor-libs` half of LICENSE_UNGOVERNED cannot
-        # change a verdict today: this path matches neither `(^|/)libs/phosphor-` (the
-        # substring is `phosphor-libs/`, not `libs/phosphor-`) nor any GPL-3 prefix, so
-        # expected_license answers None with or without the alternative, and no tracked
-        # file under phosphor-libs/data/ carries a CODE_SUFFIX at all (the schemas are
-        # .json). Narrowing the pattern to `plasmazones` alone therefore survives. The
-        # plasmazones half above IS load-bearing.
-        ("phosphor-libs/data/schemas/x.frag", gpl3, False),
         # A tests/**/data/ path is NOT one of those trees — the anchor is what keeps it
         # governed, and an unanchored pattern used to swallow it.
         ("plasmazones/tests/unit/data/d.cpp", lgpl, True),

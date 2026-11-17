@@ -32,7 +32,7 @@ Never infer behaviour from the name of a function. Read its body, and the bodies
 
 1. Locate the API in the source (`grep -rn` the class and method). Print one function or a few hundred lines at a time, never a whole file.
 2. Answer the question with the mechanism: the order of operations, which signals are emitted where, what is freed when, what is cached, and what a repeat call sees. For signals, find every emit site, and say whether a connection would run directly or queued.
-3. Find the PlasmaZones uses (`grep -rn` in `plasmazones/kwin-effect/`, `plasmazones/src/`, `phosphor-libs/libs/`). Say whether each use matches the behaviour you read, and where it does not.
+3. Find the PlasmaZones uses (`grep -rn` in `plasmazones/kwin-effect/`, `plasmazones/src/`, `../phosphor-libs/libs/`). Say whether each use matches the behaviour you read, and where it does not.
 4. If the behaviour changed between KWin or Qt versions and the repo supports more than one, say which versions behave which way.
 
 ## Report

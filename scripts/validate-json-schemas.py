@@ -3,8 +3,11 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Validate bundled data JSON against the committed JSON Schemas.
 
-The schemas live in two trees: phosphor-libs/data/schemas/ holds the shared
-contracts and plasmazones/data/schemas/ the app-only ones. Some are the
+The schemas live in two trees: data/schemas/ in phosphor-libs holds the shared
+contracts and plasmazones/data/schemas/ the app-only ones. The phosphor-libs
+tree is the commit cmake/PlasmaZonesDependencies.cmake pins, found by
+scripts/pinned_phosphor_libs.py (PHOSPHOR_LIBS_DIR overrides it with a local
+checkout), and a SCHEMA_MAP key written `phosphor-libs:<path>` is relative to it. Some are the
 single source of truth shared with runtime validation: phosphor-fsloader's
 SchemaValidator (valijson) compiles the same schema file at load time. The
 others are an author-time-only contract, because their document types
@@ -62,21 +65,22 @@ _BOOTSTRAP_ENV = "PZ_JSONSCHEMA_BOOTSTRAPPED"
 JSONSCHEMA_VERSION = "4.26.0"
 JSONSCHEMA_REQUIREMENT = f"jsonschema[format]=={JSONSCHEMA_VERSION}"
 
-# Maps a schema (relative to the source root) to the glob(s) of data
-# files it governs. Add an entry here when a new document type gets a
+# Maps a schema (relative to the source root, or to the pinned phosphor-libs
+# tree when it starts with LIBS_PREFIX) to the glob(s) of data files it governs,
+# which are always relative to the source root. Add an entry here when a new document type gets a
 # schema. Some schemas are also embedded via RCC and compiled by the
 # runtime SchemaValidator; the others are validated only here, where the
 # runtime checks those document types in C++ directly.
 SCHEMA_MAP: dict[str, list[str]] = {
-    "phosphor-libs/data/schemas/layout.schema.json": ["plasmazones/data/layouts/*.json"],
+    "phosphor-libs:data/schemas/layout.schema.json": ["plasmazones/data/layouts/*.json"],
     "plasmazones/data/schemas/scrolling-template.schema.json": ["plasmazones/data/scrolling-templates/*.json"],
-    "phosphor-libs/data/schemas/curve.schema.json": ["plasmazones/data/curves/*.json"],
-    "phosphor-libs/data/schemas/animation-metadata.schema.json": ["plasmazones/data/animations/*/metadata.json"],
-    "phosphor-libs/data/schemas/shader-metadata.schema.json": ["plasmazones/data/overlays/*/metadata.json"],
-    "phosphor-libs/data/schemas/surface-metadata.schema.json": ["plasmazones/data/surface/*/metadata.json"],
-    "phosphor-libs/data/schemas/pointer-metadata.schema.json": ["plasmazones/data/pointer/*/metadata.json"],
+    "phosphor-libs:data/schemas/curve.schema.json": ["plasmazones/data/curves/*.json"],
+    "phosphor-libs:data/schemas/animation-metadata.schema.json": ["plasmazones/data/animations/*/metadata.json"],
+    "phosphor-libs:data/schemas/shader-metadata.schema.json": ["plasmazones/data/overlays/*/metadata.json"],
+    "phosphor-libs:data/schemas/surface-metadata.schema.json": ["plasmazones/data/surface/*/metadata.json"],
+    "phosphor-libs:data/schemas/pointer-metadata.schema.json": ["plasmazones/data/pointer/*/metadata.json"],
     "plasmazones/data/schemas/whatsnew.schema.json": ["plasmazones/data/whatsnew.json"],
-    "phosphor-libs/data/schemas/host-descriptor.schema.json": ["plasmazones/data/placement-hosts/*.json"],
+    "phosphor-libs:data/schemas/host-descriptor.schema.json": ["plasmazones/data/placement-hosts/*.json"],
 }
 
 # The directories the mapped schemas live in, derived from SCHEMA_MAP so the two
@@ -84,6 +88,24 @@ SCHEMA_MAP: dict[str, list[str]] = {
 # above: nothing would be validated against it, and it would never be checked
 # for being a well-formed draft-07 schema.
 SCHEMA_DIRS: list[str] = sorted({posixpath.dirname(schema_rel) for schema_rel in SCHEMA_MAP})
+
+# The SCHEMA_MAP key prefix for a schema in the pinned phosphor-libs tree.
+LIBS_PREFIX = "phosphor-libs:"
+
+
+def schema_location(root: Path, libs: Path, rel: str) -> Path:
+    """The file a SCHEMA_MAP key or SCHEMA_DIRS entry names."""
+    if rel.startswith(LIBS_PREFIX):
+        return libs / rel[len(LIBS_PREFIX):]
+    return root / rel
+
+
+def schema_key(root: Path, libs: Path, path: Path) -> str:
+    """The SCHEMA_MAP key spelling of a schema file, inverse of schema_location."""
+    try:
+        return LIBS_PREFIX + path.relative_to(libs).as_posix()
+    except ValueError:
+        return path.relative_to(root).as_posix()
 
 # The one dialect this gate speaks. Draft7Validator is used unconditionally
 # below, so every mapped schema has to declare the matching $schema or it
@@ -430,6 +452,12 @@ def main() -> int:
     format_checker = FormatChecker()
 
     root: Path = args.root.resolve()
+    try:
+        from pinned_phosphor_libs import PinnedTreeError, tree
+        libs: Path = tree(root)
+    except PinnedTreeError as exc:
+        fail(f"cannot find the phosphor-libs tree its shared schemas live in: {exc}")
+        return 2
 
     # Resolve the explicit file list (if any) to absolute paths for
     # membership testing against each schema's matched set.
@@ -444,8 +472,8 @@ def main() -> int:
     checked = 0
 
     for schema_dir in SCHEMA_DIRS:
-        for unmapped in sorted((root / schema_dir).glob("*.schema.json")):
-            unmapped_rel = unmapped.relative_to(root).as_posix()
+        for unmapped in sorted(schema_location(root, libs, schema_dir).glob("*.schema.json")):
+            unmapped_rel = schema_key(root, libs, unmapped)
             if unmapped_rel not in SCHEMA_MAP:
                 fail(f"{unmapped_rel}: schema has no SCHEMA_MAP entry, so no data file is validated against it")
                 failures += 1
@@ -462,7 +490,7 @@ def main() -> int:
         if requested is not None:
             seen.update(resolved for resolved in (t.resolve() for t in targets) if resolved in requested)
 
-        schema_path = root / schema_rel
+        schema_path = schema_location(root, libs, schema_rel)
         if not schema_path.is_file():
             fail(f"schema not found: {schema_rel}")
             failures += 1

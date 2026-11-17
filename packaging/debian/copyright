@@ -29,40 +29,23 @@ License: GPL-3.0-or-later
 
 # All phosphor-* extracted libraries ship as LGPL so third-party
 # plugins / shells can link them without inheriting GPL — see CLAUDE.md
-# for the per-tree license rules.
-Files: phosphor-libs/libs/phosphor-*/*
-       phosphor-shell-libs/libs/phosphor-*/*
+# for the per-tree license rules. The rest of them come from the pinned
+# phosphor-libs archive, declared with the other archives below.
+Files: phosphor-shell-libs/libs/phosphor-*/*
 Copyright: 2026 fuddlesworth <fuddlesworth@users.noreply.github.com>
 License: LGPL-2.1-or-later
 
-# The LGPL tiers' own scaffolding, which the libs/phosphor-* globs above do not
+# The LGPL tier's own scaffolding, which the libs/phosphor-* glob above does not
 # reach. These carry LGPL-2.1-or-later in their own SPDX headers, so the
 # Files: * catch-all was asserting GPL-3 over them in the packaging metadata
 # while the sources said otherwise.
 #
-# phosphor-libs/data/schemas/*.json matters most here: it has no header (JSON has no
-# comment syntax), and some of it is RCC-embedded into LGPL shared libraries
-# (layout.schema.json into PhosphorZones, shader-metadata.schema.json into
-# PhosphorShaders, curve.schema.json and animation-metadata.schema.json into
-# PhosphorAnimation). Declaring those GPL-3 asserts GPL over content compiled
-# into an LGPL library. That is the hazard CLAUDE.md names when it says never
-# to "fix" a lib header to GPL-3, expressed in packaging metadata rather than
-# in a header. The rest of the directory is the libraries' author-time
-# contract, validated by scripts/validate-json-schemas.py and compiled into no
-# library, and is LGPL like the tier it belongs to.
 # cmake/ is MIXED, so its LGPL members are named one by one rather than
 # globbed: format-qml.cmake, PhosphorCPack.cmake, PhosphorTranslations.cmake,
 # post-install-sycoca.sh and uninstall.cmake.in are GPL-3 and must keep
 # resolving to the catch-all.
-Files: cmake/PhosphorDependencies.cmake
-       cmake/PhosphorLibTesting.cmake
-       cmake/PhosphorTestIsolation.cmake
-       cmake/PhosphorTestPch.cmake
+Files: cmake/PlasmaZonesDependencies.cmake
        cmake/PhosphorTier.cmake
-       cmake/test-session-bus.conf
-       phosphor-libs/CMakeLists.txt
-       phosphor-libs/moon.yml
-       phosphor-libs/data/*
        phosphor-shell-libs/CMakeLists.txt
        phosphor-shell-libs/moon.yml
 Copyright: 2026 fuddlesworth <fuddlesworth@users.noreply.github.com>
@@ -194,7 +177,7 @@ Copyright: 2026 nikitamashchenko (https://www.shadertoy.com/)
 License: GPL-3.0-or-later
 
 # Third-party sources built into the package: the Luau and valijson release
-# archives pinned (version, URL, SHA-256) in cmake/PhosphorDependencies.cmake,
+# archives pinned (version, URL, SHA-256) by the pinned phosphor-libs commit,
 # unpacked and compiled at build time. Not ours, and not GPL. The repository
 # does not track them. The Debian source package carries them at
 # packaging/deps inside its orig tarball, which the release workflow's
@@ -209,6 +192,13 @@ Files: packaging/deps/valijson-*.tar.gz
 Copyright: 2016 Tristan Penman
            2016 Akamai Technologies, Inc.
 License: BSD-2-Clause
+
+# The phosphor-libs commit PlasmaZones builds against, pinned in
+# cmake/PlasmaZonesDependencies.cmake. Its libraries are built from it and
+# installed with the package, and its schemas are compiled into them.
+Files: packaging/deps/phosphor-libs-*.tar.gz
+Copyright: 2026 fuddlesworth <fuddlesworth@users.noreply.github.com>
+License: LGPL-2.1-or-later
 
 # The suite's branding release, pinned beside them, which supplies the icons
 # the package installs. Artwork, not GPL.

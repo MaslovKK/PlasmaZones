@@ -2,7 +2,9 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # moon workspace: one project per product tier, plus the repo root for the
-# checks that span tiers. CMake stays the build system inside each tier;
+# checks that span tiers. The libraries every tier builds on are not a project
+# here: they are the phosphor-libs repository, built from the commit
+# cmake/PlasmaZonesDependencies.cmake pins. CMake stays the build system inside each tier;
 # moon orders the tiers and runs only the affected ones. It does NOT cache
 # the build and test results: those tasks set `cache: false` because the
 # four tiers share one build directory (see .moon/tasks/cmake.yml), and
@@ -12,7 +14,6 @@ $schema: 'https://moonrepo.dev/schemas/workspace.json'
 
 projects:
   repo: '.'
-  phosphor-libs: 'phosphor-libs'
   phosphor-shell-libs: 'phosphor-shell-libs'
   phosphor-shell: 'phosphor-shell'
   plasmazones: 'plasmazones'
@@ -27,13 +28,11 @@ constraints:
   # product order this workspace enforces: phosphor-shell and plasmazones are
   # both applications and neither may list the other in dependsOn. The shell
   # used to link three plasmazones targets for its surface decoration; those
-  # now live in phosphor-libs/libs/phosphor-surface-quick.
+  # now live in phosphor-libs' phosphor-surface-quick.
   #
   # What this does NOT police: runtime data reads that no dependsOn records.
-  # Three tier-1 tests read tier-4 data (phosphor-animation and
-  # phosphor-pointer read plasmazones/data/{animations,pointer}) and the
-  # shell tests read plasmazones/data/surface. Each project's moon.yml
-  # carries workspace-relative test inputs for them instead, because a
+  # The shell tests read plasmazones/data/surface. phosphor-shell/moon.yml
+  # carries a workspace-relative test input for it instead, because a
   # dependsOn in that direction would cycle. Those are input edges for
   # affected-ness, not layer edges, so enforcement stays meaningful for the
   # link graph while they remain.

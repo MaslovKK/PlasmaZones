@@ -11,7 +11,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
 # PZ Shader Pack
 
 Read the family's contract before any GLSL: the shader-theme reference, then the shared header itself. Never write a
-uniform name from memory. Schemas: `phosphor-libs/data/schemas/<family>-metadata.schema.json` (`shader-` is overlays).
+uniform name from memory. Schemas: `../phosphor-libs/data/schemas/<family>-metadata.schema.json` (`shader-` is overlays).
 
 | family | dir (`plasmazones/data/`) | entry | runs on | read first |
 |---|---|---|---|---|
@@ -53,10 +53,10 @@ uniform name from memory. Schemas: `phosphor-libs/data/schemas/<family>-metadata
 ## Changing the contract
 
 Every RHI block opens with the 672-byte `BaseUniforms`
-(`phosphor-libs/libs/phosphor-shaders/include/PhosphorShaders/BaseUniforms.h`). Each family's tail has a C++ mirror
+(`../phosphor-libs/libs/phosphor-shaders/include/PhosphorShaders/BaseUniforms.h`). Each family's tail has a C++ mirror
 pinned by `static_assert` on size and offsets:
 
-| family | GLSL (`plasmazones/data/`) | C++ mirror (`phosphor-libs/libs/`) |
+| family | GLSL (`plasmazones/data/`) | C++ mirror (`../phosphor-libs/libs/`) |
 |---|---|---|
 | overlay | `overlays/shared/common.glsl` | `phosphor-rendering/include/PhosphorRendering/ZoneShaderCommon.h`, `ZoneUniformExtension.h`; scaffold `plasmazones/src/daemon/rendering/zoneentryscaffold.cpp` |
 | animation | `animations/shared/animation_uniforms.glsl` | `phosphor-animation/include/PhosphorAnimation/AnimationUniformExtension.h`, `AnimationShaderContract.h`, `src/contract_pins.cpp` |

@@ -43,7 +43,7 @@ sed -i "s/^pkgver=.*/pkgver=$VERSION/" "$PKGBUILD"
 # than on a bare hash-shaped line, and it rewrites only the FIRST entry, which
 # is the release tarball's (source[0]). The source PKGBUILDs list the pinned
 # dependency archives after it, each with its literal hash that
-# check-conventions.py holds to cmake/PhosphorDependencies.cmake, so those
+# check-conventions.py holds to cmake/PlasmaZonesDependencies.cmake, so those
 # entries pass through untouched. Same rewrite the release workflow's AUR
 # publish steps use, so keep the two in step. The previous sed pair dropped the
 # array's closing paren on the single-line form, leaving a PKGBUILD that makepkg

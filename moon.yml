@@ -84,7 +84,6 @@ tasks:
       - 'docs/**/*'
       - 'scripts/**/*'
       - 'packaging/**/*'
-      - 'phosphor-libs/**/*'
       - 'phosphor-shell-libs/**/*'
       - 'phosphor-shell/**/*'
       - 'plasmazones/**/*'
@@ -93,7 +92,8 @@ tasks:
     command: 'python3 scripts/validate-json-schemas.py'
     inputs:
       - 'scripts/validate-json-schemas.py'
-      - 'phosphor-libs/data/schemas/**/*'
+      - 'scripts/pinned_phosphor_libs.py'
+      - 'cmake/PlasmaZonesDependencies.cmake'
       - 'plasmazones/data/**/*.json'
 
   # ECM's KDECMakeSettings registers appstreamtest at the BUILD ROOT, not
@@ -146,8 +146,7 @@ tasks:
       - '--install'
       - 'build'
     # Two edges, because the tier graph has two leaves: phosphor-shell
-    # (dependsOn phosphor-libs and phosphor-shell-libs) and plasmazones
-    # (dependsOn phosphor-libs). Layer enforcement forbids the shell depending
+    # (dependsOn phosphor-shell-libs) and plasmazones. Layer enforcement forbids the shell depending
     # on plasmazones, so neither leaf reaches the other through `^:build`, and
     # depending on one alone would leave the other tier unbuilt. The debug
     # preset sets BUILD_PHOSPHOR_SHELL=ON, so the configure generates install

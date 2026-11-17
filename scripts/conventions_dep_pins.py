@@ -1,18 +1,22 @@
 # SPDX-FileCopyrightText: 2026 fuddlesworth
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""The dep-pins rule: every packaging recipe carries the third-party pins exactly.
+"""The dep-pins rule: every packaging recipe carries the archive pins exactly.
 
-cmake/PhosphorDependencies.cmake is the only place a third-party archive is pinned
-(version, URL, file name, SHA-256). An offline packaging build cannot download, so
-each recipe in PIN_RECIPES lists the archives as extra sources of its own, and in
-doing so repeats the URL and the hash. Nothing else ties those copies to the pin, so
+Two files pin the archives a PlasmaZones build needs (version, URL, file name,
+SHA-256). cmake/PlasmaZonesDependencies.cmake pins PlasmaZones' own: the
+phosphor-libs commit it builds against and the branding release. That phosphor-libs
+commit's cmake/PhosphorDependencies.cmake pins the library tree's third-party
+sources (Luau, valijson), and this rule reads it from the pinned tree itself
+(scripts/pinned_phosphor_libs.py), so a phosphor-libs bump that moves one of those
+pins is checked too. An offline packaging build cannot download, so each recipe in
+PIN_RECIPES lists every one of these archives as an extra source of its own, and in
+doing so repeats the URL and the hash. Nothing else ties those copies to the pins, so
 a bump that missed one recipe would only surface when that distro's build failed its
 hash check, or worse, built from whatever the recipe still named. This rule fails the
 gate instead, naming the recipe and the dependency.
 
 The jobs that stage the archives with the fetch script (the Debian and OBS paths in
-release.yml, CI's luau-analyze) read the pin file itself and carry no copy, so they
-are not listed.
+release.yml) read the pin files themselves and carry no copy, so they are not listed.
 
 Stdlib only, and it returns plain tuples rather than the gate's Violation so the two
 files cannot form a cycle, the same shape as conventions_shared_text.py.
@@ -22,8 +26,13 @@ from __future__ import annotations
 import base64
 import re
 from pathlib import Path
+from typing import Callable
 
-PIN_FILE = "cmake/PhosphorDependencies.cmake"
+PIN_FILE = "cmake/PlasmaZonesDependencies.cmake"
+# The library tree's own pin file, relative to that tree.
+LIBS_PIN_FILE = "cmake/PhosphorDependencies.cmake"
+# The PlasmaZones pin naming the phosphor-libs commit, whose own pins are checked too.
+LIBS_DEP = "phosphor-libs"
 
 # Every recipe that fetches the archives itself and so must repeat each pin.
 PIN_RECIPES = (
@@ -33,43 +42,54 @@ PIN_RECIPES = (
     "packaging/nix/package.nix",
 )
 
-# One `set(NAME "value")` per line, the exact shape the pin file uses. Held strict on
+# The variable prefix each pin file uses: `set(<PREFIX>S a b)` lists the pins and
+# `set(<PREFIX>_<name>_<FIELD> "value")` holds each field, one per line. Held strict on
 # purpose: CI's luau-analyze job reads the Luau pin with a sed of the same shape, so a
 # reformatted pin that this regex stops matching would also break that job, and this
 # rule says so first.
-_SET = re.compile(r'^set\((PHOSPHOR_DEP_([A-Za-z0-9_]+?)_(VERSION|URL|FILE|SHA256)) "([^"]*)"\)\s*$', re.M)
-_DEPS = re.compile(r"^set\(PHOSPHOR_DEPS ([^)]*)\)\s*$", re.M)
+APP_PREFIX = "PLASMAZONES_DEP"
+LIBS_PREFIX = "PHOSPHOR_DEP"
 _HEX64 = re.compile(r"^[0-9a-f]{64}$")
 
 
-def read_pins(text: str) -> tuple[dict[str, dict[str, str]], list[str]]:
-    """Parse the pin file. Returns ({dep: {field: value}}, [problem])."""
+def read_pins(text: str, prefix: str = APP_PREFIX) -> tuple[dict[str, dict[str, str]], list[str]]:
+    """Parse a pin file. Returns ({dep: {field: value}}, [problem])."""
     problems: list[str] = []
-    m = _DEPS.search(text)
+    m = re.search(rf"^set\({prefix}S ([^)]*)\)\s*$", text, re.M)
     if not m:
-        return {}, ["no `set(PHOSPHOR_DEPS ...)` line, so the rule cannot tell which archives are pinned"]
+        return {}, [f"no `set({prefix}S ...)` line, so the rule cannot tell which archives are pinned"]
     names = m.group(1).split()
     if not names:
-        problems.append("PHOSPHOR_DEPS is empty, so this rule checks nothing")
+        problems.append(f"{prefix}S is empty, so this rule checks nothing")
     fields: dict[str, dict[str, str]] = {n: {} for n in names}
-    for _, dep, field, value in _SET.findall(text):
+    for dep, field, value in re.findall(
+            rf'^set\({prefix}_([A-Za-z0-9_-]+?)_(VERSION|URL|FILE|SHA256) "([^"]*)"\)\s*$', text, re.M):
         if dep in fields:
             fields[dep][field] = value
     for dep, got in fields.items():
         missing = [f for f in ("VERSION", "URL", "FILE", "SHA256") if f not in got]
         if missing:
-            problems.append(f"{dep} is in PHOSPHOR_DEPS but has no {', '.join(missing)} pin "
-                            f"in the one-line `set(PHOSPHOR_DEP_{dep}_<FIELD> \"...\")` shape")
+            problems.append(f"{dep} is in {prefix}S but has no {', '.join(missing)} pin "
+                            f"in the one-line `set({prefix}_{dep}_<FIELD> \"...\")` shape")
         elif not _HEX64.match(got["SHA256"]):
             problems.append(f"{dep}'s SHA256 pin is not 64 lowercase hex digits")
     return fields, problems
 
 
-def dep_pin_problems(repo: Path) -> list[tuple[str, str]]:
-    """Return (repo-relative path, message) for each recipe that drifted from a pin.
+def _pinned_tree(repo: Path) -> Path:
+    from pinned_phosphor_libs import tree
+
+    return tree(repo)
+
+
+def dep_pin_problems(repo: Path,
+                     libs_tree: Callable[[Path], Path] = _pinned_tree) -> list[tuple[str, str]]:
+    """Return (path, message) for each recipe that drifted from a pin.
 
     `repo` is passed in and every path is anchored on it, never on the process CWD,
-    so the rule cannot pass in silence when run from another directory.
+    so the rule cannot pass in silence when run from another directory. `libs_tree`
+    finds the pinned phosphor-libs tree, and is only called when the pin file pins
+    one.
     """
     out: list[tuple[str, str]] = []
     pin_path = repo / PIN_FILE
@@ -77,8 +97,28 @@ def dep_pin_problems(repo: Path) -> list[tuple[str, str]]:
         text = pin_path.read_text(encoding="utf-8")
     except OSError as e:
         return [(PIN_FILE, f"cannot read the pin file ({e.strerror}), so no recipe was checked")]
-    pins, problems = read_pins(text)
+    pins, problems = read_pins(text, APP_PREFIX)
     out.extend((PIN_FILE, p) for p in problems)
+    # Where each pin was read, for the messages: a stale Luau hash is fixed by
+    # copying it from the library tree's file, not from this repository's.
+    source = {dep: PIN_FILE for dep in pins}
+    if LIBS_DEP in pins:
+        try:
+            root = libs_tree(repo)
+            libs_text = (root / LIBS_PIN_FILE).read_text(encoding="utf-8")
+        except (OSError, RuntimeError) as e:
+            out.append((PIN_FILE, f"cannot read {LIBS_PIN_FILE} of the pinned {LIBS_DEP} tree ({e}), "
+                                  f"so its pins were not checked"))
+        else:
+            libs_pins, libs_problems = read_pins(libs_text, LIBS_PREFIX)
+            label = f"{LIBS_DEP} {pins[LIBS_DEP].get('VERSION', '?')}: {LIBS_PIN_FILE}"
+            out.extend((label, p) for p in libs_problems)
+            for dep, got in libs_pins.items():
+                if dep in pins:
+                    out.append((label, f"pins {dep}, which {PIN_FILE} pins too; one of the two has to go"))
+                    continue
+                pins[dep] = got
+                source[dep] = label
     # An empty recipe list is the quiet way to switch the rule off while it stays in
     # --list-rules, so it has to announce itself.
     if not PIN_RECIPES:
@@ -96,10 +136,10 @@ def dep_pin_problems(repo: Path) -> list[tuple[str, str]]:
                 continue
             if got["URL"] not in body:
                 out.append((recipe, f"does not fetch {dep} from its pinned URL {got['URL']} "
-                                    f"({PIN_FILE})"))
+                                    f"({source[dep]})"))
             if got["SHA256"] not in body:
                 out.append((recipe, f"does not carry {dep}'s pinned SHA-256 {got['SHA256']} "
-                                    f"({PIN_FILE})"))
+                                    f"({source[dep]})"))
             # Nix verifies the SRI form, not the hex one the rule finds in its comment,
             # so a .nix recipe has to carry both and they must be the same digest.
             if recipe.endswith(".nix") and _HEX64.match(got["SHA256"]):

@@ -55,7 +55,7 @@ file(GLOB_RECURSE PLASMAZONES_I18N_SOURCES CONFIGURE_DEPENDS
     # QT_TRANSLATE_NOOP. It cannot use PhosphorI18n::tr() (GPL tree), so it
     # uses Qt's own markers under its class contexts, which lupdate reads
     # natively, the same way the qsTr glob below serves its QML.
-    "${CMAKE_SOURCE_DIR}/phosphor-libs/libs/phosphor-control/src/*.cpp"
+    "${phosphor-libs_SOURCE_DIR}/libs/phosphor-control/src/*.cpp"
 )
 file(GLOB_RECURSE PLASMAZONES_I18N_QML CONFIGURE_DEPENDS
     "${CMAKE_SOURCE_DIR}/plasmazones/src/*.qml"
@@ -65,7 +65,7 @@ file(GLOB_RECURSE PLASMAZONES_I18N_QML CONFIGURE_DEPENDS
     # so that the day someone adds a real i18n() call to the settings chrome it
     # is picked up instead of silently going missing, which is the failure this
     # whole file exists to prevent.
-    "${CMAKE_SOURCE_DIR}/phosphor-libs/libs/phosphor-control/qml/*.qml"
+    "${phosphor-libs_SOURCE_DIR}/libs/phosphor-control/qml/*.qml"
 )
 
 # phosphor-control's QML is ALSO handed to lupdate raw, below. Its chrome
@@ -88,7 +88,7 @@ file(GLOB_RECURSE PLASMAZONES_I18N_QML CONFIGURE_DEPENDS
 # installs a plain QTranslator itself (plasmazones/kcm/about/kcmabout.cpp), which needs no
 # link against plasmazones_core.
 file(GLOB_RECURSE PLASMAZONES_I18N_QML_QSTR CONFIGURE_DEPENDS
-    "${CMAKE_SOURCE_DIR}/phosphor-libs/libs/phosphor-control/qml/*.qml"
+    "${phosphor-libs_SOURCE_DIR}/libs/phosphor-control/qml/*.qml"
     "${CMAKE_SOURCE_DIR}/plasmazones/kcm/*.qml"
 )
 
@@ -155,7 +155,7 @@ if(Qt6LinguistTools_FOUND AND Python3_Interpreter_FOUND)
         COMMAND Qt6::lupdate
             -no-obsolete
             -I ${CMAKE_SOURCE_DIR}/plasmazones/src
-            -I ${CMAKE_SOURCE_DIR}/phosphor-libs/libs/phosphor-control/include
+            -I ${phosphor-libs_SOURCE_DIR}/libs/phosphor-control/include
             ${PLASMAZONES_I18N_SOURCES}
             ${PLASMAZONES_I18N_QML_QSTR}
             "@${_qml_stub_dir}/stubs.txt"

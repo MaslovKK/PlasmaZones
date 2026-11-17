@@ -119,7 +119,7 @@ class EditRules(unittest.TestCase):
         for rel in ('build/CMakeCache.txt', 'build-audit/x.cpp', '.cache/cpm/luau/x.h', 'Testing/x.log',
                     '.moon/cache/x', '.claude/worktrees/pr1165/build/x.cpp'):
             self.assertIsNotNone(guard.check_edit(str(REPO / rel)), rel)
-        for rel in ('plasmazones/src/daemon/daemon.cpp', '.claude/hooks/guard.py', 'cmake/PhosphorDependencies.cmake',
+        for rel in ('plasmazones/src/daemon/daemon.cpp', '.claude/hooks/guard.py', 'cmake/PlasmaZonesDependencies.cmake',
                     '.claude/worktrees/pr1165/plasmazones/src/x.cpp'):
             self.assertIsNone(guard.check_edit(str(REPO / rel)), rel)
         self.assertIsNone(guard.check_edit('/tmp/build/x'))

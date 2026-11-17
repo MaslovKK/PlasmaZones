@@ -397,7 +397,7 @@ scratchpad/
 # ever go stale.
 packaging/obs/plasmazones.dsc
 
-# The pinned dependency archives (cmake/PhosphorDependencies.cmake) a Debian
+# The pinned dependency archives (cmake/PlasmaZonesDependencies.cmake) a Debian
 # build reads through debian/rules. The release workflow fetches them there, or
 # puts them in the OBS orig tarball, from the pins, so they are never tracked.
 packaging/deps/

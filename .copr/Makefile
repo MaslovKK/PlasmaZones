@@ -54,14 +54,14 @@ srpm: $(SPEC)
 		--exclude=.git --exclude='build*' --exclude=.moon/cache --exclude=.claude \
 		--exclude=./.cache --exclude=./packaging/deps .
 
-	# The spec's Source1 and Source2, the dependency archives pinned in
-	# cmake/PhosphorDependencies.cmake. rpmbuild -bs packs every Source into
+	# The spec's Source1 to Source4, the dependency archives pinned in
+	# cmake/PlasmaZonesDependencies.cmake and the pinned phosphor-libs tree. rpmbuild -bs packs every Source into
 	# the SRPM and fails on a missing one, and the binary build then reads them
 	# offline from its source directory. The script mode downloads each one
 	# and checks its SHA-256. The SRPM chroot is minimal, so install cmake when
 	# absent, the same way git is above.
 	command -v cmake >/dev/null || dnf -y install cmake
-	cmake -DPHOSPHOR_DEPS_FETCH=/tmp/$(NAME)-srpm -P cmake/PhosphorDependencies.cmake
+	cmake -DPHOSPHOR_DEPS_FETCH=/tmp/$(NAME)-srpm -P cmake/PlasmaZonesDependencies.cmake
 
 	# Build SRPM
 	mkdir -p /tmp/$(NAME)-rpmbuild

@@ -81,8 +81,8 @@ CODE_SUFFIXES = (CPP_SUFFIXES | QML_SUFFIXES | SHADER_SUFFIXES
 _SELECTED_RULES: set[str] = set()
 
 # Generated trees that are not ours to police. Nothing vendored is committed:
-# the third-party sources are pinned archives (cmake/PhosphorDependencies.cmake)
-# fetched into .cache/, which git ignores.
+# phosphor-libs and the third-party sources are pinned archives
+# (cmake/PlasmaZonesDependencies.cmake) fetched into .cache/, which git ignores.
 EXCLUDED_PREFIXES = ("build/", "build-off/", "build-nounity/",
                      "build-release/", "build-relwithdebinfo/")
 
@@ -294,10 +294,10 @@ GPL3 = "GPL-3.0-or-later"
 # content, so it cannot be derived from the path. data/overlays and data/surface
 # are likewise un-normalised. These trees are checked for header *presence*
 # by the spdx rule and are exempt from the per-tree license rule.
-# Anchored to the two real data trees. An unanchored "(^|/)data/" also
+# Anchored to the real data tree. An unanchored "(^|/)data/" also
 # swallowed plasmazones/tests/**/data/, quietly un-governing real GPL-3
 # sources that happened to sit in a directory called data.
-LICENSE_UNGOVERNED = re.compile(r"^(plasmazones|phosphor-libs)/data/")
+LICENSE_UNGOVERNED = re.compile(r"^plasmazones/data/")
 
 
 def expected_license(path: str) -> str | None:
@@ -356,8 +356,6 @@ I18N_BRIDGE_ALLOW = {
     "plasmazones/src/phosphor_i18n.h",
     "plasmazones/src/phosphor_qml_i18n.h",
     "plasmazones/src/phosphor_qml_i18n.cpp",
-    "phosphor-libs/libs/phosphor-control/include/PhosphorControl/LocalizedContext.h",
-    "phosphor-libs/libs/phosphor-control/src/localizedcontext.cpp",
 }
 
 I18N_CALL = re.compile(r"(?<![\w:.])(i18n|i18nc|i18np|i18ncp)\s*\(")
@@ -832,7 +830,8 @@ def rule_shared_param_text(files: list[str]) -> list[Violation]:
 
 
 # Rule: dep-pins — every packaging recipe that fetches the third-party archives
-# itself carries each pin from cmake/PhosphorDependencies.cmake exactly. The data and
+# itself carries each pin from cmake/PlasmaZonesDependencies.cmake, and from the pinned
+# phosphor-libs tree's cmake/PhosphorDependencies.cmake, exactly. The data and
 # the check live in conventions_dep_pins.py.
 def rule_dep_pins(files: list[str]) -> list[Violation]:
     # `files` is unused for the reason rule_shared_param_text gives: the drift to catch
@@ -858,7 +857,7 @@ RULES = {
     "dep5": (rule_dep5, "packaging/debian/copyright declares each file's real license and holders"),
     "js-pragma": (rule_js_pragma, f"QML .js libraries declare '.pragma library' in Qt's first {JS_PRAGMA_WINDOW} bytes"),
     "shared-param-text": (rule_shared_param_text, "a chain-resolved param's description matches on every pack"),
-    "dep-pins": (rule_dep_pins, "packaging recipes carry the third-party pins from cmake/PhosphorDependencies.cmake"),
+    "dep-pins": (rule_dep_pins, "packaging recipes carry the archive pins from cmake/PlasmaZonesDependencies.cmake and the pinned phosphor-libs tree"),
 }
 
 

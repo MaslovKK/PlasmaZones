@@ -44,7 +44,7 @@ An empty log section where a path should have logged means that path never ran. 
 
 ## 3. Walk back to the mechanism
 
-From the faulting frame, find the object or value that was bad, then where it came from: who freed it, who wrote it, which signal or D-Bus reply delivered it. Read only the source on that chain (`grep -rn` the symbol in `plasmazones/` and `phosphor-libs/libs/`). Shapes that recur here:
+From the faulting frame, find the object or value that was bad, then where it came from: who freed it, who wrote it, which signal or D-Bus reply delivered it. Read only the source on that chain (`grep -rn` the symbol in `plasmazones/` and `../phosphor-libs/libs/`). Shapes that recur here:
 
 | Shape | Where to look |
 | --- | --- |

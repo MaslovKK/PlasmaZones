@@ -85,9 +85,10 @@
 }:
 
 let
-  # ── Third-party source archives ──────────────────────────────────────────
-  # Luau and valijson, built into the package from the release archives pinned
-  # (version, URL and SHA-256) in cmake/PhosphorDependencies.cmake. The build
+  # ── Source archives ──────────────────────────────────────────────────────
+  # The phosphor-libs commit and the branding release pinned (version, URL and
+  # SHA-256) in cmake/PlasmaZonesDependencies.cmake, and Luau and valijson,
+  # pinned by that phosphor-libs commit in its cmake/PhosphorDependencies.cmake. The build
   # runs in the sandbox with no network, so they are fetched here as fixed-output
   # derivations and handed to CMake as one directory (PHOSPHOR_DEPS_ARCHIVES in
   # cmakeFlags), holding each under the FILE name the pin gives it. CMake
@@ -100,6 +101,14 @@ let
   # reads it there, and fails when a URL or hex hash here stops matching the
   # pin. Bump both forms together.
   depsArchives = linkFarm "plasmazones-deps-archives" [
+    {
+      name = "phosphor-libs-c5d6ee8a24f803607b403f90b8625b94b8a25110.tar.gz";
+      path = fetchurl {
+        url = "https://github.com/phosphor-works/phosphor-libs/archive/c5d6ee8a24f803607b403f90b8625b94b8a25110.tar.gz";
+        # sha256 f072437c31f9b96e5ed43c32e55bc0e6e8c7ac7323262dbeaf871008c670e8e6
+        hash = "sha256-8HJDfDH5uW5e1Dwy5VvA5ujHrHMjJi2+r4cQCMZw6OY=";
+      };
+    }
     {
       name = "luau-0.745.tar.gz";
       path = fetchurl {

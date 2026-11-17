@@ -129,7 +129,7 @@ static_assert(static_cast<int>(PhosphorRules::MaxGap) == Defaults::MaxGap,
 static_assert(::PhosphorZones::ZoneDefaults::BorderWidthMax == 10
                   && ::PhosphorZones::ZoneDefaults::BorderRadiusMax == 50,
               "Zone-overlay border bounds moved — update kMaxOverlayBorderWidth / kMaxOverlayBorderRadius "
-              "in phosphor-libs/libs/phosphor-rules/src/ruleaction_builtins_p.h to match");
+              "in phosphor-libs' libs/phosphor-rules/src/ruleaction_builtins_p.h to match");
 
 namespace {
 

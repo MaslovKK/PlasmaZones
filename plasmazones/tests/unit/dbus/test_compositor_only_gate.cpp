@@ -424,10 +424,11 @@ private Q_SLOTS:
     {
         const QDir testDirectory = QFileInfo(QStringLiteral(__FILE__)).absoluteDir();
         const QString appRoot = QDir::cleanPath(testDirectory.filePath(QStringLiteral("../../..")));
-        const QString repoRoot = QDir::cleanPath(appRoot + QStringLiteral("/.."));
         const QString xmlDirectory = appRoot + QStringLiteral("/dbus");
         const QString adaptorSources = appRoot + QStringLiteral("/src/dbus");
-        const QString screenAdaptor = repoRoot + QStringLiteral("/phosphor-libs/libs/phosphor-screens");
+        // phosphor-screens is in the phosphor-libs tree this build adds, which
+        // CPM unpacks outside this checkout.
+        const QString screenAdaptor = QStringLiteral(PHOSPHOR_SCREENS_SOURCE_DIR);
         QVERIFY2(QFileInfo::exists(xmlDirectory + QStringLiteral("/org.phosphor_works.Placement.Snap.xml")),
                  qPrintable(QStringLiteral("no interface XML under %1").arg(xmlDirectory)));
         QVERIFY2(QFileInfo::exists(screenAdaptor + QStringLiteral("/src/dbusscreenadaptor.cpp")),
