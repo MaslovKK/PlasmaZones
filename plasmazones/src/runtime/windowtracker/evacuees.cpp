@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// WindowTrackingAdaptor — the evacuee park
+// WindowTracker — the evacuee park
 //
 // When an output disconnects (unplugged, or a sleeping monitor that drops its
 // connector), KWin moves its windows to another output. They float where KWin
@@ -12,12 +12,11 @@
 // ledger and answers with a verdict.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-#include "windowtrackingadaptor.h"
+#include "windowtracker.h"
 #include "evacueeledger.h"
 #include "internal.h"
 #include "core/platform/logging.h"
 #include "core/utils/utils.h"
-#include "dbus/dbushelpers.h"
 #include <PhosphorEngine/IPlacementEngine.h>
 #include <PhosphorEngine/WindowPlacement.h>
 #include <PhosphorIdentity/VirtualScreenId.h>
@@ -78,7 +77,7 @@ bool pulledBackOntoParkedOutput(const EvacueeLedger& ledger, const QString& wind
 
 } // namespace
 
-QStringList WindowTrackingAdaptor::parkOutput(const QString& physicalScreenId)
+QStringList WindowTracker::parkOutput(const QString& physicalScreenId)
 {
     if (physicalScreenId.isEmpty()) {
         return {};
@@ -128,7 +127,7 @@ QStringList WindowTrackingAdaptor::parkOutput(const QString& physicalScreenId)
     return parked;
 }
 
-void WindowTrackingAdaptor::releaseParkedSlots(const QString& physicalScreenId)
+void WindowTracker::releaseParkedSlots(const QString& physicalScreenId)
 {
     if (!m_service) {
         return;
@@ -145,23 +144,20 @@ void WindowTrackingAdaptor::releaseParkedSlots(const QString& physicalScreenId)
     }
 }
 
-void WindowTrackingAdaptor::setOutputRetirer(std::function<void(const QString&)> retirer)
+void WindowTracker::setOutputRetirer(std::function<void(const QString&)> retirer)
 {
     m_evacuees->retirer = std::move(retirer);
 }
 
-void WindowTrackingAdaptor::setContextModeResolver(
+void WindowTracker::setContextModeResolver(
     std::function<PhosphorZones::AssignmentEntry::Mode(const QString&, int, const QString&)> resolver)
 {
     m_contextModeResolver = std::move(resolver);
 }
 
 PhosphorProtocol::OutputSettleVerdictList
-WindowTrackingAdaptor::reportOutputSettle(const PhosphorProtocol::OutputSettleRowList& rows)
+WindowTracker::reportOutputSettle(const PhosphorProtocol::OutputSettleRowList& rows)
 {
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return {};
-    }
     PhosphorProtocol::OutputSettleVerdictList verdicts;
     PhosphorScreens::ScreenManager* mgr = m_service ? m_service->screenManager() : nullptr;
     QSet<QString> reassertedScreens;
@@ -285,8 +281,7 @@ WindowTrackingAdaptor::reportOutputSettle(const PhosphorProtocol::OutputSettleRo
     return verdicts;
 }
 
-bool WindowTrackingAdaptor::readoptEvacuee(const QString& windowId, const QString& onScreen,
-                                           const QString& parkedPhysicalId)
+bool WindowTracker::readoptEvacuee(const QString& windowId, const QString& onScreen, const QString& parkedPhysicalId)
 {
     const QString canonical = shadowWindowId(windowId);
     // Back on the output it left: the float it could not take where KWin had
@@ -356,7 +351,7 @@ bool WindowTrackingAdaptor::readoptEvacuee(const QString& windowId, const QStrin
     return seated;
 }
 
-void WindowTrackingAdaptor::floatEvacuee(const OutputSettleRow& row, bool snapFloating)
+void WindowTracker::floatEvacuee(const OutputSettleRow& row, bool snapFloating)
 {
     const QString windowId = shadowWindowId(row.windowId);
     PhosphorScreens::ScreenManager* mgr = m_service ? m_service->screenManager() : nullptr;
@@ -421,7 +416,7 @@ void WindowTrackingAdaptor::floatEvacuee(const OutputSettleRow& row, bool snapFl
     }
 }
 
-QString WindowTrackingAdaptor::reassertEvacuee(const OutputSettleRow& row, QSet<QString>& reassertedScreens)
+QString WindowTracker::reassertEvacuee(const OutputSettleRow& row, QSet<QString>& reassertedScreens)
 {
     const QString windowId = shadowWindowId(row.windowId);
     // A zone: applied again on the screen it is stored for, whatever
@@ -478,7 +473,7 @@ QString WindowTrackingAdaptor::reassertEvacuee(const OutputSettleRow& row, QSet<
     return QString();
 }
 
-bool WindowTrackingAdaptor::adoptPendingEvacueeFloat(const QString& windowId, const QString& screenId)
+bool WindowTracker::adoptPendingEvacueeFloat(const QString& windowId, const QString& screenId)
 {
     const auto it = m_evacuees->evacueeFloatPending.constFind(shadowWindowId(windowId));
     if (it == m_evacuees->evacueeFloatPending.constEnd()) {
@@ -513,7 +508,7 @@ bool WindowTrackingAdaptor::adoptPendingEvacueeFloat(const QString& windowId, co
     return true;
 }
 
-bool WindowTrackingAdaptor::readoptOnArrival(const QString& windowId, const QString& screenId)
+bool WindowTracker::readoptOnArrival(const QString& windowId, const QString& screenId)
 {
     // The belt behind the effect's own skip: a window announced on the output
     // it is parked for, after an effect reload lost the records that would
@@ -530,7 +525,7 @@ bool WindowTrackingAdaptor::readoptOnArrival(const QString& windowId, const QStr
     return false;
 }
 
-void WindowTrackingAdaptor::dropParkedOutsideSpan(const QString& windowId, const PhosphorEngine::DesktopSpan& span)
+void WindowTracker::dropParkedOutsideSpan(const QString& windowId, const PhosphorEngine::DesktopSpan& span)
 {
     const QString canonical = shadowWindowId(windowId);
     if (!span.known || !m_evacuees->entries.contains(canonical)) {
@@ -581,7 +576,7 @@ void WindowTrackingAdaptor::dropParkedOutsideSpan(const QString& windowId, const
     }
 }
 
-void WindowTrackingAdaptor::dropEvacueeParks(const QString& windowId)
+void WindowTracker::dropEvacueeParks(const QString& windowId)
 {
     const QString canonical = shadowWindowId(windowId);
     m_evacuees->evacueeFloatPending.remove(canonical);
@@ -603,7 +598,7 @@ void WindowTrackingAdaptor::dropEvacueeParks(const QString& windowId)
     qCInfo(lcDbusWindow) << "dropEvacueeParks:" << windowId << "touched, closed or gone while its output was away";
 }
 
-void WindowTrackingAdaptor::noteEvacueeTouched(const QString& windowId, const QString& placedOnScreen)
+void WindowTracker::noteEvacueeTouched(const QString& windowId, const QString& placedOnScreen)
 {
     if (m_evacuees->adoptInProgress) {
         return;
@@ -639,7 +634,7 @@ void WindowTrackingAdaptor::noteEvacueeTouched(const QString& windowId, const QS
     }
 }
 
-void WindowTrackingAdaptor::wireEvacueeTouches()
+void WindowTracker::wireEvacueeTouches()
 {
     for (const QMetaObject::Connection& c : std::as_const(m_evacuees->touchConnections)) {
         disconnect(c);

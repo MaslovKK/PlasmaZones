@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #include "snapadaptor.h"
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/windowtracker/windowtracker.h"
 #include "core/platform/logging.h"
 #include "dbus/dbushelpers.h"
 #include <PhosphorPlacement/WindowTrackingService.h>
@@ -149,7 +149,7 @@ bool SnapAdaptor::commitBatch(const QVector<ZoneAssignmentEntry>& entries, const
         return false;
     }
 
-    WindowTrackingAdaptor* const wta = m_adaptor;
+    WindowTracker* const wta = m_adaptor;
     PhosphorProtocol::WindowGeometryList geometries =
         m_engine->applyBatchAssignments(entries, SnapIntent::UserInitiated, [wta]() -> QString {
             const QString cursor = wta->lastCursorScreenName();

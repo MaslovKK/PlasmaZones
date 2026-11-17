@@ -30,7 +30,7 @@
 #include <PhosphorZones/Zone.h>
 #include "FakePhysicalScreenSource.h"
 #include "dbus/tilingadaptor/tilingadaptor.h"
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/windowtracker/windowtracker.h"
 #include "helpers/AutotileTestHelpers.h"
 #include "helpers/IsolatedConfigGuard.h"
 #include "helpers/LayoutRegistryTestHelpers.h"
@@ -57,7 +57,7 @@ struct SnapAndAutotile
         screenMgr = std::make_unique<PhosphorScreens::ScreenManager>(
             PhosphorScreens::ScreenManagerConfig{.physicalScreenSource = &fake, .useGeometrySensors = false});
         screenMgr->start();
-        wta = new WindowTrackingAdaptor(layouts, detector, screenMgr.get(), settings, nullptr, nullptr, &parent);
+        wta = new WindowTracker(layouts, detector, screenMgr.get(), settings, nullptr, nullptr, &parent);
         layout = createTestLayout(3, layouts);
         layouts->addLayout(layout);
         layouts->setActiveLayout(layout);
@@ -96,7 +96,7 @@ struct SnapAndAutotile
     PhosphorScreens::FakePhysicalScreenSource fake;
     std::unique_ptr<PhosphorScreens::ScreenManager> screenMgr;
     QObject parent;
-    WindowTrackingAdaptor* wta = nullptr; // parent-owned
+    WindowTracker* wta = nullptr; // parent-owned
     PhosphorZones::Layout* layout = nullptr;
     std::unique_ptr<PhosphorSnapEngine::SnapEngine> snap;
     std::unique_ptr<PhosphorTileEngine::AutotileEngine> autotile;
@@ -157,8 +157,8 @@ private Q_SLOTS:
         screenMgr.start();
 
         QObject parent;
-        auto* wta = new WindowTrackingAdaptor(m_layoutManager, m_zoneDetector, &screenMgr, m_settings, nullptr, nullptr,
-                                              &parent);
+        auto* wta =
+            new WindowTracker(m_layoutManager, m_zoneDetector, &screenMgr, m_settings, nullptr, nullptr, &parent);
         assignMode(QStringLiteral("DP-1"), PhosphorZones::AssignmentEntry::Autotile);
         assignMode(QStringLiteral("DP-2"), PhosphorZones::AssignmentEntry::Autotile);
         PhosphorTileEngine::AutotileEngine autotile(m_layoutManager, wta->service(), nullptr,
@@ -210,8 +210,8 @@ private Q_SLOTS:
         screenMgr.start();
 
         QObject parent;
-        auto* wta = new WindowTrackingAdaptor(m_layoutManager, m_zoneDetector, &screenMgr, m_settings, nullptr, nullptr,
-                                              &parent);
+        auto* wta =
+            new WindowTracker(m_layoutManager, m_zoneDetector, &screenMgr, m_settings, nullptr, nullptr, &parent);
         assignMode(QStringLiteral("DP-1"), PhosphorZones::AssignmentEntry::Autotile);
         assignMode(QStringLiteral("DP-2"), PhosphorZones::AssignmentEntry::Scrolling);
         PhosphorTileEngine::AutotileEngine autotile(m_layoutManager, wta->service(), nullptr,

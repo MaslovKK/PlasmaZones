@@ -125,7 +125,7 @@ LayoutAdaptor::LayoutAdaptor(PhosphorZones::LayoutRegistry* manager, QObject* pa
         // Every bus-reachable slot dereferences m_layoutManager unguarded, so
         // there is no inert degradation available here — only a null-deref on
         // the first D-Bus call, far from the composition root that caused it.
-        // The construction-time pattern in windowtrackingadaptor/enginewiring.cpp
+        // The construction-time pattern in runtime/windowtracker/enginewiring.cpp
         // uses qFatal for the same class of misconfiguration; mirror it so debug
         // AND release both halt loudly at the point of the mistake.
         qFatal(

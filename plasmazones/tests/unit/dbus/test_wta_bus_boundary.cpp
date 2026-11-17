@@ -3,7 +3,7 @@
 
 /**
  * @file test_wta_bus_boundary.cpp
- * @brief What WindowTrackingAdaptor takes from the effect's reports: a screen
+ * @brief What WindowTracker takes from the effect's reports: a screen
  *        the daemon does not know is held until it arrives, a split monitor's
  *        physical id lands in the right virtual screen, a metadata push is
  *        normalised to WindowMetadata's invariants (a caption refresh keeps a
@@ -30,7 +30,7 @@ class TestWtaBusBoundary : public QObject
 {
     Q_OBJECT
 
-    static void push(WindowTrackingAdaptor* wta, const QString& instance, const QString& appId, int desktop,
+    static void push(WindowTracker* wta, const QString& instance, const QString& appId, int desktop,
                      const QVariantMap& extended,
                      int windowType = static_cast<int>(PhosphorProtocol::WindowType::Normal))
     {
@@ -277,7 +277,7 @@ private Q_SLOTS:
         const QString windowId = f.registerWindow(QStringLiteral("snapped-1"));
         f.snap->commitSnap(windowId, f.zone(0), kLeft);
         QCOMPARE(f.snap->screenForTrackedWindow(windowId), kLeft);
-        QSignalSpy states(f.wta, &WindowTrackingAdaptor::windowStateChanged);
+        QSignalSpy states(f.wta, &WindowTracker::windowStateChanged);
 
         f.wta->windowScreenChanged(windowId, QStringLiteral("DP-9"));
 

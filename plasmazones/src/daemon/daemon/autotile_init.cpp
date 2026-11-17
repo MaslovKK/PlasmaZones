@@ -16,7 +16,7 @@
 #include "daemon/controllers/unifiedlayoutcontroller.h"
 #include "daemon/overlayservice.h"
 #include "dbus/snapadaptor/snapadaptor.h"
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/windowtracker/windowtracker.h"
 
 #include <PhosphorContext/ContextResolver.h>
 #include <PhosphorEngine/PlacementEngineBase.h>
@@ -84,8 +84,8 @@ void Daemon::initializeAutotile()
                         if (screenId.isEmpty() && m_unifiedLayoutController) {
                             screenId = m_unifiedLayoutController->currentScreenName();
                         }
-                        if (screenId.isEmpty() && m_windowTrackingAdaptor) {
-                            screenId = resolveShortcutScreenId(m_screenManager.get(), m_windowTrackingAdaptor);
+                        if (screenId.isEmpty() && m_windowTracker) {
+                            screenId = resolveShortcutScreenId(m_screenManager.get(), m_windowTracker);
                         }
                         // Trigger gate AFTER the screen resolve so the
                         // SetOsdEnabled rule's force-ON half can consult the
@@ -183,7 +183,7 @@ void Daemon::handleTilingModeToggle()
     // toggle while looking at vs:0 with a focused window on vs:1 silently
     // flips vs:1 — exactly the "tried to swap modes for VS0 but VS1 was
     // changing" symptom seen in production logs.
-    const QString screenId = resolveCursorScreenId(m_screenManager.get(), m_windowTrackingAdaptor);
+    const QString screenId = resolveCursorScreenId(m_screenManager.get(), m_windowTracker);
     if (screenId.isEmpty()) {
         qCWarning(lcDaemon) << "Mode toggle: empty screenId from resolveCursorScreenId";
         return;
@@ -613,7 +613,7 @@ void Daemon::toggleScreenMode(const QString& screenId, bool snappingAutotilePair
             // resnapIfManualMode (navigation.cpp) including the
             // engine-managed exclude union, and resnaps silently as it does.
             // The service() check is redundant defence, not a real
-            // guard: WindowTrackingAdaptor assigns m_service in its
+            // guard: WindowTracker assigns m_service in its
             // constructor and never nulls it, so a live adaptor always
             // has one. It is kept because the body dereferences it and
             // the invariant lives in another class's header, but do not
@@ -632,8 +632,8 @@ void Daemon::toggleScreenMode(const QString& screenId, bool snappingAutotilePair
             // the branch's tail emits the pending snap-float restores, and its
             // else arm CLEARS them, so moving a failed apply across that
             // boundary would discard the float half instead of replaying it.
-            if (applied && m_layoutManager->resolveLayoutForScreen(screenId) && m_windowTrackingAdaptor
-                && m_windowTrackingAdaptor->service() && m_snapAdaptor) {
+            if (applied && m_layoutManager->resolveLayoutForScreen(screenId) && m_windowTracker
+                && m_windowTracker->service() && m_snapAdaptor) {
                 QSet<QString> engineManagedScreens;
                 if (m_screenModeRouter && m_screenManager) {
                     const auto parts = m_screenModeRouter->partitionByMode(m_screenManager->effectiveScreenIds());
@@ -649,7 +649,7 @@ void Daemon::toggleScreenMode(const QString& screenId, bool snappingAutotilePair
                 // screens at once and the parameter takes a single
                 // value; the per-window filter inside the service
                 // is what keeps that case correct.
-                m_windowTrackingAdaptor->resnapScreensToTheirLayouts(engineManagedScreens, {screenId}, desktop);
+                m_windowTracker->resnapScreensToTheirLayouts(engineManagedScreens, {screenId}, desktop);
             }
             emitPendingSnapFloatRestoresForResnapBuffer();
         } else {
@@ -682,8 +682,7 @@ void Daemon::toggleScreenMode(const QString& screenId, bool snappingAutotilePair
         // Batch all resnap entries into ONE signal to eliminate the race condition
         // where multiple per-screen signals cause the effect to restore geometries
         // and resnap in parallel.
-        PhosphorPlacement::WindowTrackingService* wts =
-            m_windowTrackingAdaptor ? m_windowTrackingAdaptor->service() : nullptr;
+        PhosphorPlacement::WindowTrackingService* wts = m_windowTracker ? m_windowTracker->service() : nullptr;
         QSet<QString> resnappedWindows;
         QVector<ZoneAssignmentEntry> allResnapEntries;
 

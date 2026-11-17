@@ -1,17 +1,16 @@
 // SPDX-FileCopyrightText: 2026 fuddlesworth
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-// WindowTrackingAdaptor: focus and activation reports from the effect. The
+// WindowTracker: focus and activation reports from the effect. The
 // cursor and active-window screen, a screen's current desktop, the window
 // activation that feeds focus memory and last-used-zone tracking, and the
 // hold-and-replay of reports naming a screen the daemon does not know yet.
 
-#include "windowtrackingadaptor.h"
+#include "windowtracker.h"
 #include "lifecyclerelay.h"
 #include "internal.h"
 #include "core/interfaces/interfaces.h"
 #include "core/platform/logging.h"
-#include "dbus/dbushelpers.h"
 #include <PhosphorIdentity/VirtualScreenId.h>
 #include <PhosphorScreens/Manager.h>
 #include <PhosphorScreens/ScreenIdentity.h>
@@ -21,13 +20,13 @@
 
 namespace PlasmaZones {
 
-void WindowTrackingAdaptor::holdScreenReport(const QString& key, const QString& screenId, std::function<void()> replay)
+void WindowTracker::holdScreenReport(const QString& key, const QString& screenId, std::function<void()> replay)
 {
     qCDebug(lcDbusWindow) << "Holding a report naming the unknown screen" << screenId << "under" << key;
     m_heldScreenReports.insert(key, HeldScreenReport{screenId, std::move(replay)});
 }
 
-void WindowTrackingAdaptor::replayHeldScreenReports()
+void WindowTracker::replayHeldScreenReports()
 {
     const QHash<QString, HeldScreenReport> held = m_heldScreenReports;
     for (auto it = held.constBegin(); it != held.constEnd(); ++it) {
@@ -38,11 +37,8 @@ void WindowTrackingAdaptor::replayHeldScreenReports()
     }
 }
 
-void WindowTrackingAdaptor::cursorScreenChanged(const QString& screenId)
+void WindowTracker::cursorScreenChanged(const QString& screenId)
 {
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return;
-    }
     m_heldScreenReports.remove(QStringLiteral("cursor")); // a later report supersedes a held one
     if (screenId.isEmpty()) {
         return;
@@ -61,7 +57,7 @@ void WindowTrackingAdaptor::cursorScreenChanged(const QString& screenId)
     qCDebug(lcDbusWindow) << "Cursor screen changed to" << resolvedId;
 }
 
-QString WindowTrackingAdaptor::resolveFocusedWindowScreen(const QString& windowId, const QString& screenId) const
+QString WindowTracker::resolveFocusedWindowScreen(const QString& windowId, const QString& screenId) const
 {
     if (screenId.isEmpty()) {
         return screenId;
@@ -76,11 +72,8 @@ QString WindowTrackingAdaptor::resolveFocusedWindowScreen(const QString& windowI
     return resolveBusScreen(screenId, windowId);
 }
 
-void WindowTrackingAdaptor::activeWindowScreenChanged(const QString& windowId, const QString& screenId)
+void WindowTracker::activeWindowScreenChanged(const QString& windowId, const QString& screenId)
 {
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return;
-    }
     if (windowId.isEmpty() || screenId.isEmpty()) {
         return;
     }
@@ -121,11 +114,8 @@ void WindowTrackingAdaptor::activeWindowScreenChanged(const QString& windowId, c
     }
 }
 
-void WindowTrackingAdaptor::screenDesktopChanged(const QString& screenId, int desktop)
+void WindowTracker::screenDesktopChanged(const QString& screenId, int desktop)
 {
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return;
-    }
     if (screenId.isEmpty() || desktop < 1 || !m_virtualDesktopManager) {
         return;
     }
@@ -154,11 +144,8 @@ void WindowTrackingAdaptor::screenDesktopChanged(const QString& screenId, int de
     m_virtualDesktopManager->updateScreenDesktop(screenId, desktop);
 }
 
-void WindowTrackingAdaptor::seedScreenDesktop(const QString& screenId, int desktop)
+void WindowTracker::seedScreenDesktop(const QString& screenId, int desktop)
 {
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return;
-    }
     if (screenId.isEmpty() || desktop < 1 || !m_virtualDesktopManager
         || (desktopCount() > 0 && desktop > desktopCount())) {
         return;
@@ -166,11 +153,8 @@ void WindowTrackingAdaptor::seedScreenDesktop(const QString& screenId, int deskt
     m_virtualDesktopManager->seedScreenDesktop(screenId, desktop);
 }
 
-void WindowTrackingAdaptor::windowActivated(const QString& windowId, const QString& screenId)
+void WindowTracker::windowActivated(const QString& windowId, const QString& screenId)
 {
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return;
-    }
     if (!validateWindowId(windowId, QStringLiteral("process windowActivated"))) {
         return;
     }
@@ -255,7 +239,7 @@ void WindowTrackingAdaptor::windowActivated(const QString& windowId, const QStri
     }
 }
 
-void WindowTrackingAdaptor::forgetClosedFullscreenHold(const QString& windowId)
+void WindowTracker::forgetClosedFullscreenHold(const QString& windowId)
 {
     if (m_cachedScrollEngine) {
         m_cachedScrollEngine->forgetClosedFullscreenHold(windowId);

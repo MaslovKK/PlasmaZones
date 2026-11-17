@@ -14,7 +14,7 @@
 #include "core/interfaces/settings_interfaces.h"
 #include "core/utils/utils.h"
 #include "dbus/tilingadaptor/tilingadaptor.h"
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/windowtracker/windowtracker.h"
 #include <PhosphorScreens/Manager.h>
 #include <PhosphorScreens/ScreenIdentity.h>
 #include <PhosphorContext/DisabledReason.h>
@@ -42,7 +42,7 @@ inline constexpr int BRIDGE_WATCHDOG_TIMEOUT_MS = 20000;
 /// the context being LEFT, dropping the pinned state on that context's live
 /// one and force-releasing every window it held. See
 /// PhosphorEngine::StickyPinPhase.
-inline void applyStickyScreenPins(WindowTrackingAdaptor* adaptor, PhosphorEngine::IPlacementEngine* autotileEngine,
+inline void applyStickyScreenPins(WindowTracker* adaptor, PhosphorEngine::IPlacementEngine* autotileEngine,
                                   PhosphorEngine::IPlacementEngine* scrollEngine, PhosphorEngine::StickyPinPhase phase)
 {
     // Null-guarded service, matching every other daemon ->service() consumer.
@@ -133,7 +133,7 @@ inline DisabledReason toDaemonDisabledReason(PhosphorContext::DisabledReason rea
  * that have an effect-reported cursor and no focused window.
  */
 inline QString resolveVirtualScreenId(PhosphorScreens::ScreenManager* mgr, const QString& physicalId,
-                                      const WindowTrackingAdaptor* trackingAdaptor,
+                                      const WindowTracker* trackingAdaptor,
                                       const std::optional<QPoint>& cursorPos = std::nullopt)
 {
     if (!mgr || !mgr->hasVirtualScreens(physicalId)) {
@@ -194,8 +194,7 @@ inline QString resolveVirtualScreenId(PhosphorScreens::ScreenManager* mgr, const
  * shortcuts). Using cursor-first silently misroutes actions when the user
  * lets the mouse rest on a different virtual screen than the focused window.
  */
-inline QString resolveShortcutScreenId(PhosphorScreens::ScreenManager* mgr,
-                                       const WindowTrackingAdaptor* trackingAdaptor)
+inline QString resolveShortcutScreenId(PhosphorScreens::ScreenManager* mgr, const WindowTracker* trackingAdaptor)
 {
     if (!trackingAdaptor) {
         QScreen* primary = Utils::primaryScreen();
@@ -237,7 +236,7 @@ inline QString resolveShortcutScreenId(PhosphorScreens::ScreenManager* mgr,
  *
  * Falls back to focused-window screen, then primary screen.
  *
- * @p mgr is unused today: WindowTrackingAdaptor::cursorScreenChanged resolves
+ * @p mgr is unused today: WindowTracker::cursorScreenChanged resolves
  * m_lastCursorScreenId to a virtual ID at the source whenever the physical
  * screen is split, so a physical ID from lastCursorScreenName means the
  * screen has no virtual split and IS the effective ID — no further mapping
@@ -248,8 +247,7 @@ inline QString resolveShortcutScreenId(PhosphorScreens::ScreenManager* mgr,
  * signature so the call site mirrors @ref resolveShortcutScreenId and so a
  * future resolution policy that needs ScreenManager has a place to land.
  */
-inline QString resolveCursorScreenId(PhosphorScreens::ScreenManager* /*mgr*/,
-                                     const WindowTrackingAdaptor* trackingAdaptor)
+inline QString resolveCursorScreenId(PhosphorScreens::ScreenManager* /*mgr*/, const WindowTracker* trackingAdaptor)
 {
     if (trackingAdaptor) {
         const QString cursorScreen = trackingAdaptor->lastCursorScreenName();

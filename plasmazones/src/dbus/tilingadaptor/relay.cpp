@@ -9,7 +9,7 @@
 #include "tilingadaptor.h"
 
 #include "core/platform/logging.h"
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/windowtracker/windowtracker.h"
 
 #include <PhosphorEngine/DesktopRemap.h>
 #include <PhosphorEngine/IPlacementEngine.h>
@@ -318,7 +318,7 @@ void TilingAdaptor::notifyEngineScreensChanged(bool isDesktopSwitch)
             // the announce was first queued.
             const QStringList announced = combinedManagedScreens();
             QVariantMap screenDesktops;
-            if (m_windowTrackingAdaptor) {
+            if (m_windowTracker) {
                 // Stamp every screen the daemon can resolve a desktop for, NOT
                 // just the announced (still-managed) ones. The receiver's
                 // destructive half — the demote/pre-tile-restore pass — is
@@ -348,7 +348,7 @@ void TilingAdaptor::notifyEngineScreensChanged(bool isDesktopSwitch)
                     }
                 }
                 for (const QString& screenId : std::as_const(stampable)) {
-                    screenDesktops.insert(screenId, m_windowTrackingAdaptor->currentDesktopForScreen(screenId));
+                    screenDesktops.insert(screenId, m_windowTracker->currentDesktopForScreen(screenId));
                 }
             }
             // What a later renumber asks of this announce (reannounceAfterRenumber).

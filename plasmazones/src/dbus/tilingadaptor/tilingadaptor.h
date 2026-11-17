@@ -35,7 +35,7 @@ struct WindowMetadata;
 
 namespace PlasmaZones {
 
-class WindowTrackingAdaptor;
+class WindowTracker;
 
 /**
  * @brief D-Bus adaptor for the shared tiling-family transport
@@ -79,11 +79,11 @@ public:
     explicit TilingAdaptor(PhosphorScreens::ScreenManager* screenManager, QObject* parent = nullptr);
     ~TilingAdaptor() override = default;
 
-    /// Wire the WindowTrackingAdaptor (post-construction, to break the
+    /// Wire the WindowTracker (post-construction, to break the
     /// construction-order cycle) so the tiling open path can resolve
     /// RouteToScreen / RouteToDesktop rules, and a window the snap open path
     /// routes onto a tiling screen reaches its engine. Pass nullptr on shutdown.
-    void setWindowTrackingAdaptor(WindowTrackingAdaptor* wta);
+    void setWindowTrackingAdaptor(WindowTracker* wta);
 
     /// Set the ordered list of engines sharing this interface's lifecycle
     /// pipeline (primary first — it is the fallback when no engine claims a
@@ -484,7 +484,7 @@ public Q_SLOTS:
     /**
      * @brief Per-window tab colours resolved from the window rules
      *
-     * Delegates to WindowTrackingAdaptor::tabColorRuleParams (which owns the
+     * Delegates to WindowTracker::tabColorRuleParams (which owns the
      * resolve and its memo). Empty map when no WTA is wired or no rule sets a
      * tab colour for the window.
      *
@@ -816,7 +816,7 @@ private:
     /// tiling open path can resolve RouteToScreen / RouteToDesktop rules
     /// (the rule store + evaluator live on the WTA). Null in tests / when unset —
     /// routing is then skipped and windows open on their spawn screen.
-    WindowTrackingAdaptor* m_windowTrackingAdaptor = nullptr;
+    WindowTracker* m_windowTracker = nullptr;
 
     // Window-opened events received before the first panel D-Bus query completed.
     // Processing them immediately would compute zones against the unreserved screen rect
@@ -947,7 +947,7 @@ public:
 
     /**
      * @brief Alive-set sweep of the float-broadcast and tab-colour-relay
-     * dedup caches, called from WindowTrackingAdaptor::pruneStaleWindows via
+     * dedup caches, called from WindowTracker::pruneStaleWindows via
      * the daemon wiring.
      *
      * Swept in the INSTANCE-id key space: the maps hold both raw and

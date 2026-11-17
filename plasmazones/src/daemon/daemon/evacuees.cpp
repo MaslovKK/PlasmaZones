@@ -5,7 +5,7 @@
 #include "helpers.h"
 
 #include "dbus/windowdragadaptor/windowdragadaptor.h"
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/windowtracker/windowtracker.h"
 #include "core/platform/logging.h"
 #include <PhosphorIdentity/VirtualScreenId.h>
 #include <PhosphorIdentity/WindowId.h>
@@ -41,8 +41,8 @@ void Daemon::retireOutputPlacements(const QString& physicalScreenId)
     // settle report and this daemon's own screen-removed handler can both run
     // it for one removal (F690): the second park finds nothing and keeps the
     // first.
-    if (m_windowTrackingAdaptor) {
-        m_windowTrackingAdaptor->parkOutput(physicalScreenId);
+    if (m_windowTracker) {
+        m_windowTracker->parkOutput(physicalScreenId);
     }
     // All three engines need the explicit whole-output reap: snap's
     // per-(screen,desktop,activity) stores are created lazily on placement,
@@ -62,8 +62,8 @@ void Daemon::retireOutputPlacements(const QString& physicalScreenId)
     }
     // The tiling prunes captured each window's slot into its record on the
     // way out; for a parked window those slots name the output that went away.
-    if (m_windowTrackingAdaptor) {
-        m_windowTrackingAdaptor->releaseParkedSlots(physicalScreenId);
+    if (m_windowTracker) {
+        m_windowTracker->releaseParkedSlots(physicalScreenId);
     }
     // A mode round trip's remembered order for the output goes with it: the
     // park holds its windows now, and a replayed order would tile windows

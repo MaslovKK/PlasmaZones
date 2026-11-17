@@ -60,7 +60,7 @@ struct SnapNavFixture : VdmHolder, FloatBackFixture
         : FloatBackFixture(&vdm)
     {
         zda = new ZoneDetectionAdaptor(&detector, layouts, screenMgr.get(), &settings, &parent);
-        wta->setZoneDetectionAdaptor(zda);
+        wta->setZoneAdjacencyResolver(zda);
         snap->setZoneAdjacencyResolver(zda);
         snap->setCrossSurfaceResolver(&cross);
         layouts->assignLayout(kLeft, 1, QString(), layout);

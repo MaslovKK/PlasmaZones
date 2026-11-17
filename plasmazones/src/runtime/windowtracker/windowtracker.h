@@ -1,10 +1,12 @@
 // SPDX-FileCopyrightText: 2026 fuddlesworth
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-// This header declares BOTH the D-Bus wire surface (slots whose signatures are
-// pinned by the interface XML) and the in-process orchestration API the daemon
-// wires. Splitting would sever the wire methods from the state they document
-// against.
+// The window tracker: window-zone tracking, the compositor's reports about
+// windows and screens, and the float, restore and evacuee policy built on them.
+// Plain C++ and Qt signals. The D-Bus surface is WindowTrackingAdaptor
+// (dbus/windowtrackingadaptor.h), a thin binding that admits the caller and
+// forwards to this class, so a host that runs the engines in process calls
+// this directly.
 
 #pragma once
 
@@ -15,13 +17,13 @@
 #include <PhosphorZones/AssignmentEntry.h>
 #include <PhosphorSnapEngine/INavigationStateProvider.h>
 #include <PhosphorSnapEngine/PlacementDirective.h>
-#include <PhosphorProtocol/AutotileMarshalling.h>
-#include <PhosphorProtocol/WindowMarshalling.h>
-#include <PhosphorProtocol/ZoneMarshalling.h>
+#include <PhosphorProtocol/AutotileTypes.h>
+#include <PhosphorProtocol/WindowTypes.h>
+#include <PhosphorProtocol/ZoneTypes.h>
+#include <PhosphorSnapEngine/IZoneAdjacencyResolver.h>
 #include <PhosphorConfig/IBackend.h>
 
 #include <QObject>
-#include <QDBusAbstractAdaptor>
 #include <QString>
 #include <QStringList>
 #include <QHash>
@@ -82,28 +84,24 @@ class ISettings;
 struct EvacueeLedger;
 class WindowLifecycleRelay;
 
-class ZoneDetectionAdaptor;
-
 /**
- * @brief D-Bus adaptor for window-zone tracking
+ * @brief Window-zone tracking and the compositor's window reports
  *
- * Provides D-Bus interface: org.phosphor_works.Placement.WindowTracking
- *  Window-zone assignment tracking
+ * Served on the bus as org.phosphor_works.Placement.WindowTracking by
+ * WindowTrackingAdaptor, which admits compositor-only reports and forwards.
+ * A direct call here is trusted: it is the daemon's own, or the adaptor's
+ * after admission.
  */
-class PLASMAZONES_EXPORT WindowTrackingAdaptor : public QDBusAbstractAdaptor,
-                                                 public PhosphorSnapEngine::INavigationStateProvider
+class PLASMAZONES_EXPORT WindowTracker : public QObject, public PhosphorSnapEngine::INavigationStateProvider
 {
     Q_OBJECT
-    Q_CLASSINFO("D-Bus Interface", "org.phosphor_works.Placement.WindowTracking")
 
 public:
-    explicit WindowTrackingAdaptor(PhosphorZones::LayoutRegistry* layoutManager,
-                                   PhosphorZones::IZoneDetector* zoneDetector,
-                                   PhosphorScreens::ScreenManager* screenManager, ISettings* settings,
-                                   PhosphorWorkspaces::VirtualDesktopManager* virtualDesktopManager,
-                                   PhosphorWorkspaces::ActivityManager* activityManager = nullptr,
-                                   QObject* parent = nullptr);
-    ~WindowTrackingAdaptor() override;
+    explicit WindowTracker(PhosphorZones::LayoutRegistry* layoutManager, PhosphorZones::IZoneDetector* zoneDetector,
+                           PhosphorScreens::ScreenManager* screenManager, ISettings* settings,
+                           PhosphorWorkspaces::VirtualDesktopManager* virtualDesktopManager,
+                           PhosphorWorkspaces::ActivityManager* activityManager = nullptr, QObject* parent = nullptr);
+    ~WindowTracker() override;
 
     /// The focused window's screen, read from the engine that holds it (snap,
     /// autotile, scroll), else the last activation or crossing report
@@ -134,11 +132,11 @@ public:
     }
 
     /**
-     * @brief Set ZoneDetectionAdaptor for daemon-driven navigation (getAdjacentZone, getFirstZoneInDirection)
-     * @param adaptor ZoneDetectionAdaptor instance (not owned; Daemon::stop() clears it).
-     *        Must be set before setEngines, which hands it to the snap engine as its adjacency resolver.
+     * @brief Set the zone adjacency resolver for daemon-driven navigation (getAdjacentZone, getFirstZoneInDirection)
+     * @param resolver Not owned; Daemon::stop() clears it.
+     *        Must be set before setEngines, which hands it to the snap engine.
      */
-    void setZoneDetectionAdaptor(ZoneDetectionAdaptor* adaptor);
+    void setZoneAdjacencyResolver(PhosphorSnapEngine::IZoneAdjacencyResolver* resolver);
 
     /**
      * @brief Wire up the compositor-facing WindowRegistry.
@@ -719,7 +717,8 @@ public Q_SLOTS:
 
     /// @brief The bus verb: setWindowFloatingForScreen on the window's live screen. Refused (logged) for an
     /// unregistered or screenless window, one off the desktop or activity its screen shows, or a disabled context.
-    void setWindowFloating(const QString& windowId, bool floating);
+    /// @p externalCaller is passed on to setWindowFloatingForScreen.
+    void setWindowFloating(const QString& windowId, bool floating, const QString& externalCaller = QString());
 
     /**
      * @brief Get all floating window IDs (for effect startup sync)
@@ -748,15 +747,9 @@ public Q_SLOTS:
     // handleBatchedResnap moved to SnapAdaptor.
 
 public:
-    // Internal-only members below — declared as plain public methods (NOT
-    // under Q_SLOTS, and without Q_INVOKABLE, which would re-export them) so
-    // QDBusAbstractAdaptor's runtime introspection does NOT expose them on
-    // the bus regardless of XML content. Same pattern as
-    // `WindowDragAdaptor::handleWindowClosed` (NOT its
-    // clearForCompositorReconnect, which must STAY a slot — the effect
-    // invokes that one over the bus at shutdown). Every caller here is
-    // in-process and reaches these via direct C++ invocation through the
-    // daemon, never through D-Bus.
+    // In-process members below. The bus surface is WindowTrackingAdaptor's,
+    // which forwards only the methods the interface XML names, so nothing
+    // here is reachable over D-Bus. Every caller is in-process.
 
     // getPreTileGeometry (out-param forwarder) removed: zero callers
     // remained — getValidatedPreTileGeometry is the single read path.
@@ -926,8 +919,6 @@ public:
     bool isInteractiveDragWindow(const QString& windowId) const;
     /// Told (windowId, keepScreenId) at the end of every releaseLeftScreens, for the daemon's own per-screen memory.
     void setWindowLeftScreenHook(std::function<void(const QString&, const QString&)> hook);
-    /// Whether a unique bus name is the registered compositor bridge's, whose screen-form float is not gated (F1108).
-    void setBridgeCallerCheck(std::function<bool(const QString&)> check);
     /// The mode a (screen, desktop, activity) context runs, hidden or not, the feature switches and the disabled gate
     /// included (Daemon::runningModeForContext). Unset, the configured mode answers (F1122).
     void setContextModeResolver(
@@ -1329,9 +1320,8 @@ public:
      * DirtyWindowPlacements when anything was removed so the next debounced save
      * persists the pruned store.
      *
-     * Plain `public:` (not Q_SLOTS): the bus surface deliberately excludes this —
-     * every caller is in-process and reaches it via direct C++ invocation through the
-     * daemon. Same pattern as `WindowDragAdaptor::handleWindowClosed`.
+     * Not on the bus: WindowTrackingAdaptor does not forward it, and every caller is
+     * in-process.
      *
      * Called from two daemon-side sites:
      *   1. Daemon::init's init-prologue priming call — runs once, synchronously,
@@ -1596,14 +1586,17 @@ public Q_SLOTS:
      * with a not-floating broadcast. The suspension-float classification is
      * stamped before routing. Used by minimize/unminimize, drag-to-float, the
      * monocle unmaximize and the shell placement map; a tiling engine answers it passively.
-     * A bus caller other than the compositor bridge is held to setWindowFloating's gate, and refused (logged) unless
-     * it names the screen the window is on (F1108, F1123).
+     * An external caller, a bus caller other than the compositor bridge, is held to setWindowFloating's gate, and
+     * refused (logged) unless it names the screen the window is on (F1108, F1123).
+     *
+     * @param externalCaller The external caller's name, for that gate and its log lines. Empty for a trusted
+     *        caller: the daemon itself, or the compositor bridge. The binding that serves the call decides.
      */
-    void setWindowFloatingForScreen(const QString& windowId, const QString& screenId, bool floating);
+    void setWindowFloatingForScreen(const QString& windowId, const QString& screenId, bool floating,
+                                    const QString& externalCaller = QString());
 
 public:
-    // Internal-only, plain `public:` (not Q_SLOTS) so the bus never exposes
-    // them, like the pruneExcludedPlacements block above.
+    // In-process only, like the pruneExcludedPlacements block above.
     /**
      * @brief Single broadcast chokepoint for engine-relayed float changes.
      *
@@ -2057,7 +2050,7 @@ private:
     // ═══════════════════════════════════════════════════════════════════════════════
     // Dependencies (kept for signal connections and settings access)
     // ═══════════════════════════════════════════════════════════════════════════════
-    ZoneDetectionAdaptor* m_zoneDetectionAdaptor = nullptr;
+    PhosphorSnapEngine::IZoneAdjacencyResolver* m_zoneAdjacencyResolver = nullptr;
     PhosphorZones::LayoutRegistry* m_layoutManager;
     ISettings* m_settings;
     /// Non-owning, late-bound via setContextResolver after Daemon constructs its resolver.
@@ -2068,7 +2061,6 @@ private:
     /// See setDesktopSpanQuery.
     PhosphorEngine::DesktopSpanQuery m_desktopSpanQuery;
     std::function<void(const QString&, const QString&)> m_windowLeftScreenHook;
-    std::function<bool(const QString&)> m_isBridgeCaller; ///< setBridgeCallerCheck
     std::function<PhosphorZones::AssignmentEntry::Mode(const QString&, int, const QString&)>
         m_contextModeResolver; ///< setContextModeResolver
     QJsonObject m_loadedScrollStripState;

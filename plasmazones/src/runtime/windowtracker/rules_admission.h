@@ -3,7 +3,7 @@
 
 #pragma once
 
-// Admission tests shared by the WindowTrackingAdaptor rule resolvers (rules.cpp:
+// Admission tests shared by the WindowTracker rule resolvers (rules.cpp:
 // the restore predicates, the open-float gate, the tab-colour / drop-indicator /
 // scrolling-open param builders; rules_placement.cpp: placement-zone
 // resolution and screen/desktop open-routing). Every resolveCachedFiltered

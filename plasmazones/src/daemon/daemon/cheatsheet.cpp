@@ -61,7 +61,7 @@ void Daemon::toggleCheatsheet()
         || (m_windowDragAdaptor && m_windowDragAdaptor->isDragInFlight())) {
         return;
     }
-    const QString screenId = resolveCursorScreenId(m_screenManager.get(), m_windowTrackingAdaptor);
+    const QString screenId = resolveCursorScreenId(m_screenManager.get(), m_windowTracker);
     const QScreen* screen = PhosphorScreens::ScreenIdentity::findByIdOrName(screenId);
     if (screenId.isEmpty() || !screen) {
         return;

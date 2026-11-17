@@ -2,19 +2,18 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// WindowTrackingAdaptor — tracking and zone-geometry queries
+// WindowTracker — tracking and zone-geometry queries
 //
 // Read-only lookups delegating to the WindowTrackingService: zone/window queries,
 // empty-zone resolution, frame geometry, and zone-geometry conversion.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-#include "windowtrackingadaptor.h"
+#include "windowtracker.h"
 #include "internal.h"
 #include "core/resolve/daemongeometryresolver.h"
 #include <PhosphorPlacement/PlacementConfig.h>
 #include <PhosphorSnapEngine/snapnavigationtargets.h>
 #include "persistenceworker.h"
-#include "dbus/zonedetectionadaptor.h"
 #include <PhosphorEngine/IPlacementEngine.h>
 #include <PhosphorTileEngine/AutotileEngine.h>
 #include <PhosphorSnapEngine/SnapEngine.h>
@@ -44,7 +43,7 @@
 
 namespace PlasmaZones {
 
-QRect WindowTrackingAdaptor::frameGeometry(const QString& windowId) const
+QRect WindowTracker::frameGeometry(const QString& windowId) const
 {
     // The shadow store is keyed on CANONICAL ids (see setFrameGeometry), so a
     // caller holding the effect's CURRENT composite for a class-mutating app
@@ -52,7 +51,7 @@ QRect WindowTrackingAdaptor::frameGeometry(const QString& windowId) const
     return m_frameGeometry.value(shadowWindowId(windowId));
 }
 
-bool WindowTrackingAdaptor::isSettledManagedFrame(const QString& windowId, const QRect& frame) const
+bool WindowTracker::isSettledManagedFrame(const QString& windowId, const QRect& frame) const
 {
     // The frame the window settled at while a zone or a tile held it in view
     // (setFrameGeometry's m_lastManagedFrame), never a drag frame. The settled
@@ -65,12 +64,12 @@ bool WindowTrackingAdaptor::isSettledManagedFrame(const QString& windowId, const
     return m_lastManagedFrame.value(shadowWindowId(windowId)) == frame;
 }
 
-QStringList WindowTrackingAdaptor::knownWindowIds() const
+QStringList WindowTracker::knownWindowIds() const
 {
     return m_frameGeometry.keys();
 }
 
-QString WindowTrackingAdaptor::resolveBusScreen(const QString& reported, const QString& windowId, bool* guessed) const
+QString WindowTracker::resolveBusScreen(const QString& reported, const QString& windowId, bool* guessed) const
 {
     if (guessed) {
         *guessed = false;
@@ -118,7 +117,7 @@ QString WindowTrackingAdaptor::resolveBusScreen(const QString& reported, const Q
     return {};
 }
 
-int WindowTrackingInternal::shownDesktop(const WindowTrackingAdaptor& adaptor, const QString& screenId)
+int WindowTrackingInternal::shownDesktop(const WindowTracker& adaptor, const QString& screenId)
 {
     const int perOutput = adaptor.currentDesktopForScreen(screenId);
     if (perOutput >= 1) {
@@ -128,12 +127,12 @@ int WindowTrackingInternal::shownDesktop(const WindowTrackingAdaptor& adaptor, c
     return layouts ? layouts->currentVirtualDesktop() : 0;
 }
 
-int WindowTrackingAdaptor::desktopCount() const
+int WindowTracker::desktopCount() const
 {
     return m_virtualDesktopManager ? m_virtualDesktopManager->desktopCount() : 0;
 }
 
-QString WindowTrackingAdaptor::liveScreenForWindow(const QString& windowId) const
+QString WindowTracker::liveScreenForWindow(const QString& windowId) const
 {
     PhosphorScreens::ScreenManager* mgr = m_service ? m_service->screenManager() : nullptr;
     const QRect frame = m_frameGeometry.value(shadowWindowId(windowId));
@@ -146,13 +145,12 @@ QString WindowTrackingAdaptor::liveScreenForWindow(const QString& windowId) cons
     return resolveScreenForWindow(windowId);
 }
 
-std::optional<PhosphorEngine::WindowDesktopContext>
-WindowTrackingAdaptor::windowDesktopContext(const QString& windowId) const
+std::optional<PhosphorEngine::WindowDesktopContext> WindowTracker::windowDesktopContext(const QString& windowId) const
 {
     return m_windowRegistry ? m_windowRegistry->desktopContext(windowId) : std::nullopt;
 }
 
-QString WindowTrackingAdaptor::lastActiveScreenName() const
+QString WindowTracker::lastActiveScreenName() const
 {
     // Prefer where an engine holds the focused window now over the cached
     // m_lastActiveScreenId: KWin fires windowActivated only on focus changes,
@@ -195,7 +193,7 @@ QString WindowTrackingAdaptor::lastActiveScreenName() const
 // Window Tracking Queries - Delegate to Service
 // ═══════════════════════════════════════════════════════════════════════════════
 
-QString WindowTrackingAdaptor::getZoneForWindow(const QString& windowId)
+QString WindowTracker::getZoneForWindow(const QString& windowId)
 {
     if (!validateWindowId(windowId, QStringLiteral("get zone for window"))) {
         return QString();
@@ -204,7 +202,7 @@ QString WindowTrackingAdaptor::getZoneForWindow(const QString& windowId)
     return m_service->zoneForWindow(windowId);
 }
 
-QStringList WindowTrackingAdaptor::getWindowsInZone(const QString& zoneId)
+QStringList WindowTracker::getWindowsInZone(const QString& zoneId)
 {
     if (zoneId.isEmpty()) {
         qCWarning(lcDbusWindow) << "getWindowsInZone: empty zone ID";
@@ -214,18 +212,18 @@ QStringList WindowTrackingAdaptor::getWindowsInZone(const QString& zoneId)
     return m_service->windowsInZone(zoneId);
 }
 
-QStringList WindowTrackingAdaptor::getSnappedWindows()
+QStringList WindowTracker::getSnappedWindows()
 {
     // Delegate to service
     return m_service->snappedWindows();
 }
 
-PhosphorProtocol::EmptyZoneList WindowTrackingAdaptor::getEmptyZones(const QString& screenId)
+PhosphorProtocol::EmptyZoneList WindowTracker::getEmptyZones(const QString& screenId)
 {
     return m_service->getEmptyZones(screenId);
 }
 
-QStringList WindowTrackingAdaptor::getMultiZoneForWindow(const QString& windowId)
+QStringList WindowTracker::getMultiZoneForWindow(const QString& windowId)
 {
     if (!validateWindowId(windowId, QStringLiteral("get multi-zone for window"))) {
         return QStringList();
@@ -235,7 +233,7 @@ QStringList WindowTrackingAdaptor::getMultiZoneForWindow(const QString& windowId
     return m_service->zonesForWindow(windowId);
 }
 
-QString WindowTrackingAdaptor::getLastUsedZoneId()
+QString WindowTracker::getLastUsedZoneId()
 {
     // Delegate to service
     return m_service->lastUsedZoneId();
@@ -245,7 +243,7 @@ QString WindowTrackingAdaptor::getLastUsedZoneId()
 // PhosphorZones::Zone Geometry Queries - Delegate to Service
 // ═══════════════════════════════════════════════════════════════════════════════
 
-PhosphorProtocol::ZoneGeometryRect WindowTrackingAdaptor::getZoneGeometry(const QString& zoneId)
+PhosphorProtocol::ZoneGeometryRect WindowTracker::getZoneGeometry(const QString& zoneId)
 {
     // The D-Bus contract for this overload is "primary screen". Resolve that
     // screen here and pass its identifier: WindowTrackingService::zoneGeometry()
@@ -271,8 +269,8 @@ PhosphorProtocol::ZoneGeometryRect WindowTrackingAdaptor::getZoneGeometry(const 
     return getZoneGeometryForScreen(zoneId, primaryId);
 }
 
-PhosphorProtocol::ZoneGeometryRect WindowTrackingAdaptor::getZoneGeometryForScreen(const QString& zoneId,
-                                                                                   const QString& screenId)
+PhosphorProtocol::ZoneGeometryRect WindowTracker::getZoneGeometryForScreen(const QString& zoneId,
+                                                                           const QString& screenId)
 {
     QRect geo = zoneGeometryRect(zoneId, screenId);
     if (!geo.isValid()) {
@@ -281,7 +279,7 @@ PhosphorProtocol::ZoneGeometryRect WindowTrackingAdaptor::getZoneGeometryForScre
     return PhosphorProtocol::ZoneGeometryRect::fromRect(geo);
 }
 
-QRect WindowTrackingAdaptor::zoneGeometryRect(const QString& zoneId, const QString& screenId)
+QRect WindowTracker::zoneGeometryRect(const QString& zoneId, const QString& screenId)
 {
     if (zoneId.isEmpty()) {
         qCDebug(lcDbusWindow) << "zoneGeometryRect: empty zone ID";

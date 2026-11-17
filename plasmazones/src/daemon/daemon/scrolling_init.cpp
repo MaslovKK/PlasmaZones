@@ -40,8 +40,8 @@ namespace {
 /// nullptr when the focused screen is not in scrolling mode (the shortcut is
 /// then a quiet no-op, matching the master-op handlers' behaviour off
 /// autotile).
-PhosphorScrollEngine::ScrollEngine* scrollTargetFor(PhosphorScreens::ScreenManager* screenManager,
-                                                    WindowTrackingAdaptor* wta, ScreenModeRouter* router,
+PhosphorScrollEngine::ScrollEngine* scrollTargetFor(PhosphorScreens::ScreenManager* screenManager, WindowTracker* wta,
+                                                    ScreenModeRouter* router,
                                                     PhosphorEngine::PlacementEngineBase* engineBase,
                                                     QString* outScreenId)
 {
@@ -83,7 +83,7 @@ void Daemon::connectScrollingShortcuts()
     // context-disable gate, then the concrete engine.
     const auto engineFor = [this](QString* outScreenId) -> PhosphorScrollEngine::ScrollEngine* {
         QString screenId;
-        auto* scroll = scrollTargetFor(m_screenManager.get(), m_windowTrackingAdaptor, m_screenModeRouter.get(),
+        auto* scroll = scrollTargetFor(m_screenManager.get(), m_windowTracker, m_screenModeRouter.get(),
                                        m_scrollEngine.get(), &screenId);
         if (!scroll) {
             return nullptr;

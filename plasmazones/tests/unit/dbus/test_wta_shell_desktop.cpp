@@ -3,7 +3,7 @@
 
 /**
  * @file test_wta_shell_desktop.cpp
- * @brief The per-desktop reads of WindowTrackingAdaptor's Phosphor shell
+ * @brief The per-desktop reads of WindowTracker's Phosphor shell
  * surface (shellsurface_desktop.cpp).
  *
  *  1. getWindowStatesForDesktop keeps the rows of getAllWindowStates
@@ -37,7 +37,8 @@
 #include <PhosphorZones/AssignmentEntry.h>
 #include <PhosphorZones/LayoutRegistry.h>
 
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/windowtracker/windowtracker.h"
+#include "dbus/windowtrackingadaptor.h"
 
 #include "helpers/IsolatedConfigGuard.h"
 #include "helpers/LayoutRegistryTestHelpers.h"
@@ -80,11 +81,14 @@ private:
 
     /// One metadata push. @p desktop is the 1-based desktop (0 = all), and
     /// @p extended the a{sv} snapshot (non-empty, so it is a full push).
+    /// Through the D-Bus binding, as the effect's report arrives: it unwraps
+    /// the span lists a bus round trip leaves as QDBusArgument.
     void push(const char* instance, int pid, int desktop, const QVariantMap& extended)
     {
-        m_wta->setWindowMetadata(QLatin1String(instance), QLatin1String(App), QStringLiteral("org.kde.dolphin.desktop"),
-                                 QStringLiteral("Home"), QString(), pid, desktop, QString(),
-                                 static_cast<int>(PhosphorProtocol::WindowType::Normal), extended);
+        m_adaptor->setWindowMetadata(QLatin1String(instance), QLatin1String(App),
+                                     QStringLiteral("org.kde.dolphin.desktop"), QStringLiteral("Home"), QString(), pid,
+                                     desktop, QString(), static_cast<int>(PhosphorProtocol::WindowType::Normal),
+                                     extended);
     }
 
     static QVariantMap snapshot(int width = 640)
@@ -121,8 +125,8 @@ private Q_SLOTS:
         m_zoneDetector = new StubZoneDetector(nullptr);
         m_registry = new PhosphorEngine::WindowRegistry(nullptr);
         m_parent = new QObject(nullptr);
-        m_wta =
-            new WindowTrackingAdaptor(m_layoutManager, m_zoneDetector, nullptr, m_settings, nullptr, nullptr, m_parent);
+        m_wta = new WindowTracker(m_layoutManager, m_zoneDetector, nullptr, m_settings, nullptr, nullptr, m_parent);
+        m_adaptor = new WindowTrackingAdaptor(m_wta, m_parent);
         m_wta->setWindowRegistry(m_registry);
         // The service asserts on a snap state for every zone / float read,
         // so the harness gives it a real (inert) SnapEngine, as
@@ -144,6 +148,7 @@ private Q_SLOTS:
         delete m_parent;
         m_parent = nullptr;
         m_wta = nullptr;
+        m_adaptor = nullptr;
         delete m_registry;
         m_registry = nullptr;
         delete m_zoneDetector;
@@ -363,7 +368,8 @@ private:
     PhosphorEngine::WindowRegistry* m_registry = nullptr;
     PhosphorSnapEngine::SnapEngine* m_snapEngine = nullptr;
     QObject* m_parent = nullptr;
-    WindowTrackingAdaptor* m_wta = nullptr;
+    WindowTracker* m_wta = nullptr;
+    WindowTrackingAdaptor* m_adaptor = nullptr;
 };
 
 QTEST_MAIN(TestWtaShellDesktop)

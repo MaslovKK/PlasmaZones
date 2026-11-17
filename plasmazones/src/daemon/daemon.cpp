@@ -75,7 +75,7 @@
 #include "dbus/settingsadaptor/settingsadaptor.h"
 #include "dbus/overlayadaptor.h"
 #include "dbus/zonedetectionadaptor.h"
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/windowtracker/windowtracker.h"
 #include "dbus/windowdragadaptor/windowdragadaptor.h"
 #include "dbus/tilingadaptor/tilingadaptor.h"
 #include "dbus/snapadaptor/snapadaptor.h"

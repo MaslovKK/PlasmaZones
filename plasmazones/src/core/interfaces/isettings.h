@@ -254,7 +254,7 @@ public:
     ///
     /// On the interface rather than only as Settings' static, so a consumer
     /// that stamps the ColorScheme match field through its INJECTED settings
-    /// (the WindowTrackingAdaptor query builder) can have a test double
+    /// (the WindowTracker query builder) can have a test double
     /// substitute a fixed scheme. Not every consumer takes that path: the
     /// daemon's registry colour-scheme provider calls the static
     /// Settings::systemColorSchemeToken() directly. Settings implements this by
@@ -616,7 +616,7 @@ public:
     }
 
     /// Float-position restore for scroll-floated windows. Virtual with an
-    /// always-on default so the WindowTrackingAdaptor's restore predicate
+    /// always-on default so the WindowTracker's restore predicate
     /// can resolve it through the interface, like its snap/autotile twins.
     virtual bool scrollingRestoreFloatedWindowsOnLogin() const
     {

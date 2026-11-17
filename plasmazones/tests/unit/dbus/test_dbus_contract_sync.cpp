@@ -66,7 +66,7 @@
 #include "dbus/snapadaptor/snapadaptor.h"
 #include "dbus/windowdragadaptor/windowdragadaptor.h"
 #include "dbus/ruleadaptor.h"
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "dbus/windowtrackingadaptor.h"
 #include "dbus/zonedetectionadaptor.h"
 
 // The expected interface name comes from the constants clients call through, so

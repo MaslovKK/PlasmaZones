@@ -48,7 +48,7 @@
 #include "core/types/enums.h"
 #include "dbus/windowdragadaptor/dropproxy.h"
 #include "dbus/windowdragadaptor/windowdragadaptor.h"
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/windowtracker/windowtracker.h"
 
 #include "helpers/BusPeer.h"
 #include "helpers/IsolatedConfigGuard.h"
@@ -434,7 +434,7 @@ private:
                              {ConfigDefaults::triggerMouseButtonField(), 0}}});
             settings.setZoneSpanEnabled(false);
 
-            wta = new WindowTrackingAdaptor(layoutManager, &detector, nullptr, &settings, nullptr, nullptr, &parent);
+            wta = new WindowTracker(layoutManager, &detector, nullptr, &settings, nullptr, nullptr, &parent);
             wta->setWindowRegistry(&registry);
             snapEngine = new PhosphorSnapEngine::SnapEngine(layoutManager, wta->service(), &detector, nullptr, nullptr);
             snapEngine->setEngineSettings(&settings);
@@ -469,7 +469,7 @@ private:
         StubSettings settings;
         PhosphorZones::LayoutRegistry* layoutManager = nullptr;
         PhosphorZones::Layout* layout = nullptr;
-        WindowTrackingAdaptor* wta = nullptr; // parent-owned
+        WindowTracker* wta = nullptr; // parent-owned
         PhosphorSnapEngine::SnapEngine* snapEngine = nullptr;
         WindowDragAdaptor* adaptor = nullptr; // parent-owned
         QScreen* screen = nullptr;

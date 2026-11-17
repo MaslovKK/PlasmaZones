@@ -80,7 +80,7 @@ public:
     /// one column on arrival. Called with the exact strip screen id, the ids
     /// that will actually move, and the destination desktop number, AFTER the
     /// sticky filter and BEFORE the first move is emitted. The daemon backs it
-    /// with WindowTrackingAdaptor::stashScrollColumnForWorkspaceMove, which
+    /// with WindowTracker::stashScrollColumnForWorkspaceMove, which
     /// also leaves out a window the move verb refuses, and only when the
     /// destination context runs scrolling. Unset, every window moves on its
     /// own.
@@ -91,7 +91,7 @@ public:
     /// so the riders rebuild their columns there. Called with the riders, the
     /// destination monitor (physical id from the map) and the desktop number,
     /// after the transfer and BEFORE the first rider move is emitted. The
-    /// daemon backs it with WindowTrackingAdaptor::stashScrollStripsForWorkspaceMove.
+    /// daemon backs it with WindowTracker::stashScrollStripsForWorkspaceMove.
     /// Unset, every rider arrives on its own.
     void setStripStashHandler(
         std::function<void(const QStringList& windowIds, const QString& targetScreenId, int desktop)> handler);

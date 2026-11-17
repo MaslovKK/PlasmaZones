@@ -10,7 +10,7 @@
  * "[]" retraction that drops a screen from that cache, the per-screen PAINT
  * override map and its predicate-driven clear, the all-windows
  * scrollTabColorsChanged broadcast, the targeted per-window re-drive, and the
- * scrollTabColors pass-through to the WindowTrackingAdaptor's rule resolution,
+ * scrollTabColors pass-through to the WindowTracker's rule resolution,
  * whose memo follows every change of the window's registry record.
  *
  * NOTE: the adaptor is parented to a plain QObject rather than a
@@ -36,7 +36,7 @@
 
 #include "config/configdefaults.h"
 #include "dbus/tilingadaptor/tilingadaptor.h"
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/windowtracker/windowtracker.h"
 #include "helpers/IsolatedConfigGuard.h"
 #include "helpers/LayoutRegistryTestHelpers.h"
 #include "helpers/StubSettings.h"
@@ -276,8 +276,7 @@ private Q_SLOTS:
         StubSettings settings(nullptr);
         StubZoneDetector zoneDetector(nullptr);
 
-        auto* wta =
-            new WindowTrackingAdaptor(layoutManager, &zoneDetector, nullptr, &settings, nullptr, nullptr, &parent);
+        auto* wta = new WindowTracker(layoutManager, &zoneDetector, nullptr, &settings, nullptr, nullptr, &parent);
         auto* registry = new PhosphorEngine::WindowRegistry(&parent);
         wta->setWindowRegistry(registry);
         wta->setWindowMetadata(QStringLiteral("inst1"), QStringLiteral("tabapp"), QString(), QString(), QString(), 0, 0,
@@ -393,8 +392,7 @@ private Q_SLOTS:
         QObject parent;
         StubSettings settings(nullptr);
         StubZoneDetector zoneDetector(nullptr);
-        auto* wta =
-            new WindowTrackingAdaptor(layoutManager, &zoneDetector, nullptr, &settings, nullptr, nullptr, &parent);
+        auto* wta = new WindowTracker(layoutManager, &zoneDetector, nullptr, &settings, nullptr, nullptr, &parent);
         auto* registry = new PhosphorEngine::WindowRegistry(&parent);
         wta->setWindowRegistry(registry);
         PhosphorEngine::WindowMetadata meta;

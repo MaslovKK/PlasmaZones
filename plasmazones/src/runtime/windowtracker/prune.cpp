@@ -1,16 +1,15 @@
 // SPDX-FileCopyrightText: 2026 fuddlesworth
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-// WindowTrackingAdaptor: the stale-window prune. The effect hands over the
+// WindowTracker: the stale-window prune. The effect hands over the
 // set of windows still alive, and every per-window store the adaptor and
 // the engines keep drops the rest.
 
-#include "windowtrackingadaptor.h"
+#include "windowtracker.h"
 #include "evacueeledger.h"
 #include "lifecyclerelay.h"
 #include "internal.h"
 #include "core/platform/logging.h"
-#include "dbus/dbushelpers.h"
 #include <PhosphorEngine/IPlacementEngine.h>
 #include <PhosphorEngine/WindowRegistry.h>
 #include <PhosphorEngine/WindowPlacement.h>
@@ -25,11 +24,8 @@
 
 namespace PlasmaZones {
 
-void WindowTrackingAdaptor::pruneStaleWindows(const QStringList& aliveWindowIds)
+void WindowTracker::pruneStaleWindows(const QStringList& aliveWindowIds)
 {
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return;
-    }
     // Fail CLOSED on an empty alive set, agreeing with both callees
     // (pruneStaleAssignments and pruneStaleInstances refuse it with a
     // warning): the effect's one-shot alive report at daemon-ready can fire

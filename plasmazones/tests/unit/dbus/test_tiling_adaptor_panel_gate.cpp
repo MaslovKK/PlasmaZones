@@ -29,7 +29,7 @@
 #include <PhosphorScreens/Manager.h>
 #include <PhosphorWorkspaces/VirtualDesktopManager.h>
 #include "dbus/tilingadaptor/tilingadaptor.h"
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/windowtracker/windowtracker.h"
 #include "helpers/IsolatedConfigGuard.h"
 #include "helpers/LayoutRegistryTestHelpers.h"
 #include "helpers/StubSettings.h"
@@ -358,8 +358,7 @@ private Q_SLOTS:
         QObject parent;
         StubSettings settings(nullptr);
         StubZoneDetector zoneDetector(nullptr);
-        auto* wta =
-            new WindowTrackingAdaptor(layoutManager, &zoneDetector, nullptr, &settings, nullptr, nullptr, &parent);
+        auto* wta = new WindowTracker(layoutManager, &zoneDetector, nullptr, &settings, nullptr, nullptr, &parent);
         RecordingEngine engine;
         // The engine floats every window it tracks; the set stands in for a
         // float another engine holds.
@@ -377,7 +376,7 @@ private Q_SLOTS:
         TilingAdaptor adaptor(nullptr, &adaptorParent);
         adaptor.setLifecycleEngines({&engine});
         adaptor.setWindowTrackingAdaptor(wta);
-        QSignalSpy spy(wta, &WindowTrackingAdaptor::windowFloatingChanged);
+        QSignalSpy spy(wta, &WindowTracker::windowFloatingChanged);
         QVERIFY(spy.isValid());
 
         const QString ended = QStringLiteral("app|minimized");
@@ -640,7 +639,7 @@ private Q_SLOTS:
         QObject parent;
         StubSettings settings(nullptr);
         StubZoneDetector zoneDetector(nullptr);
-        auto* wta = new WindowTrackingAdaptor(layoutManager, &zoneDetector, nullptr, &settings, &vdm, nullptr, &parent);
+        auto* wta = new WindowTracker(layoutManager, &zoneDetector, nullptr, &settings, &vdm, nullptr, &parent);
         AutotileEngine engine(nullptr, nullptr, nullptr, PlasmaZones::TestHelpers::testRegistry());
         engine.setAutotileScreens({QStringLiteral("HDMI-1")});
         QObject adaptorParent;

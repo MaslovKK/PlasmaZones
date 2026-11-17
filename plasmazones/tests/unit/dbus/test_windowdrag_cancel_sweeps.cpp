@@ -54,7 +54,7 @@
 #include "dbus/snapadaptor/snapadaptor.h"
 #include "dbus/tilingadaptor/tilingadaptor.h"
 #include "dbus/windowdragadaptor/windowdragadaptor.h"
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/windowtracker/windowtracker.h"
 
 #include "helpers/AutotileTestHelpers.h"
 #include "helpers/IsolatedConfigGuard.h"
@@ -163,7 +163,7 @@ private:
             QDir().mkpath(layoutDir);
             registry->setLayoutDirectory(layoutDir);
 
-            wta = new WindowTrackingAdaptor(registry.get(), &detector, nullptr, &settings, nullptr, nullptr, &parent);
+            wta = new WindowTracker(registry.get(), &detector, nullptr, &settings, nullptr, nullptr, &parent);
             adaptor = new WindowDragAdaptor(&overlay, &detector, registry.get(), nullptr, &settings, wta, &parent);
 
             engine =
@@ -189,7 +189,7 @@ private:
         StubSettings settings;
         std::unique_ptr<PhosphorRules::RuleStore> store;
         std::unique_ptr<PhosphorZones::LayoutRegistry> registry;
-        WindowTrackingAdaptor* wta = nullptr; // parent-owned
+        WindowTracker* wta = nullptr; // parent-owned
         WindowDragAdaptor* adaptor = nullptr; // parent-owned
         std::unique_ptr<AutotileEngine> engine;
     };
@@ -275,7 +275,7 @@ private Q_SLOTS:
         vdm.updateScreenDesktop(QStringLiteral("DP-1"), 1);
         vdm.updateScreenDesktop(QStringLiteral("DP-2"), 1);
 
-        auto* wta = new WindowTrackingAdaptor(registry.get(), &detector, &screenMgr, &settings, &vdm, nullptr, &parent);
+        auto* wta = new WindowTracker(registry.get(), &detector, &screenMgr, &settings, &vdm, nullptr, &parent);
         AutotileEngine engine(nullptr, nullptr, nullptr, PlasmaZones::TestHelpers::testRegistry());
         engine.setAutotileScreens({QStringLiteral("DP-1"), QStringLiteral("DP-2")});
         TilingAdaptor adaptor(&screenMgr, &parent);
@@ -381,7 +381,7 @@ private Q_SLOTS:
         HeldSnapFixture h;
         const QString w = h.f.registerWindow(QStringLiteral("held-reflow"));
         h.f.snap->commitSnap(w, h.f.zone(0), kLeft);
-        QSignalSpy batch(h.f.wta, &WindowTrackingAdaptor::applyGeometriesBatch);
+        QSignalSpy batch(h.f.wta, &WindowTracker::applyGeometriesBatch);
 
         h.adaptor->reapplySnapZones();
         QCOMPARE(batch.count(), 0);
@@ -401,7 +401,7 @@ private Q_SLOTS:
         entry.targetZoneId = h.f.zone(1);
         entry.targetGeometry = h.f.zoneRect(1, kLeft);
         entry.targetScreenId = kLeft;
-        QSignalSpy batch(h.f.wta, &WindowTrackingAdaptor::applyGeometriesBatch);
+        QSignalSpy batch(h.f.wta, &WindowTracker::applyGeometriesBatch);
 
         h.f.snap->emitBatchedResnap({entry});
         QCOMPARE(h.f.snap->zoneForWindow(w), h.f.zone(1));
@@ -419,7 +419,7 @@ private Q_SLOTS:
         HeldSnapFixture h;
         const QString w = h.f.registerWindow(QStringLiteral("held-restate"));
         const QRect rect = h.f.zoneRect(0, kLeft);
-        QSignalSpy applies(h.f.wta, &WindowTrackingAdaptor::applyGeometryRequested);
+        QSignalSpy applies(h.f.wta, &WindowTracker::applyGeometryRequested);
 
         Q_EMIT h.f.snap->restatementGeometryRequested(w, rect.x(), rect.y(), rect.width(), rect.height(), h.f.zone(0),
                                                       kLeft);
@@ -442,7 +442,7 @@ private Q_SLOTS:
         const QString kept = h.f.registerWindow(QStringLiteral("held-kept"));
         h.f.snap->commitSnap(moved, h.f.zone(0), kLeft);
         h.f.snap->commitSnap(kept, h.f.zone(1), kLeft);
-        QSignalSpy batch(h.f.wta, &WindowTrackingAdaptor::applyGeometriesBatch);
+        QSignalSpy batch(h.f.wta, &WindowTracker::applyGeometriesBatch);
 
         h.adaptor->reapplySnapZones();
         QCOMPARE(h.held.size(), 1);

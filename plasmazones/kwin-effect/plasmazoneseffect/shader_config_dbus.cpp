@@ -132,7 +132,7 @@ QStringList validatedShaderSearchPaths(const QJsonArray& arr)
 
 /// Context fields NO effect-side resolver stamps onto its WindowQuery —
 /// the effect twin of the daemon open-path's neverStampedFields()
-/// (src/dbus/windowtrackingadaptor/rules.cpp), for the same reason: an
+/// (src/runtime/windowtracker/rules.cpp), for the same reason: an
 /// unstamped field is not inert. WindowQuery::valueForField returns an
 /// ENGAGED empty string for string-valued context fields, so a positive
 /// leaf on one correctly never matches, but a NEGATED leaf

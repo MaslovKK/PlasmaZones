@@ -3,7 +3,7 @@
 
 #include "controladaptor.h"
 #include "dbus/snapadaptor/snapadaptor.h"
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/windowtracker/windowtracker.h"
 #include "compositorbridgeadaptor.h"
 #include <PhosphorZones/LayoutRegistry.h>
 #include <PhosphorZones/Layout.h>
@@ -25,7 +25,7 @@
 
 namespace PlasmaZones {
 
-ControlAdaptor::ControlAdaptor(WindowTrackingAdaptor* wta, SnapAdaptor* snapAdaptor,
+ControlAdaptor::ControlAdaptor(WindowTracker* wta, SnapAdaptor* snapAdaptor,
                                PhosphorZones::LayoutRegistry* layoutManager,
                                PhosphorEngine::IPlacementEngine* autotileEngine,
                                PhosphorScreens::ScreenManager* screenManager, CompositorBridgeAdaptor* compositorBridge,

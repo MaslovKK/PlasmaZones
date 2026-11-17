@@ -7,7 +7,7 @@
  *        window on. The effect holds every crossing back for the whole drag,
  *        so the drag adaptor's end is the only place the move is resolved:
  *        the pending (no trigger) and dead arms through
- *        WindowTrackingAdaptor::dragEndedOnScreen, an activated drop through
+ *        WindowTracker::dragEndedOnScreen, an activated drop through
  *        its cross-screen block. Two snapping outputs side by side. The same
  *        fixture covers what a crossing changes mid-drag: Escape on a pending
  *        drag, the drag-out size preview, the drop-indicator overrides, the
@@ -51,7 +51,7 @@
 
 #include "config/configdefaults.h"
 #include "dbus/windowdragadaptor/windowdragadaptor.h"
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/windowtracker/windowtracker.h"
 
 #include "helpers/AutotileTestHelpers.h"
 #include "helpers/IsolatedConfigGuard.h"
@@ -127,8 +127,7 @@ private:
                              {ConfigDefaults::triggerMouseButtonField(), 0}}});
             settings.setZoneSpanEnabled(false);
 
-            wta = new WindowTrackingAdaptor(layoutManager, &detector, screenMgr.get(), &settings, nullptr, nullptr,
-                                            &parent);
+            wta = new WindowTracker(layoutManager, &detector, screenMgr.get(), &settings, nullptr, nullptr, &parent);
             snap = std::make_unique<PhosphorSnapEngine::SnapEngine>(layoutManager, wta->service(), &detector, nullptr,
                                                                     nullptr);
             snap->setEngineSettings(&settings);
@@ -242,7 +241,7 @@ private:
         StubSettings settings;
         PhosphorZones::LayoutRegistry* layoutManager = nullptr;
         PhosphorZones::Layout* layout = nullptr;
-        WindowTrackingAdaptor* wta = nullptr; // parent-owned
+        WindowTracker* wta = nullptr; // parent-owned
         std::unique_ptr<PhosphorSnapEngine::SnapEngine> snap;
         WindowDragAdaptor* adaptor = nullptr; // parent-owned
         std::unique_ptr<PhosphorTileEngine::AutotileEngine> tiling; // tileTheOtherScreen

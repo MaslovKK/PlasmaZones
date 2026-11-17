@@ -23,12 +23,12 @@
 #include "dbus/tilingadaptor/tilingadaptor.h"
 #include "seedorderfilter.h"
 
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/windowtracker/windowtracker.h"
 // WindowColorKeys — the one home for the five colour-override key spellings
 // this file produces. The three tab colours are consumed by the KWin effect,
 // which paints the pills; the two indicator colours by the overlay's
 // drop-indicator slot.
-#include "dbus/windowtrackingadaptor/internal.h"
+#include "runtime/windowtracker/internal.h"
 
 #include <PhosphorIdentity/VirtualScreenId.h>
 #include <PhosphorPlacement/WindowTrackingService.h>
@@ -94,8 +94,7 @@ void Daemon::captureScrollingOrders(const QSet<QString>& scrollingScreens)
 SeedScope Daemon::seedScopeFor(const QString& screenId, int desktop) const
 {
     return SeedScope{screenId, desktop, [this](const QString& windowId) {
-                         const QRect frame =
-                             m_windowTrackingAdaptor ? m_windowTrackingAdaptor->frameGeometry(windowId) : QRect();
+                         const QRect frame = m_windowTracker ? m_windowTracker->frameGeometry(windowId) : QRect();
                          return seedWindowScreen(windowId, {m_autotileEngine.get(), m_scrollEngine.get()},
                                                  m_snapEngine.get(), frame, m_screenManager.get());
                      }};
@@ -121,8 +120,7 @@ void Daemon::updateScrollingScreens(const QSet<QString>& scrollingScreens)
     // user-floated-then-minimized ones. See filterEngineSeedOrder's doc.
     const QSet<QString> currentScrollScreens = m_scrollEngine->activeScreens();
     const QSet<QString> enteringScreens = scrollingScreens - currentScrollScreens;
-    PhosphorPlacement::WindowTrackingService* wts =
-        m_windowTrackingAdaptor ? m_windowTrackingAdaptor->service() : nullptr;
+    PhosphorPlacement::WindowTrackingService* wts = m_windowTracker ? m_windowTracker->service() : nullptr;
     if (!enteringScreens.isEmpty()) {
         if (!wts) {
             // Fail CLOSED, like the autotile twin. filterEngineSeedOrder

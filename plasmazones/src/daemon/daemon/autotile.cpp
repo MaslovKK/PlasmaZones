@@ -20,8 +20,8 @@
 #include "dbus/layoutadaptor/layoutadaptor.h"
 #include "dbus/snapadaptor/snapadaptor.h"
 #include "dbus/windowdragadaptor/windowdragadaptor.h"
-#include "dbus/windowtrackingadaptor/internal.h"
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/windowtracker/internal.h"
+#include "runtime/windowtracker/windowtracker.h"
 #include <PhosphorEngine/PlacementEngineBase.h>
 #include <PhosphorEngine/IPlacementEngine.h>
 #include <PhosphorEngine/WindowPlacement.h>
@@ -396,10 +396,10 @@ void Daemon::updateEngineScreens()
     // EDID id of one output, never a virtual-screen id with its physical
     // output. A wrong or stale id degrades harmlessly: the engine drops a seed
     // naming a window its strip does not contain, and drains it either way.
-    if (m_windowTrackingAdaptor && m_scrollEngine) {
-        const QString focusedId = m_windowTrackingAdaptor->lastActiveWindowId();
+    if (m_windowTracker && m_scrollEngine) {
+        const QString focusedId = m_windowTracker->lastActiveWindowId();
         if (!focusedId.isEmpty()) {
-            const QString focusedScreen = m_windowTrackingAdaptor->lastActiveScreenName();
+            const QString focusedScreen = m_windowTracker->lastActiveScreenName();
             const QSet<QString> autotileActive = m_autotileEngine->activeScreens();
             const QSet<QString> scrollActive = m_scrollEngine->activeScreens();
             for (const QString& screenId : scrollingScreens) {
@@ -652,7 +652,7 @@ void Daemon::updateEngineScreens()
     // zones (found the hard way).
     emitPendingSnapFloatRestoresForResnapBuffer(/*preserveZoneEntries=*/true);
     // A desktop just given the tiling opt-out drops the floats snap held there (autotile_none_float_owner).
-    WindowTrackingInternal::dropOptOutFloats(m_windowTrackingAdaptor);
+    WindowTrackingInternal::dropOptOutFloats(m_windowTracker);
 
     // Push the per-screen RULES-VISIBLE active layout map to the effect so
     // window-domain (appearance/animation) rules can match Field::ActiveLayout
@@ -728,7 +728,7 @@ QSet<QString> Daemon::diffActiveAssignments()
         return snapGapVerdict(screenId);
     });
     // A context that just became the tiling opt-out frees its snapped windows in place (autotile_none_float_owner).
-    WindowTrackingInternal::releaseOptOutZones(m_windowTrackingAdaptor, changed);
+    WindowTrackingInternal::releaseOptOutZones(m_windowTracker, changed);
     // Mirror the fresh snapshot onto the bus-facing adaptor and broadcast the
     // screens that moved. This is the ONE resolution of "which layout is active
     // on which screen" in the daemon, and every edge that can move that value
@@ -1295,13 +1295,13 @@ QVector<ZoneAssignmentEntry> Daemon::buildAutotileRestoreEntries(const QSet<QStr
                                                                  const QString& activity, const QString& onlyScreenId)
 {
     QVector<ZoneAssignmentEntry> entries;
-    if (!m_windowTrackingAdaptor || m_lastEngineOrders.isEmpty()) {
+    if (!m_windowTracker || m_lastEngineOrders.isEmpty()) {
         return entries;
     }
     // No null-check on service(): the adaptor constructs and owns its service
     // (never null once the adaptor exists) — the sibling callers in this file
     // rely on the same invariant.
-    PhosphorPlacement::WindowTrackingService* wts = m_windowTrackingAdaptor->service();
+    PhosphorPlacement::WindowTrackingService* wts = m_windowTracker->service();
     for (auto it = m_lastEngineOrders.constBegin(); it != m_lastEngineOrders.constEnd(); ++it) {
         // Independent scopes: the activity compare must not hide behind the
         // desktop sentinel, or a desktop-unscoped caller (the master-switch
@@ -1382,10 +1382,10 @@ void Daemon::presaveSnapFloats(const QString& screenId)
     // Reachable from `Settings::settingsChanged` (init_services.cpp) before the
     // engines exist — any synchronous re-entry into settingsChanged during the
     // D-Bus retry loop in init() would hit this path with null engine pointers.
-    if (!m_windowTrackingAdaptor || !m_windowTrackingAdaptor->service() || !m_autotileEngine || !m_snapEngine) {
+    if (!m_windowTracker || !m_windowTracker->service() || !m_autotileEngine || !m_snapEngine) {
         return;
     }
-    PhosphorPlacement::WindowTrackingService* wts = m_windowTrackingAdaptor->service();
+    PhosphorPlacement::WindowTrackingService* wts = m_windowTracker->service();
     // EVERY open window, not only the explicitly-floated set. A free window in
     // snapping mode (never snapped, never floated) has no live state anywhere,
     // and its CURRENT frame at the flip instant is the only correct restore
@@ -1395,7 +1395,7 @@ void Daemon::presaveSnapFloats(const QString& screenId)
     // slot-state gate keeps this safe for the rest of the sweep: snapped and
     // engine-tiled windows refresh their slots without any geometry write, and
     // minimized windows take its preserve path.
-    const QStringList allIds = m_windowTrackingAdaptor->knownWindowIds();
+    const QStringList allIds = m_windowTracker->knownWindowIds();
     for (const QString& fid : allIds) {
         // A window floated BY a tiling mode (either engine) is that mode's
         // own float, not a snap float: capturing it here would poison the
@@ -1416,14 +1416,14 @@ void Daemon::presaveSnapFloats(const QString& screenId)
                 continue;
             }
         }
-        m_windowTrackingAdaptor->captureWindowPlacement(fid);
+        m_windowTracker->captureWindowPlacement(fid);
         qCDebug(lcDaemon) << "Captured snap-float to record for" << fid << "screen=" << screenId;
     }
 }
 
 void Daemon::seedAutotileOrderForScreen(const QString& screenId)
 {
-    if (!m_autotileEngine || !m_windowTrackingAdaptor) {
+    if (!m_autotileEngine || !m_windowTracker) {
         return;
     }
 
@@ -1432,7 +1432,7 @@ void Daemon::seedAutotileOrderForScreen(const QString& screenId)
     // activation, or windows changed between toggles).
     TilingStateKey orderKey{screenId, currentDesktopForScreen(screenId), currentActivity()};
     QStringList order = m_lastEngineOrders.value(orderKey);
-    PhosphorPlacement::WindowTrackingService* wts = m_windowTrackingAdaptor->service();
+    PhosphorPlacement::WindowTrackingService* wts = m_windowTracker->service();
     if (!wts) {
         // Fail CLOSED: without the WTS the seed filter cannot drop live user
         // floats or durable snap-slot floats, and seeding a saved order

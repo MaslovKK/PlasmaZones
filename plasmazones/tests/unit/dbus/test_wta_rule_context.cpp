@@ -3,7 +3,7 @@
 
 /**
  * @file test_wta_rule_context.cpp
- * @brief WindowTrackingAdaptor rule-context coverage: the screen-derived
+ * @brief WindowTracker rule-context coverage: the screen-derived
  *        context fields buildContextualRuleQuery stamps (ScreenId,
  *        ActiveLayout, and the screen shape: orientation, width, height,
  *        aspect ratio), the refusal of a rule negating a shape field the
@@ -29,7 +29,7 @@
 #include <PhosphorZones/Layout.h>
 #include <PhosphorZones/LayoutRegistry.h>
 #include <PhosphorZones/Zone.h>
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/windowtracker/windowtracker.h"
 #include <PhosphorSnapEngine/SnapEngine.h>
 #include <PhosphorEngine/WindowRegistry.h>
 #include <PhosphorWorkspaces/VirtualDesktopManager.h>
@@ -69,8 +69,8 @@ private Q_SLOTS:
         m_desktopManager = new PhosphorWorkspaces::VirtualDesktopManager(nullptr);
         // WTA needs a parent QObject for QDBusAbstractAdaptor.
         m_parent = new QObject(nullptr);
-        m_wta = new WindowTrackingAdaptor(m_layoutManager, m_zoneDetector, nullptr, m_settings, m_desktopManager,
-                                          nullptr, m_parent);
+        m_wta = new WindowTracker(m_layoutManager, m_zoneDetector, nullptr, m_settings, m_desktopManager, nullptr,
+                                  m_parent);
 
         m_snapEngine = new SnapEngine(m_layoutManager, m_wta->service(), m_zoneDetector, nullptr, nullptr);
         m_snapEngine->setEngineSettings(m_settings);
@@ -701,7 +701,7 @@ private:
     StubSettings* m_settings = nullptr;
     StubZoneDetector* m_zoneDetector = nullptr;
     QObject* m_parent = nullptr;
-    WindowTrackingAdaptor* m_wta = nullptr;
+    WindowTracker* m_wta = nullptr;
     PhosphorWorkspaces::VirtualDesktopManager* m_desktopManager = nullptr;
     SnapEngine* m_snapEngine = nullptr;
     std::unique_ptr<PhosphorRules::RuleStore> m_store;

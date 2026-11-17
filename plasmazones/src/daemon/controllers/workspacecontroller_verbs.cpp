@@ -272,7 +272,7 @@ void WorkspaceController::moveColumnToWorkspace(const QString& screenId, const Q
         // one column. It reads the live column, so it is recorded before the
         // first move releases anything. The handler leaves out a window the
         // move verb refuses at the time it runs, the one being dragged
-        // (WindowTrackingAdaptor::stashScrollColumnForWorkspaceMove), which
+        // (WindowTracker::stashScrollColumnForWorkspaceMove), which
         // this controller cannot see (C75).
         if (m_columnStashHandler) {
             m_columnStashHandler(stripScreenId, moving, desktop);

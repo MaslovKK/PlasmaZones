@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 fuddlesworth
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#include "windowtrackingadaptor.h"
+#include "windowtracker.h"
 #include <PhosphorIdentity/VirtualScreenId.h>
 #include <PhosphorRules/Rule.h>
 #include <PhosphorRules/RuleAction.h>
@@ -15,7 +15,6 @@
 #include "core/interfaces/interfaces.h"
 #include "core/platform/logging.h"
 #include "core/utils/utils.h"
-#include "dbus/dbushelpers.h"
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -23,12 +22,9 @@
 
 namespace PlasmaZones {
 
-void WindowTrackingAdaptor::storePreTileGeometry(const QString& windowId, int x, int y, int width, int height,
-                                                 const QString& screenId, bool overwrite)
+void WindowTracker::storePreTileGeometry(const QString& windowId, int x, int y, int width, int height,
+                                         const QString& screenId, bool overwrite)
 {
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return;
-    }
     if (!validateWindowId(windowId, QStringLiteral("store pre-tile geometry"))) {
         return;
     }
@@ -49,7 +45,7 @@ void WindowTrackingAdaptor::storePreTileGeometry(const QString& windowId, int x,
                           << "overwrite=" << overwrite;
 }
 
-bool WindowTrackingAdaptor::hasPreTileGeometry(const QString& windowId)
+bool WindowTracker::hasPreTileGeometry(const QString& windowId)
 {
     // No m_service guard: the ctor qFatals on a null service and then assigns
     // it unconditionally, so it is non-null for the object's whole life. The
@@ -73,13 +69,8 @@ bool WindowTrackingAdaptor::hasPreTileGeometry(const QString& windowId)
     return m_service->validatedUnmanagedGeometry(windowId, screenId).has_value();
 }
 
-void WindowTrackingAdaptor::clearPreTileGeometry(const QString& windowId)
+void WindowTracker::clearPreTileGeometry(const QString& windowId)
 {
-    // The inverse of storePreTileGeometry takes its gate (#1155): another peer
-    // must not wipe every screen's float-back of a window.
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return;
-    }
     if (!validateWindowId(windowId, QStringLiteral("clear pre-tile geometry"))) {
         return;
     }
@@ -88,7 +79,7 @@ void WindowTrackingAdaptor::clearPreTileGeometry(const QString& windowId)
     m_service->clearFreeGeometry(windowId);
 }
 
-PhosphorProtocol::PreTileGeometryList WindowTrackingAdaptor::getPreTileGeometries()
+PhosphorProtocol::PreTileGeometryList WindowTracker::getPreTileGeometries()
 {
     PhosphorProtocol::PreTileGeometryList result;
     // Source from the SINGLE float-back store — the unified record's shared
@@ -131,8 +122,7 @@ PhosphorProtocol::PreTileGeometryList WindowTrackingAdaptor::getPreTileGeometrie
     return result;
 }
 
-bool WindowTrackingAdaptor::getValidatedPreTileGeometry(const QString& windowId, int& x, int& y, int& width,
-                                                        int& height)
+bool WindowTracker::getValidatedPreTileGeometry(const QString& windowId, int& x, int& y, int& width, int& height)
 {
     x = y = width = height = 0;
 
@@ -168,7 +158,7 @@ bool WindowTrackingAdaptor::getValidatedPreTileGeometry(const QString& windowId,
     return true;
 }
 
-PhosphorProtocol::WindowGeometryList WindowTrackingAdaptor::getUpdatedWindowGeometries()
+PhosphorProtocol::WindowGeometryList WindowTracker::getUpdatedWindowGeometries()
 {
     // A geometry re-apply is a placement: none with snapping switched off,
     // none in a context the user disabled (F445).
@@ -214,7 +204,7 @@ bool anyRuleRefusesZoneRestore(const PhosphorRules::RuleSet& rules)
 }
 } // namespace
 
-QString WindowTrackingAdaptor::getPendingRestoreGeometries()
+QString WindowTracker::getPendingRestoreGeometries()
 {
     // The cache stands in for the snap restore's own answer, so it is empty
     // wherever that answer is no: snapping off, the zone restore off
@@ -280,7 +270,7 @@ QString WindowTrackingAdaptor::getPendingRestoreGeometries()
     return QString::fromUtf8(QJsonDocument(result).toJson(QJsonDocument::Compact));
 }
 
-void WindowTrackingAdaptor::onLayoutChanged()
+void WindowTracker::onLayoutChanged()
 {
     // Mid-removal the layoutsChanged that closes it moves the windows, then
     // prunes; pruning here first would unsnap them before they move.
@@ -298,7 +288,7 @@ void WindowTrackingAdaptor::onLayoutChanged()
     }
 }
 
-void WindowTrackingAdaptor::relayZonePrune(const PhosphorPlacement::WindowTrackingService::ZonePruneResult& result)
+void WindowTracker::relayZonePrune(const PhosphorPlacement::WindowTrackingService::ZonePruneResult& result)
 {
     // The effect clears its snapped mark on "unsnapped" (F328): a window the
     // prune left in no zone kept its snap decoration, and a later minimize
@@ -317,8 +307,8 @@ void WindowTrackingAdaptor::relayZonePrune(const PhosphorPlacement::WindowTracki
     }
 }
 
-void WindowTrackingAdaptor::resnapScreensToTheirLayouts(const QSet<QString>& excludeScreens,
-                                                        const QSet<QString>& screens, int desktop)
+void WindowTracker::resnapScreensToTheirLayouts(const QSet<QString>& excludeScreens, const QSet<QString>& screens,
+                                                int desktop)
 {
     if (!m_service || !m_cachedSnapEngine) {
         return;
@@ -332,13 +322,13 @@ void WindowTrackingAdaptor::resnapScreensToTheirLayouts(const QSet<QString>& exc
     relayZonePrune(m_service->pruneStaleZoneAssignments());
 }
 
-void WindowTrackingAdaptor::onPanelGeometryReady()
+void WindowTracker::onPanelGeometryReady()
 {
     qCDebug(lcDbusWindow) << "Panel geometry: ready, checking if pending restores available";
     tryEmitPendingRestoresAvailable();
 }
 
-void WindowTrackingAdaptor::tryEmitPendingRestoresAvailable()
+void WindowTracker::tryEmitPendingRestoresAvailable()
 {
     // Don't emit more than once per session
     if (m_pendingRestoresEmitted) {
@@ -370,7 +360,7 @@ void WindowTrackingAdaptor::tryEmitPendingRestoresAvailable()
     Q_EMIT pendingRestoresAvailable();
 }
 
-QString WindowTrackingAdaptor::detectScreenForZone(const QString& zoneId) const
+QString WindowTracker::detectScreenForZone(const QString& zoneId) const
 {
     if (!m_layoutManager) {
         return QString();

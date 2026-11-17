@@ -11,7 +11,7 @@
 // on the D-Bus surface.
 
 #include "windowdragadaptor.h"
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/windowtracker/windowtracker.h"
 #include <PhosphorSnapEngine/SnapEngine.h>
 #include "core/interfaces/interfaces.h"
 #include <PhosphorContext/ContextResolver.h>
@@ -1032,7 +1032,7 @@ void WindowDragAdaptor::updateDragCursor(const QString& windowId, int cursorX, i
     // below never runs), which is deliberate and safe: a pending drag
     // exercises none of the policy-driven activation behaviors, its endDrag
     // takes the pending branch, which hands a window dropped on another
-    // screen to WindowTrackingAdaptor::dragEndedOnScreen (the effect holds
+    // screen to WindowTracker::dragEndedOnScreen (the effect holds
     // every crossing back for the whole drag, so nothing else would).
     if (m_draggedWindowId.isEmpty() && m_pendingSnapDragWindowId == windowId) {
         if (!activateSnapDragIfNeeded(modifiers, mouseButtons, cursorX, cursorY)) {

@@ -11,7 +11,7 @@
 #include "core/platform/logging.h"
 #include "dbus/tilingadaptor/tilingadaptor.h"
 #include "dbus/windowdragadaptor/windowdragadaptor.h"
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/windowtracker/windowtracker.h"
 #include <PhosphorEngine/DesktopRemap.h>
 #include <PhosphorEngine/WindowPlacementStore.h>
 #include <PhosphorEngine/WindowRegistry.h>
@@ -122,7 +122,7 @@ void Daemon::onDesktopsRenumbered(const PhosphorEngine::DesktopRemap& remap)
                                                 unchangedStartupRule(std::exchange(m_lateStartupRules, {})))});
         int recordsMoved = 0;
         if (PhosphorPlacement::WindowTrackingService* service =
-                m_windowTrackingAdaptor ? m_windowTrackingAdaptor->service() : nullptr) {
+                m_windowTracker ? m_windowTracker->service() : nullptr) {
             recordsMoved = service->placementStore().remapRestoredDesktopZones(remap, *restoredUpTo);
             if (recordsMoved > 0) {
                 service->markDirty(PhosphorPlacement::WindowTrackingService::DirtyWindowPlacements);
@@ -168,9 +168,9 @@ void Daemon::onDesktopsRenumbered(const PhosphorEngine::DesktopRemap& remap)
             removedDesktops.insert(oldDesktop);
         }
     }
-    const bool readoptEvictees = m_running && !removedDesktops.isEmpty() && m_tilingAdaptor && m_windowTrackingAdaptor;
+    const bool readoptEvictees = m_running && !removedDesktops.isEmpty() && m_tilingAdaptor && m_windowTracker;
     if (readoptEvictees) {
-        m_tilingAdaptor->noteRenumberEvictees(m_windowTrackingAdaptor->knownWindowIds(), removedDesktops);
+        m_tilingAdaptor->noteRenumberEvictees(m_windowTracker->knownWindowIds(), removedDesktops);
     }
     // Re-announce the managed set as a desktop switch when the renumber may
     // have cost the effect the last one (F692). The effect re-reads its
@@ -414,10 +414,10 @@ void Daemon::reconcileDesktopsAtStartup()
     const QStringList liveIds = m_virtualDesktopManager->desktopIds();
     m_lateStartupRenumberUpTo.reset();
     m_lateStartupRules.clear();
-    if (m_windowTrackingAdaptor) {
-        const QStringList knownIds = m_windowTrackingAdaptor->knownDesktopIds();
+    if (m_windowTracker) {
+        const QStringList knownIds = m_windowTracker->knownDesktopIds();
         if (liveIds.isEmpty() && !knownIds.isEmpty()) {
-            const PhosphorPlacement::WindowTrackingService* service = m_windowTrackingAdaptor->service();
+            const PhosphorPlacement::WindowTrackingService* service = m_windowTracker->service();
             m_lateStartupRenumberUpTo = service ? service->placementStore().sequence() : 0;
             m_lateStartupRules = m_ruleStore ? m_ruleStore->ruleSet().rules() : QList<PhosphorRules::Rule>();
         }
@@ -433,8 +433,8 @@ void Daemon::reconcileDesktopsAtStartup()
         // Remembered for the next start. The first snapshot's desktopsChanged
         // went out before connectDesktopActivity's connection that keeps it
         // current from here on.
-        if (m_windowTrackingAdaptor) {
-            m_windowTrackingAdaptor->setKnownDesktopIds(liveIds);
+        if (m_windowTracker) {
+            m_windowTracker->setKnownDesktopIds(liveIds);
         }
     }
     if (PhosphorWorkspaces::ActivityManager::isAvailable()) {

@@ -7,8 +7,8 @@
 // refuses it unless a keyboard snap could make the same move (F20).
 
 #include "snapadaptor.h"
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
-#include "dbus/windowtrackingadaptor/internal.h"
+#include "runtime/windowtracker/windowtracker.h"
+#include "runtime/windowtracker/internal.h"
 #include "core/interfaces/interfaces.h"
 #include "core/platform/logging.h"
 

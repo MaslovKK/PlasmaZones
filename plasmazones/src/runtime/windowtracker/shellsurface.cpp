@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// WindowTrackingAdaptor — Phosphor shell surface
+// WindowTracker — Phosphor shell surface
 //
 // The placement map's click/drag verbs and the identity/urgency feed behind
 // its cell labels: activateWindow, getWindowMetadata, moveWindowToDesktop,
@@ -13,7 +13,7 @@
 // state is touched.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-#include "windowtrackingadaptor.h"
+#include "windowtracker.h"
 #include "core/platform/logging.h"
 #include <PhosphorEngine/WindowRegistry.h>
 #include <PhosphorIdentity/WindowId.h>
@@ -21,7 +21,7 @@
 
 namespace PlasmaZones {
 
-bool WindowTrackingAdaptor::isRegistryTracked(const QString& windowId) const
+bool WindowTracker::isRegistryTracked(const QString& windowId) const
 {
     if (windowId.isEmpty() || !m_windowRegistry) {
         return false;
@@ -32,7 +32,7 @@ bool WindowTrackingAdaptor::isRegistryTracked(const QString& windowId) const
     return m_windowRegistry->contains(PhosphorIdentity::WindowId::extractInstanceId(windowId));
 }
 
-QString WindowTrackingAdaptor::shellWindowIdFor(const QString& instanceId) const
+QString WindowTracker::shellWindowIdFor(const QString& instanceId) const
 {
     // setWindowMetadata freezes the canonical composite before it upserts,
     // so a registered instance always has a mapping; canonicalizeForLookup
@@ -41,7 +41,7 @@ QString WindowTrackingAdaptor::shellWindowIdFor(const QString& instanceId) const
     return m_windowRegistry ? m_windowRegistry->canonicalizeForLookup(instanceId) : instanceId;
 }
 
-void WindowTrackingAdaptor::activateWindow(const QString& windowId)
+void WindowTracker::activateWindow(const QString& windowId)
 {
     if (!isRegistryTracked(windowId)) {
         qCDebug(lcDbusWindow) << "activateWindow: ignoring untracked window" << windowId;
@@ -50,7 +50,7 @@ void WindowTrackingAdaptor::activateWindow(const QString& windowId)
     Q_EMIT activateWindowRequested(windowId);
 }
 
-QString WindowTrackingAdaptor::getWindowMetadata(const QString& windowId, QString& title, QString& desktopFile)
+QString WindowTracker::getWindowMetadata(const QString& windowId, QString& title, QString& desktopFile)
 {
     title.clear();
     desktopFile.clear();
@@ -67,7 +67,7 @@ QString WindowTrackingAdaptor::getWindowMetadata(const QString& windowId, QStrin
     return meta->appId;
 }
 
-void WindowTrackingAdaptor::moveWindowToDesktop(const QString& windowId, int desktop)
+void WindowTracker::moveWindowToDesktop(const QString& windowId, int desktop)
 {
     // Desktops are 1-based on this interface (screenDesktopChanged and the
     // metadata push agree); 0 means "all / unknown" there and is not a
@@ -81,7 +81,7 @@ void WindowTrackingAdaptor::moveWindowToDesktop(const QString& windowId, int des
     Q_EMIT windowDesktopMoveRequested(windowId, desktop);
 }
 
-QStringList WindowTrackingAdaptor::getUrgentWindows()
+QStringList WindowTracker::getUrgentWindows()
 {
     // Sorted for a stable wire answer: QSet order is hash order, and a
     // consumer diffing two reads should not see churn from a rehash.
@@ -90,9 +90,8 @@ QStringList WindowTrackingAdaptor::getUrgentWindows()
     return ids;
 }
 
-void WindowTrackingAdaptor::onShellRegistryMetadata(const QString& instanceId,
-                                                    const PhosphorEngine::WindowMetadata* previous,
-                                                    const PhosphorEngine::WindowMetadata& current)
+void WindowTracker::onShellRegistryMetadata(const QString& instanceId, const PhosphorEngine::WindowMetadata* previous,
+                                            const PhosphorEngine::WindowMetadata& current)
 {
     const QString windowId = shellWindowIdFor(instanceId);
 
@@ -124,7 +123,7 @@ void WindowTrackingAdaptor::onShellRegistryMetadata(const QString& instanceId,
     Q_EMIT windowUrgencyChanged(windowId, urgent);
 }
 
-void WindowTrackingAdaptor::onShellRegistryWindowGone(const QString& instanceId)
+void WindowTracker::onShellRegistryWindowGone(const QString& instanceId)
 {
     // Runs inside the registry's windowDisappeared emit, while the canonical
     // mapping is still available, so the id resolves to the same composite

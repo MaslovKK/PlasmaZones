@@ -23,7 +23,7 @@
 
 #include <PhosphorProtocol/ServiceConstants.h>
 #include "dbus/controladaptor.h"
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/windowtracker/windowtracker.h"
 #include <PhosphorSnapEngine/SnapEngine.h>
 #include <PhosphorZones/LayoutRegistry.h>
 #include <PhosphorSnapEngine/SnapState.h>
@@ -50,7 +50,7 @@ using StubSettingsBridge = StubSettings;
 // Stub PhosphorZones::Zone Detector
 // =========================================================================
 
-// WindowTrackingAdaptor only null-checks the detector and SnapEngine only
+// WindowTracker only null-checks the detector and SnapEngine only
 // stores it, so the shared inert stub covers both. The former local copy
 // answered layout() with nullptr instead of remembering the set layout; no
 // caller in this suite reads it either way.
@@ -79,8 +79,7 @@ private Q_SLOTS:
         m_zoneDetector = new StubZoneDetectorBridge(nullptr);
 
         m_wtaParent = new QObject(nullptr);
-        m_wta = new WindowTrackingAdaptor(m_layoutManager, m_zoneDetector, nullptr, m_settings, nullptr, nullptr,
-                                          m_wtaParent);
+        m_wta = new WindowTracker(m_layoutManager, m_zoneDetector, nullptr, m_settings, nullptr, nullptr, m_wtaParent);
 
         m_snapEngine = new SnapEngine(m_layoutManager, m_wta->service(), m_zoneDetector, nullptr, nullptr);
         m_snapEngine->setEngineSettings(m_settings);
@@ -408,7 +407,7 @@ private:
     StubSettingsBridge* m_settings = nullptr;
     StubZoneDetectorBridge* m_zoneDetector = nullptr;
     QObject* m_wtaParent = nullptr;
-    WindowTrackingAdaptor* m_wta = nullptr;
+    WindowTracker* m_wta = nullptr;
     SnapEngine* m_snapEngine = nullptr;
     QObject* m_controlParent = nullptr;
     ControlAdaptor* m_controlAdaptor = nullptr;

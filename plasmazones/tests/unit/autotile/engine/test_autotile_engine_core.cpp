@@ -869,7 +869,7 @@ private Q_SLOTS:
         QVERIFY(normalizedBeforeTeardown);
 
         // Screen teardown captures directly through AutotileEngine, bypassing
-        // WindowTrackingAdaptor. The minimized guard must still preserve the
+        // WindowTracker. The minimized guard must still preserve the
         // pre-minimize tiled slot rather than persisting the temporary float.
         // placementChanged describes the live occupancy release even when the
         // durable record is already content-identical.

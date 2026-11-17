@@ -10,7 +10,7 @@
 //   syncWindowFloating (the in-process engine sync), getFloatingWindows,
 //   applyGeometryForFloat, setWindowFloatingForScreen.
 
-#include "windowtrackingadaptor.h"
+#include "windowtracker.h"
 #include "internal.h"
 #include "core/interfaces/interfaces.h"
 #include "core/platform/logging.h"
@@ -24,10 +24,9 @@
 #include <PhosphorSnapEngine/SnapState.h>
 #include <PhosphorZones/AssignmentEntry.h>
 #include <PhosphorZones/LayoutRegistry.h>
-#include "dbus/dbushelpers.h"
 namespace PlasmaZones {
 
-bool WindowTrackingInternal::isOptOutContext(const WindowTrackingAdaptor& adaptor, const QString& screenId, int desktop,
+bool WindowTrackingInternal::isOptOutContext(const WindowTracker& adaptor, const QString& screenId, int desktop,
                                              const QString& activity)
 {
     PhosphorZones::LayoutRegistry* const layouts = adaptor.layoutRegistry();
@@ -40,7 +39,7 @@ bool WindowTrackingInternal::isOptOutContext(const WindowTrackingAdaptor& adapto
         && entry.tilingAlgorithm == PhosphorZones::NoTilingAlgorithm;
 }
 
-bool WindowTrackingInternal::onOptOutContext(const WindowTrackingAdaptor& adaptor, const QString& windowId,
+bool WindowTrackingInternal::onOptOutContext(const WindowTracker& adaptor, const QString& windowId,
                                              const QString& screenId)
 {
     const QString screen = screenId.isEmpty() ? adaptor.liveScreenForWindow(windowId) : screenId;
@@ -54,8 +53,7 @@ bool WindowTrackingInternal::onOptOutContext(const WindowTrackingAdaptor& adapto
     return desktop && isOptOutContext(adaptor, screen, *desktop, activity);
 }
 
-void WindowTrackingInternal::dropOptOutFloat(WindowTrackingAdaptor& adaptor, const QString& windowId,
-                                             const QString& screenId)
+void WindowTrackingInternal::dropOptOutFloat(WindowTracker& adaptor, const QString& windowId, const QString& screenId)
 {
     PhosphorPlacement::WindowTrackingService* const service = adaptor.service();
     if (!service || windowId.isEmpty()) {
@@ -102,7 +100,7 @@ void WindowTrackingInternal::dropOptOutFloat(WindowTrackingAdaptor& adaptor, con
     }
 }
 
-void WindowTrackingInternal::dropOptOutFloats(WindowTrackingAdaptor* adaptor)
+void WindowTrackingInternal::dropOptOutFloats(WindowTracker* adaptor)
 {
     PhosphorSnapEngine::SnapEngine* const snap = adaptor ? adaptor->snapEngine() : nullptr;
     if (!snap) {
@@ -130,7 +128,7 @@ void WindowTrackingInternal::dropOptOutFloats(WindowTrackingAdaptor* adaptor)
     }
 }
 
-void WindowTrackingInternal::releaseOptOutZones(WindowTrackingAdaptor* adaptor, const QSet<QString>& screens)
+void WindowTrackingInternal::releaseOptOutZones(WindowTracker* adaptor, const QSet<QString>& screens)
 {
     const PhosphorSnapEngine::SnapEngine* const snap = adaptor ? adaptor->snapEngine() : nullptr;
     PhosphorZones::LayoutRegistry* const layouts = adaptor ? adaptor->layoutRegistry() : nullptr;
@@ -166,7 +164,7 @@ void WindowTrackingInternal::releaseOptOutZones(WindowTrackingAdaptor* adaptor, 
     }
 }
 
-void WindowTrackingInternal::placeReleasedOnOptOut(WindowTrackingAdaptor& adaptor, const QString& windowId,
+void WindowTrackingInternal::placeReleasedOnOptOut(WindowTracker& adaptor, const QString& windowId,
                                                    const QString& screenId, const QRect& freeGeometry)
 {
     PhosphorPlacement::WindowTrackingService* const service = adaptor.service();
@@ -210,7 +208,7 @@ namespace {
 /// window on a hidden desktop or another activity would be adopted into a
 /// context it is not in (float is per mode), and a disabled context places
 /// nothing (F1048, as l13_bus_snap_hidden_multidesktop refuses the bus snap).
-const char* busFloatRefusal(const WindowTrackingAdaptor& adaptor, const PhosphorContext::IContextResolver* resolver,
+const char* busFloatRefusal(const WindowTracker& adaptor, const PhosphorContext::IContextResolver* resolver,
                             const QString& windowId, const QString& screen)
 {
     PhosphorZones::LayoutRegistry* const layouts = adaptor.layoutRegistry();
@@ -228,19 +226,8 @@ const char* busFloatRefusal(const WindowTrackingAdaptor& adaptor, const Phosphor
 
 } // namespace
 
-void WindowTrackingAdaptor::setBridgeCallerCheck(std::function<bool(const QString&)> check)
+void WindowTracker::notifyDragOutUnsnap(const QString& windowId)
 {
-    m_isBridgeCaller = std::move(check);
-}
-
-void WindowTrackingAdaptor::notifyDragOutUnsnap(const QString& windowId)
-{
-    // A compositor drag report (#1155): only the registered bridge may unsnap a
-    // window as a drag-out over the bus. endDrag's in-process call is admitted,
-    // since the host is serving endDrag then, not this method.
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return;
-    }
     if (!validateWindowId(windowId, QStringLiteral("drag-out unsnap"))) {
         return;
     }
@@ -291,7 +278,7 @@ void WindowTrackingAdaptor::notifyDragOutUnsnap(const QString& windowId)
     }
 }
 
-bool WindowTrackingAdaptor::getPreFloatZone(const QString& windowId, QString& zoneId)
+bool WindowTracker::getPreFloatZone(const QString& windowId, QString& zoneId)
 {
     if (windowId.isEmpty()) {
         qCDebug(lcDbusWindow) << "getPreFloatZone: empty windowId";
@@ -304,14 +291,8 @@ bool WindowTrackingAdaptor::getPreFloatZone(const QString& windowId, QString& zo
     return !zoneId.isEmpty();
 }
 
-void WindowTrackingAdaptor::clearPreFloatZone(const QString& windowId)
+void WindowTracker::clearPreFloatZone(const QString& windowId)
 {
-    // The inverse of a compositor-recorded float home, so it takes the same
-    // gate as the writes it undoes (#1155): another peer must not wipe a
-    // window's pre-float zone.
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return;
-    }
     if (windowId.isEmpty()) {
         return;
     }
@@ -324,7 +305,7 @@ void WindowTrackingAdaptor::clearPreFloatZone(const QString& windowId)
     }
 }
 
-bool WindowTrackingAdaptor::isWindowFloating(const QString& windowId)
+bool WindowTracker::isWindowFloating(const QString& windowId)
 {
     if (windowId.isEmpty()) {
         return false;
@@ -342,12 +323,12 @@ bool WindowTrackingAdaptor::isWindowFloating(const QString& windowId)
     return m_service->isWindowFloating(windowId);
 }
 
-bool WindowTrackingAdaptor::queryWindowFloating(const QString& windowId)
+bool WindowTracker::queryWindowFloating(const QString& windowId)
 {
     return isWindowFloating(windowId);
 }
 
-void WindowTrackingAdaptor::setWindowFloating(const QString& windowId, bool floating)
+void WindowTracker::setWindowFloating(const QString& windowId, bool floating, const QString& externalCaller)
 {
     // The bus verb (F678), floated or unfloated by the engine that runs the
     // screen the window is on: the path the effect's minimize and drag floats
@@ -368,10 +349,10 @@ void WindowTrackingAdaptor::setWindowFloating(const QString& windowId, bool floa
         qCInfo(lcDbusWindow) << "setWindowFloating:" << windowId << refusal << "on" << screen << "- refused";
         return;
     }
-    setWindowFloatingForScreen(windowId, screen, floating);
+    setWindowFloatingForScreen(windowId, screen, floating, externalCaller);
 }
 
-void WindowTrackingAdaptor::syncWindowFloating(const QString& windowId, bool floating)
+void WindowTracker::syncWindowFloating(const QString& windowId, bool floating)
 {
     if (!validateWindowId(windowId, QStringLiteral("sync float state"))) {
         return;
@@ -439,7 +420,7 @@ void WindowTrackingAdaptor::syncWindowFloating(const QString& windowId, bool flo
     captureWindowPlacement(windowId);
 }
 
-QStringList WindowTrackingAdaptor::getFloatingWindows()
+QStringList WindowTracker::getFloatingWindows()
 {
     // USER floats only — suspension floats (minimize-as-float) are filtered
     // out, and consumers re-seeding float state from this list therefore
@@ -462,7 +443,7 @@ QStringList WindowTrackingAdaptor::getFloatingWindows()
     return result;
 }
 
-bool WindowTrackingAdaptor::applyGeometryForFloat(const QString& windowId, const QString& screenId)
+bool WindowTracker::applyGeometryForFloat(const QString& windowId, const QString& screenId)
 {
     // CALLER CONTRACT: callers must guarantee a non-minimized window. Unlike
     // the snap engine's applyFloatGeometryUnlessMinimized twin, this method
@@ -482,13 +463,13 @@ bool WindowTrackingAdaptor::applyGeometryForFloat(const QString& windowId, const
     return false;
 }
 
-// WindowTrackingAdaptor::clearFloatingStateForSnap was removed — all
+// WindowTracker::clearFloatingStateForSnap was removed — all
 // snap-commit paths now route through PhosphorSnapEngine::SnapEngine::commitSnap
 // which handles clearing the floating state internally and emits
 // windowFloatingClearedForSnap, which this adaptor relays to its own
 // windowFloatingChanged D-Bus signal in the constructor wiring.
 
-bool WindowTrackingAdaptor::relayWindowFloatingChanged(const QString& windowId, bool floating, const QString& screenId)
+bool WindowTracker::relayWindowFloatingChanged(const QString& windowId, bool floating, const QString& screenId)
 {
     // The single owner of the last-broadcast dedup contract — see the header
     // doc: every emission channel must keep m_broadcastFloating equal to what
@@ -517,7 +498,8 @@ bool WindowTrackingAdaptor::relayWindowFloatingChanged(const QString& windowId, 
     return true;
 }
 
-void WindowTrackingAdaptor::setWindowFloatingForScreen(const QString& windowId, const QString& screenId, bool floating)
+void WindowTracker::setWindowFloatingForScreen(const QString& windowId, const QString& screenId, bool floating,
+                                               const QString& externalCaller)
 {
     if (!validateWindowId(windowId, QStringLiteral("set float for screen"))) {
         return;
@@ -540,9 +522,9 @@ void WindowTrackingAdaptor::setWindowFloatingForScreen(const QString& windowId, 
     // engine of another one would adopt it there (F1123). A split monitor's
     // physical id names the half the window is on. The bridge floats a window
     // where it is (minimize, drag, overflow), and a call the daemon makes
-    // outside a bus call is not gated.
-    if (const QString caller = DbusHelpers::busCaller(this);
-        !caller.isEmpty() && !(m_isBridgeCaller && m_isBridgeCaller(caller))) {
+    // outside a bus call is not gated. The binding that serves the call names
+    // the external caller, so an empty name is a trusted one.
+    if (const QString& caller = externalCaller; !caller.isEmpty()) {
         const QString named = resolveBusScreen(effectiveScreenId, windowId);
         const QString live = isRegistryTracked(windowId) ? liveScreenForWindow(windowId) : QString();
         if (named.isEmpty() || named != live) {

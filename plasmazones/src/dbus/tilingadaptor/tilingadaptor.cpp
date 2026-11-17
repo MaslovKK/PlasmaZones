@@ -5,7 +5,7 @@
 
 #include "core/platform/logging.h"
 #include "dbus/dbushelpers.h"
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/windowtracker/windowtracker.h"
 
 #include <PhosphorEngine/IPlacementEngine.h>
 #include <PhosphorIdentity/WindowId.h>
@@ -229,7 +229,7 @@ void TilingAdaptor::relayScrollTabColorsChanged()
 
 void TilingAdaptor::relayScrollTabColorsForWindow(const QString& windowId)
 {
-    if (windowId.isEmpty() || !m_windowTrackingAdaptor) {
+    if (windowId.isEmpty() || !m_windowTracker) {
         return;
     }
     // Only windows the effect actually paints a pill for. The strip payload
@@ -275,7 +275,7 @@ void TilingAdaptor::relayScrollTabColorsForWindow(const QString& windowId)
     // deliberately does NOT gate — the scroll engine already emits only on a
     // real model change there, so a second gate could only duplicate it. The
     // two differ on purpose.
-    const QVariantMap colors = m_windowTrackingAdaptor->tabColorRuleParams(windowId);
+    const QVariantMap colors = m_windowTracker->tabColorRuleParams(windowId);
     const auto it = m_lastScrollTabColorsRelay.constFind(windowId);
     if (it != m_lastScrollTabColorsRelay.constEnd() && *it == colors) {
         return;
@@ -297,10 +297,10 @@ QVariantMap TilingAdaptor::scrollTabColors(const QString& windowId)
 {
     // The WTA owns the resolve and its memo; this is a pass-through so the
     // effect can reach it on the interface it already listens to.
-    if (!m_windowTrackingAdaptor || windowId.isEmpty()) {
+    if (!m_windowTracker || windowId.isEmpty()) {
         return {};
     }
-    return m_windowTrackingAdaptor->tabColorRuleParams(windowId);
+    return m_windowTracker->tabColorRuleParams(windowId);
 }
 
 QStringList TilingAdaptor::combinedManagedScreens() const
@@ -383,23 +383,23 @@ void TilingAdaptor::dispatchWindowOpened(const PhosphorProtocol::WindowOpenedEnt
     // place, ahead of the float it could not take where KWin had put it
     // (F1046). One that could not float in place when its output went away
     // (minimized, or out of view) floats now instead of tiling (F643).
-    if (m_windowTrackingAdaptor) {
-        if (m_windowTrackingAdaptor->readoptOnArrival(entry.windowId, entry.screenId)
-            || m_windowTrackingAdaptor->adoptPendingEvacueeFloat(entry.windowId, entry.screenId)) {
+    if (m_windowTracker) {
+        if (m_windowTracker->readoptOnArrival(entry.windowId, entry.screenId)
+            || m_windowTracker->adoptPendingEvacueeFloat(entry.windowId, entry.screenId)) {
             return;
         }
     }
     // Whether this announce is the window's first placement, the only kind its
     // open routing runs for. Read before the claim below, which writes this
     // window's placement record.
-    const bool firstPlacement = m_windowTrackingAdaptor && m_windowTrackingAdaptor->isFirstTilingPlacement(entry);
+    const bool firstPlacement = m_windowTracker && m_windowTracker->isFirstTilingPlacement(entry);
     // Claim this instance's placement record before any selector reads one, the
     // same reason the snap channel does it at the head of resolveWindowRestore.
     // The two open channels and every later re-drive must agree on WHICH record
     // belongs to this window. Screen-aware like the snap channel's: only a
     // record the engine running the opening screen can restore on this output.
-    if (m_windowTrackingAdaptor && m_windowTrackingAdaptor->service()) {
-        auto* svc = m_windowTrackingAdaptor->service();
+    if (m_windowTracker && m_windowTracker->service()) {
+        auto* svc = m_windowTracker->service();
         // The reopen contract's leave, ahead of the claim: a window whose OWN
         // record names another screen (with a live slot) left it, so every
         // engine slot of that record is released silently and the claim then
@@ -443,9 +443,8 @@ void TilingAdaptor::dispatchWindowOpened(const PhosphorProtocol::WindowOpenedEnt
     // re-runs the routing: the routed screen is baked into the parked entry.
     PhosphorProtocol::WindowOpenedEntry routedEntry = entry;
     bool ruleRouted = false;
-    if (m_windowTrackingAdaptor && firstPlacement) {
-        const QString routed =
-            m_windowTrackingAdaptor->applyOpenRoutingForTiling(entry.windowId, entry.screenId, &ruleRouted);
+    if (m_windowTracker && firstPlacement) {
+        const QString routed = m_windowTracker->applyOpenRoutingForTiling(entry.windowId, entry.screenId, &ruleRouted);
         if (!routed.isEmpty()) {
             routedEntry.screenId = routed;
         }
@@ -460,11 +459,11 @@ void TilingAdaptor::dispatchWindowOpened(const PhosphorProtocol::WindowOpenedEnt
     dispatchOpenToClaimingEngine(routedEntry, /*allowPark=*/true, /*allowCrossScreenClaim=*/!ruleRouted);
 }
 
-void TilingAdaptor::setWindowTrackingAdaptor(WindowTrackingAdaptor* wta)
+void TilingAdaptor::setWindowTrackingAdaptor(WindowTracker* wta)
 {
     // The old adaptor is left alone: the shutdown clear can run after it is
     // gone, and the dispatcher below checks this adaptor's own lifetime.
-    m_windowTrackingAdaptor = wta;
+    m_windowTracker = wta;
     if (!wta) {
         return;
     }
@@ -568,8 +567,8 @@ void TilingAdaptor::dispatchOpenToClaimingEngine(const PhosphorProtocol::WindowO
             // still holds for it elsewhere goes: a window moved while nothing
             // reported the crossing (an effect reload) is announced here and
             // nowhere else (F1000).
-            if (m_windowTrackingAdaptor) {
-                m_windowTrackingAdaptor->releaseLeftScreens(entry.windowId, entry.screenId, engine);
+            if (m_windowTracker) {
+                m_windowTracker->releaseLeftScreens(entry.windowId, entry.screenId, engine);
             }
             return;
         }
@@ -726,8 +725,8 @@ void TilingAdaptor::windowReannounced(const QString& windowId, const QString& sc
     // membership it still holds anywhere else is stale: the effect re-announces
     // a window whose workspace move the compositor refused, after the
     // snap-target handoff had already filed it under the destination (F581).
-    if (m_windowTrackingAdaptor && !windowId.isEmpty() && !screenId.isEmpty()) {
-        m_windowTrackingAdaptor->releaseSnapOutsideLiveContext(windowId, screenId);
+    if (m_windowTracker && !windowId.isEmpty() && !screenId.isEmpty()) {
+        m_windowTracker->releaseSnapOutsideLiveContext(windowId, screenId);
     }
     announceWindow("windowReannounced", windowId, screenId, minWidth, minHeight, /*focusEligible=*/false);
 }
@@ -858,9 +857,9 @@ void TilingAdaptor::windowClosed(const QString& windowId)
     // strand the other entry for the process lifetime.
     m_lastFloatBroadcast.remove(windowId);
     m_lastScrollTabColorsRelay.remove(windowId);
-    if (m_windowTrackingAdaptor) {
-        m_lastFloatBroadcast.remove(m_windowTrackingAdaptor->shadowWindowId(windowId));
-        m_lastScrollTabColorsRelay.remove(m_windowTrackingAdaptor->shadowWindowId(windowId));
+    if (m_windowTracker) {
+        m_lastFloatBroadcast.remove(m_windowTracker->shadowWindowId(windowId));
+        m_lastScrollTabColorsRelay.remove(m_windowTracker->shadowWindowId(windowId));
     }
     removeUnclaimedOpen(windowId);
     removePendingOpen(windowId);
@@ -893,8 +892,8 @@ void TilingAdaptor::windowClosed(const QString& windowId)
     // method is a genuine close only — the drag-bypass tracking drop goes
     // through releaseWindowTracking, which captures nothing. EVERY engine
     // tracking the window closes it (see enginesTrackingWindow).
-    if (m_windowTrackingAdaptor) {
-        m_windowTrackingAdaptor->captureWindowPlacement(windowId);
+    if (m_windowTracker) {
+        m_windowTracker->captureWindowPlacement(windowId);
     }
     for (PhosphorEngine::IPlacementEngine* engine : enginesTrackingWindow(windowId)) {
         engine->windowClosed(windowId);
@@ -927,8 +926,8 @@ void TilingAdaptor::onTrackedWindowDestroyed(const QString& windowId)
         // The scroll engine's close seeds its closed-mid-hold memory, which
         // the WindowTracking close already spent: spend it again, as
         // releaseWindowTrackingVia does.
-        if (m_windowTrackingAdaptor) {
-            m_windowTrackingAdaptor->forgetClosedFullscreenHold(windowId);
+        if (m_windowTracker) {
+            m_windowTracker->forgetClosedFullscreenHold(windowId);
         }
         if (!closingScreen.isEmpty()) {
             refreshFocusedWindow(closingScreen);
@@ -979,8 +978,8 @@ void TilingAdaptor::pruneStaleFloatBroadcasts(const QStringList& aliveInstances)
 void TilingAdaptor::forgetFloatBroadcast(const QString& windowId)
 {
     m_lastFloatBroadcast.remove(windowId);
-    if (m_windowTrackingAdaptor) {
-        m_lastFloatBroadcast.remove(m_windowTrackingAdaptor->shadowWindowId(windowId));
+    if (m_windowTracker) {
+        m_lastFloatBroadcast.remove(m_windowTracker->shadowWindowId(windowId));
     }
 }
 
@@ -1007,9 +1006,9 @@ void TilingAdaptor::releaseWindowTrackingVia(const QString& windowId, PhosphorEn
     // this id, but only via a retitle while the window is off-strip; the
     // symmetric eviction closes the verdict-moved-and-moved-back residue.
     m_lastScrollTabColorsRelay.remove(windowId);
-    if (m_windowTrackingAdaptor) {
-        m_lastFloatBroadcast.remove(m_windowTrackingAdaptor->shadowWindowId(windowId));
-        m_lastScrollTabColorsRelay.remove(m_windowTrackingAdaptor->shadowWindowId(windowId));
+    if (m_windowTracker) {
+        m_lastFloatBroadcast.remove(m_windowTracker->shadowWindowId(windowId));
+        m_lastScrollTabColorsRelay.remove(m_windowTracker->shadowWindowId(windowId));
     }
     removeUnclaimedOpen(windowId);
     removePendingOpen(windowId);
@@ -1034,7 +1033,7 @@ void TilingAdaptor::releaseWindowTrackingVia(const QString& windowId, PhosphorEn
     const QString releasingScreen = owner ? owner->screenForTrackedWindow(windowId) : trackedScreenForWindow(windowId);
     const QVector<PhosphorEngine::IPlacementEngine*> releasing =
         owner ? QVector<PhosphorEngine::IPlacementEngine*>{owner} : enginesTrackingWindow(windowId);
-    const bool floatedBefore = m_windowTrackingAdaptor && m_windowTrackingAdaptor->isWindowFloating(windowId);
+    const bool floatedBefore = m_windowTracker && m_windowTracker->isWindowFloating(windowId);
     for (PhosphorEngine::IPlacementEngine* engine : releasing) {
         engine->windowClosed(windowId);
     }
@@ -1044,17 +1043,17 @@ void TilingAdaptor::releaseWindowTrackingVia(const QString& windowId, PhosphorEn
     // way releaseLeftScreens closes out a leave (F716): passive, no geometry
     // and no capture, and only once no engine floats the window any more. The
     // suspension classification goes with it.
-    if (floatedBefore && !m_windowTrackingAdaptor->isWindowFloating(windowId)) {
-        if (PhosphorPlacement::WindowTrackingService* service = m_windowTrackingAdaptor->service()) {
+    if (floatedBefore && !m_windowTracker->isWindowFloating(windowId)) {
+        if (PhosphorPlacement::WindowTrackingService* service = m_windowTracker->service()) {
             service->clearSuspensionFloat(windowId);
         }
-        m_windowTrackingAdaptor->relayWindowFloatingChanged(windowId, false, releasingScreen);
+        m_windowTracker->relayWindowFloatingChanged(windowId, false, releasingScreen);
     }
     // A LIVE window released here gets no WindowTracking.windowClosed, so the
     // scroll engine's closed-mid-hold memory (seeded by windowClosed above)
     // would preserve every later capture of it. Spend it now.
-    if (m_windowTrackingAdaptor) {
-        m_windowTrackingAdaptor->forgetClosedFullscreenHold(windowId);
+    if (m_windowTracker) {
+        m_windowTracker->forgetClosedFullscreenHold(windowId);
     }
     if (!releasingScreen.isEmpty()) {
         refreshFocusedWindow(releasingScreen);

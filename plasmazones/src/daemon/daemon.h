@@ -106,7 +106,7 @@ public:
     /**
      * @brief Frozen-snapshot per-screen mode + disable/lock cascade façade.
      *
-     * Borrowed by the three D-Bus adaptors (SnapAdaptor, WindowTrackingAdaptor,
+     * Borrowed by the three D-Bus adaptors (SnapAdaptor, WindowTracker,
      * WindowDragAdaptor) and the daemon's own navigation / OSD / overlay paths
      * so the cascade `(modeFor → currentDesktop → currentActivity →
      * isContextDisabled → isContextLocked)` resolves through one call instead of
@@ -1137,7 +1137,7 @@ private:
     // built via `PhosphorRules::ExclusionRules::excludePlacementRulesFrom` and
     // kept in lockstep with the store via the rulesChanged subscription wired
     // in init(). SnapEngine borrows a pointer into this set for its exclusion resolves;
-    // the WindowTrackingAdaptor's pruneExcludedPlacements receives the
+    // the WindowTracker's pruneExcludedPlacements receives the
     // AppId patterns extracted from this same slice at refilter time. Held as a
     // member (stable address) so the bound RuleEvaluator's per-revision cache
     // stays valid across back-to-back resolves.
@@ -1373,7 +1373,10 @@ private:
     SettingsAdaptor* m_settingsAdaptor = nullptr;
     OverlayAdaptor* m_overlayAdaptor = nullptr; // Overlay visibility only
     ZoneDetectionAdaptor* m_zoneDetectionAdaptor = nullptr; // PhosphorZones::Zone detection queries
-    WindowTrackingAdaptor* m_windowTrackingAdaptor = nullptr; // Window-zone tracking
+    // Window-zone tracking. A plain QObject child, not an adaptor: its bus
+    // surface is m_windowTrackingAdaptor, which is deleted before it.
+    WindowTracker* m_windowTracker = nullptr;
+    WindowTrackingAdaptor* m_windowTrackingAdaptor = nullptr; // D-Bus binding of m_windowTracker
     PhosphorScreens::DBusScreenAdaptor* m_screenAdaptor = nullptr;
     WindowDragAdaptor* m_windowDragAdaptor = nullptr; // Window drag handling
     // Held so stop() can invoke detach() before the unique_ptr members
@@ -1442,7 +1445,7 @@ private:
     std::unique_ptr<PhosphorEngine::PlacementEngineBase> m_snapEngine;
     std::unique_ptr<PhosphorEngine::PlacementEngineBase> m_scrollEngine;
     /// Single source of truth for "which engine owns screen X". Used by
-    /// WindowTrackingAdaptor and the daemon's navigation handlers (via
+    /// WindowTracker and the daemon's navigation handlers (via
     /// `navigatorForShortcut` in navigation.cpp). Owns no state of its
     /// own — just delegates to the layout manager and engine pointers it
     /// was constructed with.
@@ -1588,7 +1591,7 @@ private:
      * navigation OSD.
      *
      * It also drops what the other engines hold of the window off the screen it
-     * is on (WindowTrackingAdaptor::releaseLeftScreens), as the autotile twin
+     * is on (WindowTracker::releaseLeftScreens), as the autotile twin
      * does; a float toggle moves no ownership, so holds on that screen's other
      * desktops stay (F579).
      */

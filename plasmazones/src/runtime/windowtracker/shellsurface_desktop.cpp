@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// WindowTrackingAdaptor — Phosphor shell surface, per-desktop reads
+// WindowTracker — Phosphor shell surface, per-desktop reads
 //
 // The dashboard draws every desktop's placement map at once and the polkit
 // prompt attaches to the window whose process asked, so two reads that the
@@ -14,14 +14,13 @@
 // getAllWindowStates, so a row here is exactly a row there, filtered.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-#include "windowtrackingadaptor.h"
+#include "windowtracker.h"
 #include "core/platform/logging.h"
 #include <PhosphorEngine/WindowRegistry.h>
 
 namespace PlasmaZones {
 
-void WindowTrackingAdaptor::recordShellWindowFacts(const QString& windowId,
-                                                   const PhosphorEngine::WindowMetadata& current)
+void WindowTracker::recordShellWindowFacts(const QString& windowId, const PhosphorEngine::WindowMetadata& current)
 {
     ShellWindowFacts facts;
     facts.pid = current.pid;
@@ -38,7 +37,7 @@ void WindowTrackingAdaptor::recordShellWindowFacts(const QString& windowId,
     m_shellWindowFacts.insert(windowId, facts);
 }
 
-bool WindowTrackingAdaptor::factsOnDesktop(const ShellWindowFacts& facts, int desktop)
+bool WindowTracker::factsOnDesktop(const ShellWindowFacts& facts, int desktop)
 {
     if (facts.sticky) {
         return true;
@@ -49,8 +48,7 @@ bool WindowTrackingAdaptor::factsOnDesktop(const ShellWindowFacts& facts, int de
     return facts.virtualDesktops.contains(desktop);
 }
 
-PhosphorProtocol::WindowStateList WindowTrackingAdaptor::getWindowStatesForDesktop(const QString& screenId,
-                                                                                   int virtualDesktop)
+PhosphorProtocol::WindowStateList WindowTracker::getWindowStatesForDesktop(const QString& screenId, int virtualDesktop)
 {
     PhosphorProtocol::WindowStateList out;
     if (virtualDesktop < 0) {
@@ -93,7 +91,7 @@ PhosphorProtocol::WindowStateList WindowTrackingAdaptor::getWindowStatesForDeskt
     return out;
 }
 
-QString WindowTrackingAdaptor::findWindowByPid(int pid)
+QString WindowTracker::findWindowByPid(int pid)
 {
     if (pid <= 0) {
         return QString();

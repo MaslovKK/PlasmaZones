@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 fuddlesworth
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#include "windowtrackingadaptor.h"
+#include "windowtracker.h"
 #include "internal.h"
 #include "lifecyclerelay.h"
 #include "evacueeledger.h"
@@ -9,7 +9,6 @@
 #include <PhosphorPlacement/PlacementConfig.h>
 #include <PhosphorSnapEngine/snapnavigationtargets.h>
 #include "persistenceworker.h"
-#include "dbus/zonedetectionadaptor.h"
 #include <PhosphorEngine/IPlacementEngine.h>
 #include <PhosphorTileEngine/AutotileEngine.h>
 #include <PhosphorSnapEngine/SnapEngine.h>
@@ -22,13 +21,12 @@
 #include <PhosphorWorkspaces/VirtualDesktopManager.h>
 #include "core/platform/logging.h"
 #include "core/resolve/screenmoderouter.h"
-#include "dbus/dbushelpers.h"
 #include "core/utils/utils.h"
 #include <PhosphorIdentity/VirtualScreenId.h>
 #include <PhosphorScreens/VirtualScreen.h>
 #include "core/types/types.h"
 #include <PhosphorEngine/WindowRegistry.h>
-// Complete type required where ~WindowTrackingAdaptor destroys the
+// Complete type required where ~WindowTracker destroys the
 // unique_ptr<RuleEvaluator> member (m_ruleEvaluator).
 #include <PhosphorRules/RuleEvaluator.h>
 #include <PhosphorProtocol/ServiceConstants.h>
@@ -41,12 +39,11 @@
 
 namespace PlasmaZones {
 
-WindowTrackingAdaptor::WindowTrackingAdaptor(PhosphorZones::LayoutRegistry* layoutManager,
-                                             PhosphorZones::IZoneDetector* zoneDetector,
-                                             PhosphorScreens::ScreenManager* screenManager, ISettings* settings,
-                                             PhosphorWorkspaces::VirtualDesktopManager* virtualDesktopManager,
-                                             PhosphorWorkspaces::ActivityManager* activityManager, QObject* parent)
-    : QDBusAbstractAdaptor(parent)
+WindowTracker::WindowTracker(PhosphorZones::LayoutRegistry* layoutManager, PhosphorZones::IZoneDetector* zoneDetector,
+                             PhosphorScreens::ScreenManager* screenManager, ISettings* settings,
+                             PhosphorWorkspaces::VirtualDesktopManager* virtualDesktopManager,
+                             PhosphorWorkspaces::ActivityManager* activityManager, QObject* parent)
+    : QObject(parent)
     , m_layoutManager(layoutManager)
     , m_settings(settings)
     , m_virtualDesktopManager(virtualDesktopManager)
@@ -69,7 +66,7 @@ WindowTrackingAdaptor::WindowTrackingAdaptor(PhosphorZones::LayoutRegistry* layo
     // failure mode.
     if (!layoutManager || !zoneDetector || !settings) {
         qFatal(
-            "WindowTrackingAdaptor: null dependency at construction "
+            "WindowTracker: null dependency at construction "
             "(layoutManager=%p, zoneDetector=%p, settings=%p) — daemon-wiring bug",
             static_cast<void*>(layoutManager), static_cast<void*>(zoneDetector), static_cast<void*>(settings));
     }
@@ -108,7 +105,7 @@ WindowTrackingAdaptor::WindowTrackingAdaptor(PhosphorZones::LayoutRegistry* layo
 
     // Forward service signals to D-Bus
     connect(m_service, &PhosphorPlacement::WindowTrackingService::windowZoneChanged, this,
-            &WindowTrackingAdaptor::windowZoneChanged);
+            &WindowTracker::windowZoneChanged);
 
     // Snap-commit signal wiring is deferred to setEngines() where m_snapEngine
     // is available — commitSnap/commitMultiZoneSnap/uncommitSnap live on
@@ -116,13 +113,13 @@ WindowTrackingAdaptor::WindowTrackingAdaptor(PhosphorZones::LayoutRegistry* layo
 
     // Connect service state changes to persistence
     connect(m_service, &PhosphorPlacement::WindowTrackingService::stateChanged, this,
-            &WindowTrackingAdaptor::scheduleSaveState);
+            &WindowTracker::scheduleSaveState);
 
     // Setup debounced save timer (500ms delay to batch rapid state changes)
     m_saveTimer = new QTimer(this);
     m_saveTimer->setSingleShot(true);
     m_saveTimer->setInterval(500);
-    connect(m_saveTimer, &QTimer::timeout, this, &WindowTrackingAdaptor::saveState);
+    connect(m_saveTimer, &QTimer::timeout, this, &WindowTracker::saveState);
 
     // Persistence I/O worker — disk writes happen off the main thread.
     // PersistenceIO::processWrite runs on the worker thread via a queued
@@ -231,7 +228,7 @@ WindowTrackingAdaptor::WindowTrackingAdaptor(PhosphorZones::LayoutRegistry* layo
     auto* restoresChanged = new QTimer(this);
     restoresChanged->setSingleShot(true);
     restoresChanged->setInterval(50);
-    connect(restoresChanged, &QTimer::timeout, this, &WindowTrackingAdaptor::pendingRestoresChanged);
+    connect(restoresChanged, &QTimer::timeout, this, &WindowTracker::pendingRestoresChanged);
     const auto noteRestoresChanged = [restoresChanged]() {
         restoresChanged->start();
     };
@@ -269,13 +266,13 @@ WindowTrackingAdaptor::WindowTrackingAdaptor(PhosphorZones::LayoutRegistry* layo
             return;
         }
         connect(screenMgr, &PhosphorScreens::ScreenManager::panelGeometryReady, this,
-                &WindowTrackingAdaptor::onPanelGeometryReady);
+                &WindowTracker::onPanelGeometryReady);
         // Effect reports held for a screen the daemon did not know yet replay
         // once it does; queued so the manager has finished registering it.
-        connect(screenMgr, &PhosphorScreens::ScreenManager::screenAdded, this,
-                &WindowTrackingAdaptor::replayHeldScreenReports, Qt::QueuedConnection);
+        connect(screenMgr, &PhosphorScreens::ScreenManager::screenAdded, this, &WindowTracker::replayHeldScreenReports,
+                Qt::QueuedConnection);
         connect(screenMgr, &PhosphorScreens::ScreenManager::virtualScreensChanged, this,
-                &WindowTrackingAdaptor::replayHeldScreenReports, Qt::QueuedConnection);
+                &WindowTracker::replayHeldScreenReports, Qt::QueuedConnection);
         // The outputs' half of the instant-restore refetch (see above).
         connect(screenMgr, &PhosphorScreens::ScreenManager::screenAdded, this, noteRestoresChanged);
         connect(screenMgr, &PhosphorScreens::ScreenManager::screenRemoved, this, noteRestoresChanged);
@@ -321,29 +318,29 @@ WindowTrackingAdaptor::WindowTrackingAdaptor(PhosphorZones::LayoutRegistry* layo
 // that originally required this has moved to SnapEngine (Phase 5E), but
 // the destructor is kept out-of-line to avoid churning every translation
 // unit that includes this header.
-WindowTrackingAdaptor::~WindowTrackingAdaptor() = default;
+WindowTracker::~WindowTracker() = default;
 
-PhosphorSnapEngine::SnapEngine* WindowTrackingAdaptor::snapEngine() const
+PhosphorSnapEngine::SnapEngine* WindowTracker::snapEngine() const
 {
     return m_cachedSnapEngine;
 }
 
 // setEngines() lives in enginewiring.cpp.
-int WindowTrackingAdaptor::currentDesktopForScreen(const QString& screenId) const
+int WindowTracker::currentDesktopForScreen(const QString& screenId) const
 {
     // Per-output virtual desktops (#648): this screen's current desktop, falling
     // back to the global current when no per-output value is on record.
     return m_virtualDesktopManager ? m_virtualDesktopManager->currentDesktopForScreen(screenId) : 0;
 }
 
-void WindowTrackingAdaptor::setScreenModeRouter(ScreenModeRouter* router)
+void WindowTracker::setScreenModeRouter(ScreenModeRouter* router)
 {
     m_screenModeRouter = router;
 }
 
-void WindowTrackingAdaptor::setZoneDetectionAdaptor(ZoneDetectionAdaptor* adaptor)
+void WindowTracker::setZoneAdjacencyResolver(PhosphorSnapEngine::IZoneAdjacencyResolver* resolver)
 {
-    m_zoneDetectionAdaptor = adaptor;
+    m_zoneAdjacencyResolver = resolver;
     // Only records the pointer: setEngines hands it to the snap engine as its
     // adjacency resolver, so it must be set before setEngines.
 }
@@ -356,7 +353,7 @@ void WindowTrackingAdaptor::setZoneDetectionAdaptor(ZoneDetectionAdaptor* adapto
 // SnapAdaptor (org.phosphor_works.Placement.Snap D-Bus interface).
 // ═══════════════════════════════════════════════════════════════════════════════
 
-bool WindowTrackingAdaptor::validateWindowId(const QString& windowId, const QString& operation) const
+bool WindowTracker::validateWindowId(const QString& windowId, const QString& operation) const
 {
     if (windowId.isEmpty()) {
         qCWarning(lcDbusWindow) << "Cannot" << operation << "- empty window ID";
@@ -365,7 +362,7 @@ bool WindowTrackingAdaptor::validateWindowId(const QString& windowId, const QStr
     return true;
 }
 
-QString WindowTrackingAdaptor::resolveScreenForSnap(const QString& callerScreen, const QString& zoneId) const
+QString WindowTracker::resolveScreenForSnap(const QString& callerScreen, const QString& zoneId) const
 {
     if (!callerScreen.isEmpty()) {
         return callerScreen;
@@ -381,7 +378,7 @@ QString WindowTrackingAdaptor::resolveScreenForSnap(const QString& callerScreen,
     return m_lastActiveScreenId;
 }
 
-void WindowTrackingAdaptor::setWindowRegistry(PhosphorEngine::WindowRegistry* registry)
+void WindowTracker::setWindowRegistry(PhosphorEngine::WindowRegistry* registry)
 {
     if (m_windowRegistry == registry) {
         return;
@@ -425,7 +422,7 @@ void WindowTrackingAdaptor::setWindowRegistry(PhosphorEngine::WindowRegistry* re
                                                   onShellRegistryMetadata(instanceId, &oldMeta, newMeta);
                                               });
     m_registryConnections << QObject::connect(registry, &PhosphorEngine::WindowRegistry::windowDisappeared, this,
-                                              &WindowTrackingAdaptor::onShellRegistryWindowGone);
+                                              &WindowTracker::onShellRegistryWindowGone);
     // Reactive metadata updates. We do NOT retroactively enforce rules — a
     // committed snap/autotile/float state stays put even if the new class
     // would have behaved differently at open.
@@ -459,11 +456,8 @@ void WindowTrackingAdaptor::setWindowRegistry(PhosphorEngine::WindowRegistry* re
         });
 }
 
-void WindowTrackingAdaptor::reapplyWindowAppearance()
+void WindowTracker::reapplyWindowAppearance()
 {
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return;
-    }
     // Fan out to all three engines through the common IPlacementEngine
     // contract. Each engine re-emits its placement geometry for the windows it
     // manages, which the compositor turns back into per-window chrome (borders

@@ -4,7 +4,7 @@
 /**
  * @file test_wta_known_desktops.cpp
  * @brief The virtual desktop ids the session last saw, kept in session state
- *        through the WindowTrackingAdaptor.
+ *        through the WindowTracker.
  *
  * The daemon hands the list to VirtualDesktopManager::setBaselineDesktopIds
  * at the next start, so desktops removed, added or moved while it was down
@@ -23,7 +23,7 @@
 #include <PhosphorPlacement/WindowTrackingService.h>
 #include <PhosphorZones/LayoutRegistry.h>
 
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/windowtracker/windowtracker.h"
 
 #include "helpers/IsolatedConfigGuard.h"
 #include "helpers/LayoutRegistryTestHelpers.h"
@@ -173,8 +173,7 @@ private:
     void makeAdaptor()
     {
         m_parent = new QObject(nullptr);
-        m_wta =
-            new WindowTrackingAdaptor(m_layoutManager, m_zoneDetector, nullptr, m_settings, nullptr, nullptr, m_parent);
+        m_wta = new WindowTracker(m_layoutManager, m_zoneDetector, nullptr, m_settings, nullptr, nullptr, m_parent);
     }
 
     void destroyAdaptor()
@@ -192,7 +191,7 @@ private:
     StubSettings* m_settings = nullptr;
     StubZoneDetector* m_zoneDetector = nullptr;
     QObject* m_parent = nullptr;
-    WindowTrackingAdaptor* m_wta = nullptr;
+    WindowTracker* m_wta = nullptr;
 };
 
 QTEST_MAIN(TestWtaKnownDesktops)

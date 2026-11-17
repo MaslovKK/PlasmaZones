@@ -52,7 +52,7 @@ namespace PlasmaZones {
 class IOverlayService;
 
 class ISettings;
-class WindowTrackingAdaptor;
+class WindowTracker;
 
 /**
  * @brief D-Bus adaptor for window drag handling
@@ -83,7 +83,7 @@ public:
     explicit WindowDragAdaptor(IOverlayService* overlay, PhosphorZones::IZoneDetector* detector,
                                PhosphorZones::LayoutRegistry* layoutManager,
                                PhosphorScreens::ScreenManager* screenManager, ISettings* settings,
-                               WindowTrackingAdaptor* windowTracking, QObject* parent = nullptr);
+                               WindowTracker* windowTracking, QObject* parent = nullptr);
     ~WindowDragAdaptor() override = default;
 
     /**
@@ -236,7 +236,7 @@ public Q_SLOTS:
      *     preview is cancelled and nothing commits
      *   - a pending snap drag that never activated → NoOp, cancelled or not.
      *     An uncancelled drop on another screen first goes to
-     *     WindowTrackingAdaptor::dragEndedOnScreen, and a snapped window's
+     *     WindowTracker::dragEndedOnScreen, and a snapped window's
      *     uncancelled drop on its own screen to notifyDragOutUnsnap
      *   - engine-owned screen bypass → NoOp when a drag-insert preview on the
      *     release screen commits, else ApplyFloat at the release cursor
@@ -731,7 +731,7 @@ private:
     PhosphorZones::LayoutRegistry* m_layoutManager; // Concrete type for signal connections
     PhosphorScreens::ScreenManager* m_screenManager;
     ISettings* m_settings;
-    WindowTrackingAdaptor* m_windowTracking;
+    WindowTracker* m_windowTracking;
     PhosphorEngine::IPlacementEngine* m_autotileEngine = nullptr; // Optional: per-screen autotile check
     PhosphorEngine::IPlacementEngine* m_scrollEngine = nullptr; // Optional: per-screen scrolling check
     PhosphorContext::IContextResolver* m_contextResolver =
@@ -1182,7 +1182,7 @@ private:
     /// The registry's fills-output verdict for @p windowId, false when unknown.
     bool windowFillsOutput(const QString& windowId) const;
     /// The pre-snap size a drag-out restores on @p screenId, the release
-    /// screen: WindowTrackingAdaptor::preSnapSizeOn, the rule every drag-out
+    /// screen: WindowTracker::preSnapSizeOn, the rule every drag-out
     /// path shares.
     std::optional<QSize> preSnapSizeFor(const QString& windowId, const QString& screenId) const;
 

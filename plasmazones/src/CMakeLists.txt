@@ -177,31 +177,33 @@ set(plasmazones_core_SRCS
     dbus/ruleadaptor.cpp
     dbus/ruleadaptor.h
     # snapnavigationtargets moved to phosphor-libs/libs/phosphor-snap-engine/
-    dbus/windowtrackingadaptor/windowtrackingadaptor.cpp
-    dbus/windowtrackingadaptor/lifecycle.cpp
-    dbus/windowtrackingadaptor/activation.cpp
-    dbus/windowtrackingadaptor/prune.cpp
-    dbus/windowtrackingadaptor/evacuees.cpp
-    dbus/windowtrackingadaptor/screenleave.cpp
-    dbus/windowtrackingadaptor/evacueeledger.h
-    dbus/windowtrackingadaptor/lifecyclerelay.h
-    dbus/windowtrackingadaptor/queries.cpp
-    dbus/windowtrackingadaptor/enginewiring.cpp
-    dbus/windowtrackingadaptor/rules.cpp
-    dbus/windowtrackingadaptor/rules_placement.cpp
-    dbus/windowtrackingadaptor/rules_admission.h
-    dbus/windowtrackingadaptor/crossmode.cpp
-    dbus/windowtrackingadaptor/navigation.cpp
-    dbus/windowtrackingadaptor/float.cpp
-    dbus/windowtrackingadaptor/persistence.cpp
-    dbus/windowtrackingadaptor/saveload.cpp
-    dbus/windowtrackingadaptor/persistenceworker.cpp
-    dbus/windowtrackingadaptor/persistenceworker.h
-    dbus/windowtrackingadaptor/convenience.cpp
-    dbus/windowtrackingadaptor/shellsurface.cpp
-    dbus/windowtrackingadaptor/shellsurface_desktop.cpp
-    dbus/windowtrackingadaptor/windowtrackingadaptor.h
-    dbus/windowtrackingadaptor/internal.h
+    dbus/windowtrackingadaptor.cpp
+    dbus/windowtrackingadaptor.h
+    runtime/windowtracker/windowtracker.cpp
+    runtime/windowtracker/lifecycle.cpp
+    runtime/windowtracker/activation.cpp
+    runtime/windowtracker/prune.cpp
+    runtime/windowtracker/evacuees.cpp
+    runtime/windowtracker/screenleave.cpp
+    runtime/windowtracker/evacueeledger.h
+    runtime/windowtracker/lifecyclerelay.h
+    runtime/windowtracker/queries.cpp
+    runtime/windowtracker/enginewiring.cpp
+    runtime/windowtracker/rules.cpp
+    runtime/windowtracker/rules_placement.cpp
+    runtime/windowtracker/rules_admission.h
+    runtime/windowtracker/crossmode.cpp
+    runtime/windowtracker/navigation.cpp
+    runtime/windowtracker/float.cpp
+    runtime/windowtracker/persistence.cpp
+    runtime/windowtracker/saveload.cpp
+    runtime/windowtracker/persistenceworker.cpp
+    runtime/windowtracker/persistenceworker.h
+    runtime/windowtracker/convenience.cpp
+    runtime/windowtracker/shellsurface.cpp
+    runtime/windowtracker/shellsurface_desktop.cpp
+    runtime/windowtracker/windowtracker.h
+    runtime/windowtracker/internal.h
     dbus/windowdragadaptor/windowdragadaptor.cpp
     dbus/windowdragadaptor/selector_gate.cpp
     dbus/windowdragadaptor/drag.cpp

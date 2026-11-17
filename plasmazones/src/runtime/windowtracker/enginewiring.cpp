@@ -2,15 +2,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// WindowTrackingAdaptor — engine cross-wiring
+// WindowTracker — engine cross-wiring
 //
 // Holds setEngines(), which wires cross-engine references, the disabled-context
 // restore predicates, and the shared OSD navigation path.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-#include "windowtrackingadaptor.h"
+#include "windowtracker.h"
 
-#include "dbus/zonedetectionadaptor.h"
 // ScrollOpenKeys lives in internal.h; the open-params resolver below reads every
 // key through it, and unity batching must not be what supplies the declaration.
 #include "internal.h"
@@ -42,9 +41,9 @@ namespace PlasmaZones {
 // This method only wires cross-engine references and the shared OSD path.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-void WindowTrackingAdaptor::setEngines(PhosphorEngine::PlacementEngineBase* snapEngine,
-                                       PhosphorEngine::PlacementEngineBase* autotileEngine,
-                                       PhosphorEngine::PlacementEngineBase* scrollEngine)
+void WindowTracker::setEngines(PhosphorEngine::PlacementEngineBase* snapEngine,
+                               PhosphorEngine::PlacementEngineBase* autotileEngine,
+                               PhosphorEngine::PlacementEngineBase* scrollEngine)
 {
     // Disconnect previous autotile engine nav feedback (its other seven
     // signals get their own targeted disconnect blocks below)
@@ -172,13 +171,13 @@ void WindowTrackingAdaptor::setEngines(PhosphorEngine::PlacementEngineBase* snap
 
     // ═══════════════════════════════════════════════════════════════════════════
     // Cross-engine references — SnapEngine needs AutotileEngine for
-    // isActiveOnScreen() routing and ZoneDetectionAdaptor for adjacency queries.
+    // isActiveOnScreen() routing and the zone adjacency resolver.
     // These are wired only when a live SnapEngine is supplied; the OUTGOING
     // engine's copies are dropped in the detach block above, so a teardown call
     // (nullptr, nullptr, nullptr) still releases them.
     // ═══════════════════════════════════════════════════════════════════════════
     if (auto* snap = m_cachedSnapEngine.data()) {
-        snap->setZoneAdjacencyResolver(m_zoneDetectionAdaptor);
+        snap->setZoneAdjacencyResolver(m_zoneAdjacencyResolver);
         if (auto* autotile = m_cachedAutotileEngine.data()) {
             snap->setAutotileEngine(autotile);
         }
@@ -274,7 +273,7 @@ void WindowTrackingAdaptor::setEngines(PhosphorEngine::PlacementEngineBase* snap
         // Snap-specific signal: carries PhosphorProtocol::WindowStateEntry which is snap-mode-only.
         // Connected via qobject_cast since the member type is PlacementEngineBase.
         connect(snap, &PhosphorSnapEngine::SnapEngine::windowSnapStateChanged, this,
-                &WindowTrackingAdaptor::windowStateChanged);
+                &WindowTracker::windowStateChanged);
         connect(snap, &PhosphorSnapEngine::SnapEngine::windowFloatingClearedForSnap, this,
                 [this](const QString& windowId, const QString& screenId) {
                     // Through the relay chokepoint so m_broadcastFloating
@@ -300,7 +299,7 @@ void WindowTrackingAdaptor::setEngines(PhosphorEngine::PlacementEngineBase* snap
         // same class of misconfiguration; mirror it so debug AND release
         // both halt loudly instead of corrupting state propagation.
         qFatal(
-            "WindowTrackingAdaptor::setEngines: snapEngine (%p) is not a SnapEngine — "
+            "WindowTracker::setEngines: snapEngine (%p) is not a SnapEngine — "
             "snap-specific signal wiring would silently drop window-state notifications",
             static_cast<void*>(snapEngine));
     }
@@ -324,7 +323,7 @@ void WindowTrackingAdaptor::setEngines(PhosphorEngine::PlacementEngineBase* snap
     // ═══════════════════════════════════════════════════════════════════════════
     if (m_autotileEngine) {
         connect(m_autotileEngine, &PhosphorEngine::PlacementEngineBase::navigationFeedback, this,
-                &WindowTrackingAdaptor::navigationFeedback);
+                &WindowTracker::navigationFeedback);
         // Autotile's disabled-context gate is applied centrally at save time by the
         // WindowPlacementStore serialize keep-predicate (isPersistedContextDisabled),
         // so no engine-side disabled-context predicate injection is needed.
@@ -383,11 +382,11 @@ void WindowTrackingAdaptor::setEngines(PhosphorEngine::PlacementEngineBase* snap
     // mode-agnostic WindowTracking interface.
     if (m_autotileEngine) {
         connect(m_autotileEngine, &PhosphorEngine::PlacementEngineBase::windowDesktopMoveRequested, this,
-                &WindowTrackingAdaptor::windowDesktopMoveRequested);
+                &WindowTracker::windowDesktopMoveRequested);
     }
     if (m_snapEngine) {
         connect(m_snapEngine, &PhosphorEngine::PlacementEngineBase::windowDesktopMoveRequested, this,
-                &WindowTrackingAdaptor::windowDesktopMoveRequested);
+                &WindowTracker::windowDesktopMoveRequested);
     }
 
     // Daemon-initiated cross-output directional move: a tiling-family
@@ -417,11 +416,11 @@ void WindowTrackingAdaptor::setEngines(PhosphorEngine::PlacementEngineBase* snap
     // navigation call (the engine returns true expecting the window has moved).
     if (m_autotileEngine) {
         connect(m_autotileEngine, &PhosphorEngine::PlacementEngineBase::crossModeMoveRequested, this,
-                &WindowTrackingAdaptor::handleCrossModeMove, Qt::DirectConnection);
+                &WindowTracker::handleCrossModeMove, Qt::DirectConnection);
     }
     if (m_snapEngine) {
         connect(m_snapEngine, &PhosphorEngine::PlacementEngineBase::crossModeMoveRequested, this,
-                &WindowTrackingAdaptor::handleCrossModeMove, Qt::DirectConnection);
+                &WindowTracker::handleCrossModeMove, Qt::DirectConnection);
     }
 
     // Cross-MODE directional swap: like the move above, but a two-way exchange —
@@ -430,11 +429,11 @@ void WindowTrackingAdaptor::setEngines(PhosphorEngine::PlacementEngineBase* snap
     // same synchronous-handoff reason.
     if (m_autotileEngine) {
         connect(m_autotileEngine, &PhosphorEngine::PlacementEngineBase::crossModeSwapRequested, this,
-                &WindowTrackingAdaptor::handleCrossModeSwap, Qt::DirectConnection);
+                &WindowTracker::handleCrossModeSwap, Qt::DirectConnection);
     }
     if (m_snapEngine) {
         connect(m_snapEngine, &PhosphorEngine::PlacementEngineBase::crossModeSwapRequested, this,
-                &WindowTrackingAdaptor::handleCrossModeSwap, Qt::DirectConnection);
+                &WindowTracker::handleCrossModeSwap, Qt::DirectConnection);
     }
 
     // Cross-MODE directional focus from an autotile boundary: autotile's plain
@@ -444,12 +443,12 @@ void WindowTrackingAdaptor::setEngines(PhosphorEngine::PlacementEngineBase* snap
     // below).
     if (m_autotileEngine) {
         connect(m_autotileEngine, &PhosphorEngine::PlacementEngineBase::crossModeFocusRequested, this,
-                &WindowTrackingAdaptor::handleCrossModeFocus, Qt::DirectConnection);
+                &WindowTracker::handleCrossModeFocus, Qt::DirectConnection);
     }
     // Snap's focus toward a tiling monitor goes to that monitor's engine too (F422).
     if (m_snapEngine) {
         connect(m_snapEngine, &PhosphorEngine::PlacementEngineBase::crossModeFocusRequested, this,
-                &WindowTrackingAdaptor::handleCrossModeFocus, Qt::DirectConnection);
+                &WindowTracker::handleCrossModeFocus, Qt::DirectConnection);
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -522,24 +521,24 @@ void WindowTrackingAdaptor::setEngines(PhosphorEngine::PlacementEngineBase* snap
     // ═══════════════════════════════════════════════════════════════════════════
     if (m_scrollEngine) {
         connect(m_scrollEngine, &PhosphorEngine::PlacementEngineBase::navigationFeedback, this,
-                &WindowTrackingAdaptor::navigationFeedback);
+                &WindowTracker::navigationFeedback);
         connect(m_scrollEngine, &PhosphorEngine::PlacementEngineBase::windowDesktopMoveRequested, this,
-                &WindowTrackingAdaptor::windowDesktopMoveRequested);
+                &WindowTracker::windowDesktopMoveRequested);
         // Empty source screen, same reasoning as the autotile relay above.
         connect(m_scrollEngine, &PhosphorEngine::PlacementEngineBase::windowOutputMoveExpected, this,
                 [this](const QString& windowId, const QString& targetScreenId) {
                     announceOutputMove(windowId, targetScreenId, QString(), m_scrollEngine.data());
                 });
         connect(m_scrollEngine, &PhosphorEngine::PlacementEngineBase::crossModeMoveRequested, this,
-                &WindowTrackingAdaptor::handleCrossModeMove, Qt::DirectConnection);
+                &WindowTracker::handleCrossModeMove, Qt::DirectConnection);
         connect(m_scrollEngine, &PhosphorEngine::PlacementEngineBase::crossModeSwapRequested, this,
-                &WindowTrackingAdaptor::handleCrossModeSwap, Qt::DirectConnection);
+                &WindowTracker::handleCrossModeSwap, Qt::DirectConnection);
         // Cross-MODE directional FOCUS: emitted by scroll (here), autotile and
         // snap (above); each probes its own same-mode neighbour first and
         // defers only for a different-mode one. DirectConnection so the
         // activation lands within the navigation call, like the move/swap.
         connect(m_scrollEngine, &PhosphorEngine::PlacementEngineBase::crossModeFocusRequested, this,
-                &WindowTrackingAdaptor::handleCrossModeFocus, Qt::DirectConnection);
+                &WindowTracker::handleCrossModeFocus, Qt::DirectConnection);
         connect(m_scrollEngine, &PhosphorEngine::PlacementEngineBase::geometryRestoreRequested, this,
                 floatRestoreRelay);
         connect(m_scrollEngine, &PhosphorEngine::PlacementEngineBase::sizeRestoreRequested, this, sizeRestoreRelay);
@@ -612,7 +611,7 @@ void WindowTrackingAdaptor::setEngines(PhosphorEngine::PlacementEngineBase* snap
     wireEvacueeTouches();
 }
 
-void WindowTrackingAdaptor::setRuleStore(PhosphorRules::RuleStore* store)
+void WindowTracker::setRuleStore(PhosphorRules::RuleStore* store)
 {
     if (m_ruleStore == store) {
         return;

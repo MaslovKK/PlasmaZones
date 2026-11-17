@@ -222,7 +222,7 @@ private Q_SLOTS:
         const QString w = f.registerWindow(QStringLiteral("s2-once"));
         f.snapThenFloat(w, kLeft);
         QSignalSpy cleared(f.snap.get(), &PhosphorSnapEngine::SnapEngine::windowFloatingClearedForSnap);
-        QSignalSpy relayed(f.wta, &WindowTrackingAdaptor::windowFloatingChanged);
+        QSignalSpy relayed(f.wta, &WindowTracker::windowFloatingChanged);
 
         f.snapOn(w, {f.zone(1)}, kLeft);
         QCOMPARE(cleared.count(), 1);
@@ -275,7 +275,7 @@ private Q_SLOTS:
         f.snap->stateForWindowOnScreen(w, kLeft, 1);
         f.snap->setWindowFloat(w, true, kLeft);
         QSignalSpy cleared(f.snap.get(), &PhosphorSnapEngine::SnapEngine::windowFloatingClearedForSnap);
-        QSignalSpy relayed(f.wta, &WindowTrackingAdaptor::windowFloatingChanged);
+        QSignalSpy relayed(f.wta, &WindowTracker::windowFloatingChanged);
 
         f.snapOn(w, {f.zone(2)}, kLeft, 2);
 
@@ -297,7 +297,7 @@ private Q_SLOTS:
         f.showDesktop(kLeft, 2);
         f.snap->setWindowFloat(w, true, kLeft);
         f.showDesktop(kLeft, 1);
-        QSignalSpy relayed(f.wta, &WindowTrackingAdaptor::windowFloatingChanged);
+        QSignalSpy relayed(f.wta, &WindowTracker::windowFloatingChanged);
 
         f.snapOn(w, {f.zone(0)}, kLeft, 1);
         QCOMPARE(relayed.count(), 1);
@@ -318,8 +318,8 @@ private Q_SLOTS:
         const QString w = f.registerWindow(QStringLiteral("s4-float"));
         f.snappedOnOneFloatedOnTwo(w, kFreeLeft);
         f.setFrame(w, f.zoneRect(0, kLeft));
-        QSignalSpy relayed(f.wta, &WindowTrackingAdaptor::windowFloatingChanged);
-        QSignalSpy applies(f.wta, &WindowTrackingAdaptor::applyGeometryRequested);
+        QSignalSpy relayed(f.wta, &WindowTracker::windowFloatingChanged);
+        QSignalSpy applies(f.wta, &WindowTracker::applyGeometryRequested);
 
         f.showDesktop(kLeft, 2);
         f.snap->reconcileDesktopMemberships(kLeft, StatementFixture::onOneAndTwo());
@@ -347,8 +347,8 @@ private Q_SLOTS:
         const QRect settled = f.zoneRect(0, kLeft).adjusted(0, 0, -7, -9);
         f.setFrame(w, settled);
         QVERIFY2(f.wta->isSettledManagedFrame(w, settled), "precondition: reported while it held its zone in view");
-        QSignalSpy relayed(f.wta, &WindowTrackingAdaptor::windowFloatingChanged);
-        QSignalSpy applies(f.wta, &WindowTrackingAdaptor::applyGeometryRequested);
+        QSignalSpy relayed(f.wta, &WindowTracker::windowFloatingChanged);
+        QSignalSpy applies(f.wta, &WindowTracker::applyGeometryRequested);
 
         f.showDesktop(kLeft, 2);
         f.snap->reconcileDesktopMemberships(kLeft, StatementFixture::onOneAndTwo());
@@ -373,8 +373,8 @@ private Q_SLOTS:
         f.setFrame(w, moved);
         f.wta->setInteractiveDragWindow(QString());
         QVERIFY(!f.wta->isSettledManagedFrame(w, moved));
-        QSignalSpy relayed(f.wta, &WindowTrackingAdaptor::windowFloatingChanged);
-        QSignalSpy applies(f.wta, &WindowTrackingAdaptor::applyGeometryRequested);
+        QSignalSpy relayed(f.wta, &WindowTracker::windowFloatingChanged);
+        QSignalSpy applies(f.wta, &WindowTracker::applyGeometryRequested);
 
         f.showDesktop(kLeft, 2);
         f.snap->reconcileDesktopMemberships(kLeft, StatementFixture::onOneAndTwo());
@@ -465,7 +465,7 @@ private Q_SLOTS:
                 return mode;
             });
         };
-        QSignalSpy relayed(f.wta, &WindowTrackingAdaptor::windowFloatingChanged);
+        QSignalSpy relayed(f.wta, &WindowTracker::windowFloatingChanged);
 
         runs(PhosphorZones::AssignmentEntry::Mode::Scrolling);
         f.showDesktop(kLeft, 2);

@@ -5,7 +5,7 @@
  * @file test_wta_float_back_model.cpp
  * @brief The float-back refusal model at its three writers
  *        (WindowTrackingService::recordFreeGeometry, recordFloatingClose and
- *        WindowTrackingAdaptor::captureWindowPlacement): a rect off its screen
+ *        WindowTracker::captureWindowPlacement): a rect off its screen
  *        key (P), the frame of a window in a zone or tile in view (O), a
  *        managed frame (M), and, where a frame is sampled, the frame of a
  *        minimized, suspended or output-filling window (S). Two outputs side
@@ -17,7 +17,8 @@
 
 #include "wta_float_back_fixture.h"
 
-#include "dbus/windowtrackingadaptor/internal.h"
+#include "runtime/windowtracker/internal.h"
+#include "dbus/windowtrackingadaptor.h"
 #include "helpers/ScreenDisablingResolver.h"
 #include "helpers/VirtualScreenTestHelpers.h"
 #include "helpers/WindowPlacementBuilders.h"
@@ -422,7 +423,7 @@ private Q_SLOTS:
         const QString w = f.registerWindow(QStringLiteral("f678-tile"));
         tile.heldScreen.insert(w, kRight);
         f.setFrame(w, QRect(2100, 100, 800, 600));
-        QSignalSpy floatSpy(f.wta, &WindowTrackingAdaptor::windowFloatingChanged);
+        QSignalSpy floatSpy(f.wta, &WindowTracker::windowFloatingChanged);
 
         f.wta->setWindowFloating(w, true);
 
@@ -528,7 +529,7 @@ private Q_SLOTS:
         FloatLoggingEngine tile;
         tile.activeScreens = {kRight};
         BusHost host;
-        WindowTrackingAdaptor* const wta = hostedAdaptor(f, tile, host);
+        const auto [wta, adaptor] = hostedTracker(f, tile, host);
         const auto detach = qScopeGuard([wta] {
             wta->setEngines(nullptr, nullptr, nullptr);
             wta->setWindowRegistry(nullptr);
@@ -546,7 +547,7 @@ private Q_SLOTS:
         QVERIFY(peer.floatOn(w, kRight));
         QVERIFY2(tile.floatCalls.isEmpty(), "another caller may not float a window on a hidden desktop");
 
-        wta->setBridgeCallerCheck([service = peer.peer.baseService()](const QString& busName) {
+        adaptor->setBridgeCallerCheck([service = peer.peer.baseService()](const QString& busName) {
             return busName == service;
         });
         QVERIFY(peer.floatOn(w, kRight));
@@ -561,7 +562,7 @@ private Q_SLOTS:
         FloatLoggingEngine tile;
         tile.activeScreens = {kLeft, kRight};
         BusHost host;
-        WindowTrackingAdaptor* const wta = hostedAdaptor(f, tile, host);
+        const auto [wta, adaptor] = hostedTracker(f, tile, host);
         const auto detach = qScopeGuard([wta] {
             wta->setEngines(nullptr, nullptr, nullptr);
             wta->setWindowRegistry(nullptr);
@@ -591,7 +592,7 @@ private Q_SLOTS:
         FloatLoggingEngine tile;
         tile.activeScreens = {vs0, vs1};
         BusHost host;
-        WindowTrackingAdaptor* const wta = hostedAdaptor(f, tile, host);
+        const auto [wta, adaptor] = hostedTracker(f, tile, host);
         const auto detach = qScopeGuard([wta] {
             wta->setEngines(nullptr, nullptr, nullptr);
             wta->setWindowRegistry(nullptr);
@@ -649,7 +650,7 @@ private Q_SLOTS:
         const auto unset = qScopeGuard([&f] {
             f.snap->setLiveModeResolver({});
         });
-        QSignalSpy stateSpy(f.wta, &WindowTrackingAdaptor::windowStateChanged);
+        QSignalSpy stateSpy(f.wta, &WindowTracker::windowStateChanged);
         const auto floatedZone = [&stateSpy](const QString& windowId) -> std::optional<QString> {
             for (const QList<QVariant>& args : stateSpy) {
                 const auto entry = args.at(1).value<PhosphorProtocol::WindowStateEntry>();
@@ -683,7 +684,7 @@ private Q_SLOTS:
         const QString w = f.registerWindow(QStringLiteral("opt-out-float"));
         f.setFrame(w, QRect(100, 100, 800, 600));
         optOut(f, kLeft);
-        QSignalSpy floatSpy(f.wta, &WindowTrackingAdaptor::windowFloatingChanged);
+        QSignalSpy floatSpy(f.wta, &WindowTracker::windowFloatingChanged);
 
         f.wta->setWindowFloating(w, true);
 
@@ -733,7 +734,7 @@ private Q_SLOTS:
         QVERIFY(f.snap->isFloating(onOptOut));
         QVERIFY(f.snap->isFloating(onSnapping));
         optOut(f, kLeft);
-        QSignalSpy floatSpy(f.wta, &WindowTrackingAdaptor::windowFloatingChanged);
+        QSignalSpy floatSpy(f.wta, &WindowTracker::windowFloatingChanged);
 
         WindowTrackingInternal::dropOptOutFloats(f.wta);
 
@@ -760,8 +761,8 @@ private Q_SLOTS:
         f.snap->commitSnap(onOptOut, f.zone(0), kLeft);
         f.snap->commitSnap(onSnapping, f.zone(1), kRight);
         optOut(f, kLeft);
-        QSignalSpy stateSpy(f.wta, &WindowTrackingAdaptor::windowStateChanged);
-        QSignalSpy geometrySpy(f.wta, &WindowTrackingAdaptor::applyGeometryRequested);
+        QSignalSpy stateSpy(f.wta, &WindowTracker::windowStateChanged);
+        QSignalSpy geometrySpy(f.wta, &WindowTracker::applyGeometryRequested);
 
         WindowTrackingInternal::releaseOptOutZones(f.wta, {kLeft, kRight});
 
@@ -785,7 +786,7 @@ private Q_SLOTS:
     void aStripWindowReleasedOnTheOptOutLandsOnScreen()
     {
         FloatBackFixture f;
-        QSignalSpy geometrySpy(f.wta, &WindowTrackingAdaptor::applyGeometryRequested);
+        QSignalSpy geometrySpy(f.wta, &WindowTracker::applyGeometryRequested);
         const auto landed = [&geometrySpy](const QString& windowId) -> std::optional<QRect> {
             for (const QList<QVariant>& args : std::as_const(geometrySpy)) {
                 if (args.at(0).toString() == windowId) {
@@ -845,15 +846,22 @@ private:
         }
     };
 
-    /// A second adaptor on the fixture's outputs, exported through @p host as
-    /// Daemon's are, with @p tile in the autotile slot and nothing else.
-    static WindowTrackingAdaptor* hostedAdaptor(FloatBackFixture& f, FloatLoggingEngine& tile, BusHost& host)
+    struct Hosted
     {
-        auto* wta =
-            new WindowTrackingAdaptor(f.layouts, &f.detector, f.screenMgr.get(), &f.settings, nullptr, nullptr, &host);
+        WindowTracker* tracker;
+        WindowTrackingAdaptor* adaptor;
+    };
+
+    /// A second tracker on the fixture's outputs, with its D-Bus binding
+    /// exported through @p host as Daemon's is, and @p tile in the autotile
+    /// slot and nothing else.
+    static Hosted hostedTracker(FloatBackFixture& f, FloatLoggingEngine& tile, BusHost& host)
+    {
+        auto* wta = new WindowTracker(f.layouts, &f.detector, f.screenMgr.get(), &f.settings, nullptr, nullptr, &host);
+        auto* adaptor = new WindowTrackingAdaptor(wta, &host);
         wta->setWindowRegistry(&f.registry);
         wta->setEngines(nullptr, &tile, nullptr);
-        return wta;
+        return {wta, adaptor};
     }
 
     /// Another bus connection calling the screen-form float on the object

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// WindowTrackingAdaptor — cross-mode handoffs and the workspace move verb
+// WindowTracker — cross-mode handoffs and the workspace move verb
 //
 // handleCrossModeMove / handleCrossModeSwap: relinquish a window from the source
 // engine and place (or exchange) it on the target engine when a directional
@@ -13,7 +13,7 @@
 // handoff with same-engine moves allowed, and its compositor legs.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-#include "windowtrackingadaptor.h"
+#include "windowtracker.h"
 #include "internal.h"
 
 #include "core/platform/logging.h"
@@ -67,8 +67,7 @@ QString zoneWithSameOrdinal(PhosphorZones::LayoutRegistry* layouts, PhosphorSnap
 
 } // namespace
 
-PhosphorEngine::PlacementEngineBase*
-WindowTrackingAdaptor::engineForMode(PhosphorZones::AssignmentEntry::Mode mode) const
+PhosphorEngine::PlacementEngineBase* WindowTracker::engineForMode(PhosphorZones::AssignmentEntry::Mode mode) const
 {
     switch (mode) {
     case PhosphorZones::AssignmentEntry::Autotile:
@@ -81,8 +80,8 @@ WindowTrackingAdaptor::engineForMode(PhosphorZones::AssignmentEntry::Mode mode) 
     return nullptr;
 }
 
-void WindowTrackingAdaptor::handleCrossModeMove(const QString& windowId, const QString& targetScreenId,
-                                                int targetDesktop, const QString& direction)
+void WindowTracker::handleCrossModeMove(const QString& windowId, const QString& targetScreenId, int targetDesktop,
+                                        const QString& direction)
 {
     // sender() is only valid inside this signal dispatch; the impl below
     // never touches it, so every other caller passes its engine explicitly.
@@ -90,9 +89,9 @@ void WindowTrackingAdaptor::handleCrossModeMove(const QString& windowId, const Q
                       targetDesktop, direction, /*allowSameEngine=*/false, WorkspaceMoveWire{});
 }
 
-void WindowTrackingAdaptor::moveWindowToWorkspaceVerb(const QString& rawWindowId, const QString& targetScreenId,
-                                                      int targetDesktop, const QString& targetDesktopId,
-                                                      const QString& direction, bool moveOutput, bool subjectOfVerb)
+void WindowTracker::moveWindowToWorkspaceVerb(const QString& rawWindowId, const QString& targetScreenId,
+                                              int targetDesktop, const QString& targetDesktopId,
+                                              const QString& direction, bool moveOutput, bool subjectOfVerb)
 {
     if (rawWindowId.isEmpty() || targetDesktop < 1) {
         return;
@@ -222,7 +221,7 @@ void WindowTrackingAdaptor::moveWindowToWorkspaceVerb(const QString& rawWindowId
     crossModeMoveImpl(sourceEngine, windowId, landingScreen, targetDesktop, direction, /*allowSameEngine=*/true, wire);
 }
 
-bool WindowTrackingAdaptor::refusesWorkspaceMove(const QString& windowId) const
+bool WindowTracker::refusesWorkspaceMove(const QString& windowId) const
 {
     // Sticky (on-all-desktops) windows: the effect REFUSES a desktop move for
     // them outright (PlasmaZonesEffect::applyWorkspaceMove returns for
@@ -240,8 +239,8 @@ bool WindowTrackingAdaptor::refusesWorkspaceMove(const QString& windowId) const
     return m_service->isWindowSticky(windowId) || isInteractiveDragWindow(windowId);
 }
 
-bool WindowTrackingAdaptor::stashScrollColumnForWorkspaceMove(const QString& stripScreenId,
-                                                              const QStringList& windowIds, int targetDesktop)
+bool WindowTracker::stashScrollColumnForWorkspaceMove(const QString& stripScreenId, const QStringList& windowIds,
+                                                      int targetDesktop)
 {
     auto* const scroll = qobject_cast<PhosphorScrollEngine::ScrollEngine*>(m_scrollEngine.data());
     if (!scroll || stripScreenId.isEmpty() || targetDesktop < 1) {
@@ -264,8 +263,8 @@ bool WindowTrackingAdaptor::stashScrollColumnForWorkspaceMove(const QString& str
     return scroll->stashColumnForDesktopMove(stripScreenId, moving, targetDesktop);
 }
 
-void WindowTrackingAdaptor::stashScrollStripsForWorkspaceMove(const QStringList& rawWindowIds,
-                                                              const QString& targetScreenId, int targetDesktop)
+void WindowTracker::stashScrollStripsForWorkspaceMove(const QStringList& rawWindowIds, const QString& targetScreenId,
+                                                      int targetDesktop)
 {
     auto* const scroll = qobject_cast<PhosphorScrollEngine::ScrollEngine*>(m_scrollEngine.data());
     if (!scroll || targetScreenId.isEmpty() || targetDesktop < 1 || rawWindowIds.isEmpty() || !m_layoutManager) {
@@ -313,8 +312,8 @@ void WindowTrackingAdaptor::stashScrollStripsForWorkspaceMove(const QStringList&
     }
 }
 
-void WindowTrackingAdaptor::emitMoveLegs(const QString& windowId, int desktop, const QString& desktopId,
-                                         const QString& outputScreenId, bool workspaceVerb)
+void WindowTracker::emitMoveLegs(const QString& windowId, int desktop, const QString& desktopId,
+                                 const QString& outputScreenId, bool workspaceVerb)
 {
     const bool desktopLeg = desktop > 0 || !desktopId.isEmpty();
     if (!desktopLeg && outputScreenId.isEmpty()) {
@@ -335,10 +334,9 @@ void WindowTrackingAdaptor::emitMoveLegs(const QString& windowId, int desktop, c
     Q_EMIT windowDesktopMoveRequested(windowId, desktop);
 }
 
-void WindowTrackingAdaptor::crossModeMoveImpl(PhosphorEngine::PlacementEngineBase* sourceEngine,
-                                              const QString& windowId, const QString& targetScreenId, int targetDesktop,
-                                              const QString& direction, bool allowSameEngine,
-                                              const WorkspaceMoveWire& wire)
+void WindowTracker::crossModeMoveImpl(PhosphorEngine::PlacementEngineBase* sourceEngine, const QString& windowId,
+                                      const QString& targetScreenId, int targetDesktop, const QString& direction,
+                                      bool allowSameEngine, const WorkspaceMoveWire& wire)
 {
     if (!sourceEngine || windowId.isEmpty() || targetScreenId.isEmpty() || !m_layoutManager) {
         return;
@@ -552,7 +550,7 @@ void WindowTrackingAdaptor::crossModeMoveImpl(PhosphorEngine::PlacementEngineBas
     }
 }
 
-void WindowTrackingAdaptor::handleCrossModeFocus(const QString& targetScreenId, const QString& direction, bool* handled)
+void WindowTracker::handleCrossModeFocus(const QString& targetScreenId, const QString& direction, bool* handled)
 {
     auto* sourceEngine = qobject_cast<PhosphorEngine::PlacementEngineBase*>(sender());
     if (!sourceEngine || targetScreenId.isEmpty() || !m_layoutManager) {
@@ -603,8 +601,8 @@ void WindowTrackingAdaptor::handleCrossModeFocus(const QString& targetScreenId, 
     }
 }
 
-void WindowTrackingAdaptor::handleCrossModeSwap(const QString& windowId, const QString& targetScreenId,
-                                                int targetDesktop, const QString& direction)
+void WindowTracker::handleCrossModeSwap(const QString& windowId, const QString& targetScreenId, int targetDesktop,
+                                        const QString& direction)
 {
     auto* sourceEngine = qobject_cast<PhosphorEngine::PlacementEngineBase*>(sender());
     if (!sourceEngine || windowId.isEmpty() || targetScreenId.isEmpty() || !m_layoutManager) {

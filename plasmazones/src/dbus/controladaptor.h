@@ -20,7 +20,7 @@ class LayoutRegistry;
 
 namespace PlasmaZones {
 
-class WindowTrackingAdaptor;
+class WindowTracker;
 class SnapAdaptor;
 class CompositorBridgeAdaptor;
 class ScreenModeRouter;
@@ -50,8 +50,7 @@ class PLASMAZONES_EXPORT ControlAdaptor : public QDBusAbstractAdaptor
     Q_CLASSINFO("D-Bus Interface", "org.phosphor_works.Placement.Control")
 
 public:
-    explicit ControlAdaptor(WindowTrackingAdaptor* wta, SnapAdaptor* snapAdaptor,
-                            PhosphorZones::LayoutRegistry* layoutManager,
+    explicit ControlAdaptor(WindowTracker* wta, SnapAdaptor* snapAdaptor, PhosphorZones::LayoutRegistry* layoutManager,
                             PhosphorEngine::IPlacementEngine* autotileEngine,
                             PhosphorScreens::ScreenManager* screenManager, CompositorBridgeAdaptor* compositorBridge,
                             PhosphorEngine::IPlacementEngine* scrollEngine = nullptr,
@@ -161,7 +160,7 @@ public:
     void notifyShortcutsChanged();
 
 private:
-    WindowTrackingAdaptor* m_wta;
+    WindowTracker* m_wta;
     SnapAdaptor* m_snapAdaptor;
     PhosphorZones::LayoutRegistry* m_layoutManager;
     PhosphorEngine::IPlacementEngine* m_autotileEngine;

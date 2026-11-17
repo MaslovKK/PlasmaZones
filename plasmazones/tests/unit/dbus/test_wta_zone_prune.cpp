@@ -38,7 +38,7 @@ private Q_SLOTS:
     {
         const QString w = QStringLiteral("app|prune-delete");
         service()->assignWindowToZone(w, m_zoneIds[2], m_screenId, m_desktop);
-        QSignalSpy states(m_wta, &WindowTrackingAdaptor::windowStateChanged);
+        QSignalSpy states(m_wta, &WindowTracker::windowStateChanged);
 
         QVERIFY(deleteZone(m_testLayout, m_zoneIds[2]));
 
@@ -64,7 +64,7 @@ private Q_SLOTS:
     {
         const QString w = QStringLiteral("app|prune-span");
         service()->assignWindowToZones(w, {m_zoneIds[1], m_zoneIds[2]}, m_screenId, m_desktop);
-        QSignalSpy batch(m_wta, &WindowTrackingAdaptor::applyGeometriesBatch);
+        QSignalSpy batch(m_wta, &WindowTracker::applyGeometriesBatch);
 
         QVERIFY(deleteZone(m_testLayout, m_zoneIds[2]));
 
@@ -85,7 +85,7 @@ private Q_SLOTS:
     {
         const QString w = QStringLiteral("app|prune-switch");
         service()->assignWindowToZone(w, m_zoneIds[0], m_screenId, m_desktop);
-        QSignalSpy states(m_wta, &WindowTrackingAdaptor::windowStateChanged);
+        QSignalSpy states(m_wta, &WindowTracker::windowStateChanged);
 
         switchDefaultTo(addLayout(2));
 

@@ -3,7 +3,7 @@
 
 /**
  * @file test_wta_scroll_strips.cpp
- * @brief The WindowTrackingAdaptor leg of scrolling strip-structure
+ * @brief The WindowTracker leg of scrolling strip-structure
  *        persistence.
  *
  * The engine's own serialize/deserialize is covered by
@@ -29,7 +29,7 @@
 #include <PhosphorPlacement/WindowTrackingService.h>
 #include <PhosphorZones/LayoutRegistry.h>
 
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/windowtracker/windowtracker.h"
 
 #include "helpers/IsolatedConfigGuard.h"
 #include "helpers/LayoutRegistryTestHelpers.h"
@@ -184,8 +184,7 @@ private:
     void makeAdaptor()
     {
         m_parent = new QObject(nullptr);
-        m_wta =
-            new WindowTrackingAdaptor(m_layoutManager, m_zoneDetector, nullptr, m_settings, nullptr, nullptr, m_parent);
+        m_wta = new WindowTracker(m_layoutManager, m_zoneDetector, nullptr, m_settings, nullptr, nullptr, m_parent);
     }
 
     void destroyAdaptor()
@@ -209,7 +208,7 @@ private:
     StubSettings* m_settings = nullptr;
     StubZoneDetector* m_zoneDetector = nullptr;
     QObject* m_parent = nullptr;
-    WindowTrackingAdaptor* m_wta = nullptr;
+    WindowTracker* m_wta = nullptr;
 };
 
 QTEST_MAIN(TestWtaScrollStrips)

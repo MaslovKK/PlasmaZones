@@ -24,16 +24,16 @@ public:
     using QObject::QObject;
 
 Q_SIGNALS:
-    /// Emitted once by WindowTrackingAdaptor::windowClosed after its teardown.
+    /// Emitted once by WindowTracker::windowClosed after its teardown.
     void windowClosed(const QString& windowId);
-    /// The instance ids alive at a WindowTrackingAdaptor::pruneStaleWindows sweep.
+    /// The instance ids alive at a WindowTracker::pruneStaleWindows sweep.
     void stalePruned(const QStringList& aliveInstances);
     /// The effect's per-output-desktops report moved
-    /// (WindowTrackingAdaptor::reportPerOutputDesktopsMode). Change-gated: a
+    /// (WindowTracker::reportPerOutputDesktopsMode). Change-gated: a
     /// subscriber that connects after the effect reported hears nothing and
-    /// reads WindowTrackingAdaptor::perOutputDesktopsMode() for the answer.
+    /// reads WindowTracker::perOutputDesktopsMode() for the answer.
     void perOutputDesktopsModeReported(bool enabled);
-    /// Every admitted WindowTrackingAdaptor::screenDesktopChanged report, changed
+    /// Every admitted WindowTracker::screenDesktopChanged report, changed
     /// or not, emitted before VirtualDesktopManager::updateScreenDesktop applies
     /// it. The manager emits only on a real change, so a report that repeats its
     /// row (the effect's forced answer to an already satisfied switch request)

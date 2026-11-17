@@ -110,7 +110,7 @@ private Q_SLOTS:
         QCOMPARE(verdictOf(m_wta->reportOutputSettle({unplugRow(w)}), w), int(OutputSettleVerdict::EvacueeFloat));
         QVERIFY(m_snapEngine->hasParked(w, kA));
 
-        QSignalSpy dropped(m_wta, &WindowTrackingAdaptor::parkDropped);
+        QSignalSpy dropped(m_wta, &WindowTracker::parkDropped);
         m_snapEngine->setCurrentDesktopForScreen(kA, 1);
         QCOMPARE(verdictOf(m_wta->reportOutputSettle({redockRow(w)}), w), int(OutputSettleVerdict::Readopt));
         QCOMPARE(m_wta->service()->zoneForWindow(w), m_zoneIds[0]);
@@ -128,7 +128,7 @@ private Q_SLOTS:
         QVERIFY(unplugA());
         m_wta->reportOutputSettle({unplugRow(w)});
 
-        QSignalSpy dropped(m_wta, &WindowTrackingAdaptor::parkDropped);
+        QSignalSpy dropped(m_wta, &WindowTracker::parkDropped);
         m_snapEngine->setCurrentDesktopForScreen(kA, 1);
         QCOMPARE(verdictOf(m_wta->reportOutputSettle({redockRow(w, 4)}), w), int(OutputSettleVerdict::UserMove));
         QVERIFY(m_wta->service()->zoneForWindow(w).isEmpty());
@@ -175,7 +175,7 @@ private Q_SLOTS:
         });
         QCOMPARE(m_snapEngine->zoneForWindow(w), m_zoneIds[1]);
 
-        QSignalSpy applySpy(m_wta, &WindowTrackingAdaptor::applyGeometryRequested);
+        QSignalSpy applySpy(m_wta, &WindowTracker::applyGeometryRequested);
         m_snapEngine->setCurrentDesktopForScreen(kA, 1);
         m_wta->reportOutputSettle({redockRow(w)});
 
@@ -190,7 +190,7 @@ private Q_SLOTS:
         const QString w = QStringLiteral("app|closed");
         QVERIFY(snapOnA(w));
         QVERIFY(unplugA());
-        QSignalSpy dropped(m_wta, &WindowTrackingAdaptor::parkDropped);
+        QSignalSpy dropped(m_wta, &WindowTracker::parkDropped);
         m_wta->windowClosed(w, 0, kB);
         QVERIFY(!m_snapEngine->hasParked(w, QString()));
         QCOMPARE(dropped.count(), 1);
@@ -519,7 +519,7 @@ private Q_SLOTS:
         QVERIFY(floatOnA(w));
         optOutOnB(1);
         QVERIFY(unplugA());
-        QSignalSpy floatSpy(m_wta, &WindowTrackingAdaptor::windowFloatingChanged);
+        QSignalSpy floatSpy(m_wta, &WindowTracker::windowFloatingChanged);
 
         QCOMPARE(verdictOf(m_wta->reportOutputSettle({unplugRow(w)}), w), int(OutputSettleVerdict::EvacueeFloat));
 
@@ -596,10 +596,10 @@ private Q_SLOTS:
         m_snapEngine->setCurrentDesktopForScreen(kA, 1);
         QStringList heard;
         QObject listener;
-        connect(m_wta, &WindowTrackingAdaptor::parkReseated, &listener, [&heard](const QString& id, const QString&) {
+        connect(m_wta, &WindowTracker::parkReseated, &listener, [&heard](const QString& id, const QString&) {
             heard.append(QStringLiteral("reseated:") + id);
         });
-        connect(m_wta, &WindowTrackingAdaptor::parkDropped, &listener, [&heard](const QString& id, const QString&) {
+        connect(m_wta, &WindowTracker::parkDropped, &listener, [&heard](const QString& id, const QString&) {
             heard.append(QStringLiteral("dropped:") + id);
         });
         QVERIFY(m_wta->readoptOnArrival(w, kA));
@@ -624,8 +624,8 @@ private Q_SLOTS:
         const auto clear = qScopeGuard([this] {
             m_snapEngine->setContextModeResolver({});
         });
-        QSignalSpy reseated(m_wta, &WindowTrackingAdaptor::parkReseated);
-        QSignalSpy dropped(m_wta, &WindowTrackingAdaptor::parkDropped);
+        QSignalSpy reseated(m_wta, &WindowTracker::parkReseated);
+        QSignalSpy dropped(m_wta, &WindowTracker::parkDropped);
         QVERIFY(!m_wta->readoptOnArrival(w, kA));
         QVERIFY(m_wta->service()->zoneForWindow(w).isEmpty());
         QCOMPARE(dropped.count(), 1);
@@ -647,8 +647,8 @@ private Q_SLOTS:
             m_wta->setEngines(m_snapEngine, nullptr, nullptr);
         });
         m_snapEngine->setCurrentDesktopForScreen(kA, 1);
-        QSignalSpy reseated(m_wta, &WindowTrackingAdaptor::parkReseated);
-        QSignalSpy dropped(m_wta, &WindowTrackingAdaptor::parkDropped);
+        QSignalSpy reseated(m_wta, &WindowTracker::parkReseated);
+        QSignalSpy dropped(m_wta, &WindowTracker::parkDropped);
         QVERIFY(m_wta->readoptOnArrival(w, kA));
         QCOMPARE(m_wta->service()->zoneForWindow(w), m_zoneIds[0]);
         QCOMPARE(reseated.count(), 1);
@@ -667,8 +667,8 @@ private Q_SLOTS:
             PhosphorScreens::ScreenManagerConfig{.physicalScreenSource = &fake, .useGeometrySensors = false});
         screenMgr.start();
         QObject parent;
-        auto* wta = new WindowTrackingAdaptor(m_layoutManager, m_zoneDetector, &screenMgr, m_settings, nullptr, nullptr,
-                                              &parent);
+        auto* wta =
+            new WindowTracker(m_layoutManager, m_zoneDetector, &screenMgr, m_settings, nullptr, nullptr, &parent);
         QStringList retired;
         wta->setOutputRetirer([&retired](const QString& id) {
             retired.append(id);

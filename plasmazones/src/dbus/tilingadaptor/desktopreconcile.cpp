@@ -3,7 +3,7 @@
 
 #include "tilingadaptor.h"
 
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/windowtracker/windowtracker.h"
 
 #include "core/platform/logging.h"
 
@@ -77,8 +77,8 @@ PhosphorEngine::DesktopSpan TilingAdaptor::spanFor(const PhosphorEngine::WindowM
     // push for the same transition, so it is never behind it.
     if (meta.isSticky.has_value()) {
         span.sticky = *meta.isSticky;
-    } else if (m_windowTrackingAdaptor && m_windowTrackingAdaptor->service()) {
-        span.sticky = m_windowTrackingAdaptor->service()->isWindowSticky(canonicalWindowId);
+    } else if (m_windowTracker && m_windowTracker->service()) {
+        span.sticky = m_windowTracker->service()->isWindowSticky(canonicalWindowId);
     }
     span.desktops = span.sticky ? QSet<int>{} : desktopSetOf(meta);
     // A window with no desktop stamped is UNKNOWN, not sticky: reading the
@@ -144,7 +144,7 @@ void TilingAdaptor::applyMembershipResult(PhosphorEngine::IPlacementEngine* engi
         if (lifecycleEngine && !engine->heldKeyForWindow(windowId)) {
             fullyReleased.insert(windowId);
         }
-        if (!lifecycleEngine && m_windowTrackingAdaptor) {
+        if (!lifecycleEngine && m_windowTracker) {
             // Keep the persisted placement record honest. The release changed
             // the window's snap state, and the engine signal that normally
             // reports such a change also clears the tiling engines' float
@@ -152,7 +152,7 @@ void TilingAdaptor::applyMembershipResult(PhosphorEngine::IPlacementEngine* engi
             // on the desktop it moved TO — so the record is refreshed directly
             // instead. fromStateChange because an engine state change is
             // authoritative even for a minimized window.
-            m_windowTrackingAdaptor->captureWindowPlacement(windowId, QString(), /*fromStateChange=*/true);
+            m_windowTracker->captureWindowPlacement(windowId, QString(), /*fromStateChange=*/true);
             // The effect keeps its own per-window zone cache, fed by
             // windowStateChanged, and the IsSnapped / Zone rule-match fields
             // read it. Left unsaid it keeps naming the zone this window has
@@ -161,7 +161,7 @@ void TilingAdaptor::applyMembershipResult(PhosphorEngine::IPlacementEngine* engi
             // of the two consumers a context release must drive by hand; see
             // relayWindowReleasedFromContext for why the engine signal that
             // would drive all of them at once is wrong here.
-            m_windowTrackingAdaptor->relayWindowReleasedFromContext(windowId, key.screenId);
+            m_windowTracker->relayWindowReleasedFromContext(windowId, key.screenId);
         }
     }
     if (lifecycleEngine) {
@@ -214,8 +214,8 @@ void TilingAdaptor::reconcileWindowMembership(const QString& windowId, const Pho
     // A window parked for an output that went away keeps no context on a
     // desktop or activity it left while away: KWin still returns it, and the
     // re-seat must not put it back where it no longer is.
-    if (m_windowTrackingAdaptor) {
-        m_windowTrackingAdaptor->dropParkedOutsideSpan(windowId, span);
+    if (m_windowTracker) {
+        m_windowTracker->dropParkedOutsideSpan(windowId, span);
     }
 }
 

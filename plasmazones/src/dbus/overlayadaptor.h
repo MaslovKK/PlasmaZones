@@ -37,7 +37,7 @@ class ISettings;
  *  PhosphorZones::Zone overlay visibility and highlighting only
  *
  * Note: PhosphorZones::Zone detection and window tracking are handled by separate adaptors
- * (ZoneDetectionAdaptor and WindowTrackingAdaptor).
+ * (ZoneDetectionAdaptor and WindowTracker).
  *
  * Uses interface types for loose coupling
  */

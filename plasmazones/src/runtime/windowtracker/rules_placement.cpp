@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// WindowTrackingAdaptor — rule-driven open placement and routing
+// WindowTracker — rule-driven open placement and routing
 //
 // The open-path half of the rule resolvers: the SnapToZone placement directive
 // (zone ordinals and names, re-validated by one shared reader), the
@@ -14,7 +14,7 @@
 // rules.cpp; the admission tests both TUs share are in rules_admission.h.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-#include "windowtrackingadaptor.h"
+#include "windowtracker.h"
 #include "internal.h"
 #include "rules_admission.h"
 
@@ -119,8 +119,8 @@ bool hasValidPlacementTarget(const PhosphorRules::ResolvedActions& resolved)
 
 } // namespace
 
-PhosphorSnapEngine::PlacementDirective WindowTrackingAdaptor::placementZonesByRule(const QString& windowId,
-                                                                                   const QString& screenId)
+PhosphorSnapEngine::PlacementDirective WindowTracker::placementZonesByRule(const QString& windowId,
+                                                                           const QString& screenId)
 {
     // Placement is purely rule-driven: absent a matching SnapToZone / RouteToScreen
     // rule there is nothing to snap or route, so the answer is empty.
@@ -256,8 +256,7 @@ PhosphorSnapEngine::PlacementDirective WindowTrackingAdaptor::placementZonesByRu
     return directive;
 }
 
-bool WindowTrackingAdaptor::emitOpenRoutingIfMatched(const PhosphorRules::ResolvedActions& resolved,
-                                                     const QString& windowId)
+bool WindowTracker::emitOpenRoutingIfMatched(const PhosphorRules::ResolvedActions& resolved, const QString& windowId)
 {
     const QString key = shadowWindowId(windowId);
     // Once per open (route_once). Both open channels route a window that
@@ -279,8 +278,8 @@ bool WindowTrackingAdaptor::emitOpenRoutingIfMatched(const PhosphorRules::Resolv
     return verdict.matched;
 }
 
-WindowTrackingAdaptor::OpenRouteVerdict
-WindowTrackingAdaptor::routeOpenByRules(const PhosphorRules::ResolvedActions& resolved, const QString& windowId)
+WindowTracker::OpenRouteVerdict WindowTracker::routeOpenByRules(const PhosphorRules::ResolvedActions& resolved,
+                                                                const QString& windowId)
 {
     OpenRouteVerdict verdict;
     // Named-workspace routing outranks the positional desktop number and the
@@ -385,7 +384,7 @@ WindowTrackingAdaptor::routeOpenByRules(const PhosphorRules::ResolvedActions& re
     return verdict;
 }
 
-bool WindowTrackingAdaptor::applyOpenDesktopRouting(const QString& windowId, const QString& screenId)
+bool WindowTracker::applyOpenDesktopRouting(const QString& windowId, const QString& screenId)
 {
     // Engine-neutral RouteToDesktop: when a matched rule pins the opening window
     // to a virtual desktop, ask the compositor to move it there. Independent of
@@ -410,12 +409,12 @@ bool WindowTrackingAdaptor::applyOpenDesktopRouting(const QString& windowId, con
         m_ruleEvaluator->resolveCachedFiltered(windowId, *query, admitWith(&admitScreenStamped, *query)), windowId);
 }
 
-void WindowTrackingAdaptor::clearOpenWorkspaceRoute(const QString& windowId)
+void WindowTracker::clearOpenWorkspaceRoute(const QString& windowId)
 {
     m_openRoutePass.remove(shadowWindowId(windowId));
 }
 
-void WindowTrackingAdaptor::republishOpenRoute(const QString& windowId)
+void WindowTracker::republishOpenRoute(const QString& windowId)
 {
     const QString key = shadowWindowId(windowId);
     if (const auto latched = m_openRoutes.constFind(key); latched != m_openRoutes.constEnd()) {
@@ -423,17 +422,17 @@ void WindowTrackingAdaptor::republishOpenRoute(const QString& windowId)
     }
 }
 
-bool WindowTrackingAdaptor::hasSnapOpenPlacement(const QString& windowId) const
+bool WindowTracker::hasSnapOpenPlacement(const QString& windowId) const
 {
     return m_snapOpenPlacements.contains(shadowWindowId(windowId));
 }
 
-void WindowTrackingAdaptor::markSnapOpenPlacement(const QString& windowId)
+void WindowTracker::markSnapOpenPlacement(const QString& windowId)
 {
     m_snapOpenPlacements.insert(shadowWindowId(windowId));
 }
 
-QString WindowTrackingAdaptor::openRouteLandingScreen(const QString& windowId, const QString& screenId) const
+QString WindowTracker::openRouteLandingScreen(const QString& windowId, const QString& screenId) const
 {
     const OpenRouteVerdict latched = m_openRoutes.value(shadowWindowId(windowId));
     if (!latched.workspaceDeclared || latched.screen.isEmpty()) {
@@ -442,7 +441,7 @@ QString WindowTrackingAdaptor::openRouteLandingScreen(const QString& windowId, c
     return workspaceLandingScreen(windowId, screenId, latched.screen);
 }
 
-bool WindowTrackingAdaptor::isFirstTilingPlacement(const PhosphorProtocol::WindowOpenedEntry& entry) const
+bool WindowTracker::isFirstTilingPlacement(const PhosphorProtocol::WindowOpenedEntry& entry) const
 {
     // A genuine open (Tiling.windowOpened) always is. A re-announce
     // (windowsOpenedBatch, windowReannounced: a mode flip, a desktop return, a
@@ -459,8 +458,8 @@ bool WindowTrackingAdaptor::isFirstTilingPlacement(const PhosphorProtocol::Windo
     return !m_service->placementStore().peekExact(entry.windowId).has_value();
 }
 
-PhosphorZones::AssignmentEntry::Mode WindowTrackingAdaptor::runningModeFor(const QString& screenId, int desktop,
-                                                                           const QString& activity) const
+PhosphorZones::AssignmentEntry::Mode WindowTracker::runningModeFor(const QString& screenId, int desktop,
+                                                                   const QString& activity) const
 {
     if (m_contextModeResolver) {
         return m_contextModeResolver(screenId, desktop, activity);
@@ -469,8 +468,8 @@ PhosphorZones::AssignmentEntry::Mode WindowTrackingAdaptor::runningModeFor(const
                            : PhosphorZones::AssignmentEntry::Snapping;
 }
 
-QString WindowTrackingAdaptor::workspaceLandingScreen(const QString& windowId, const QString& currentScreenId,
-                                                      const QString& ownerScreenId) const
+QString WindowTracker::workspaceLandingScreen(const QString& windowId, const QString& currentScreenId,
+                                              const QString& ownerScreenId) const
 {
     if (ownerScreenId.isEmpty()) {
         return currentScreenId;
@@ -504,26 +503,25 @@ QString WindowTrackingAdaptor::workspaceLandingScreen(const QString& windowId, c
     return subs.isEmpty() ? ownerScreenId : subs.constFirst();
 }
 
-void WindowTrackingAdaptor::evictRuleVerdicts(const QString& windowId)
+void WindowTracker::evictRuleVerdicts(const QString& windowId)
 {
     if (m_ruleEvaluator) {
         m_ruleEvaluator->evictCached(windowId);
     }
 }
 
-void WindowTrackingAdaptor::setRoutedOpenDispatcher(
-    std::function<void(const PhosphorProtocol::WindowOpenedEntry&)> dispatcher)
+void WindowTracker::setRoutedOpenDispatcher(std::function<void(const PhosphorProtocol::WindowOpenedEntry&)> dispatcher)
 {
     m_routedOpenDispatcher = std::move(dispatcher);
 }
 
-void WindowTrackingAdaptor::setWindowLeftScreenHook(std::function<void(const QString&, const QString&)> hook)
+void WindowTracker::setWindowLeftScreenHook(std::function<void(const QString&, const QString&)> hook)
 {
     m_windowLeftScreenHook = std::move(hook);
 }
 
-bool WindowTrackingAdaptor::applyOpenScreenRouting(const QString& windowId, const QString& screenId,
-                                                   PhosphorEngine::RestoreReason reason)
+bool WindowTracker::applyOpenScreenRouting(const QString& windowId, const QString& screenId,
+                                           PhosphorEngine::RestoreReason reason)
 {
     if (!m_ruleStore) {
         return false;
@@ -723,8 +721,8 @@ bool WindowTrackingAdaptor::applyOpenScreenRouting(const QString& windowId, cons
     return true;
 }
 
-QString WindowTrackingAdaptor::applyOpenRoutingForTiling(const QString& windowId, const QString& screenId,
-                                                         bool* directiveMatched)
+QString WindowTracker::applyOpenRoutingForTiling(const QString& windowId, const QString& screenId,
+                                                 bool* directiveMatched)
 {
     // Owned by this function, not the caller: a set-only out-param leaves a
     // caller's pre-set value standing on every no-match path, which reads as

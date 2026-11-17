@@ -753,7 +753,7 @@ void TilingHandler::floatOntoScreen(KWin::EffectWindow* w, const QString& window
     // it lands on, and the daemon is told it floats there and crossed: in
     // this order on one connection, so the float send finds the destination
     // engine not holding it and hands it over floating
-    // (WindowTrackingAdaptor::setWindowFloatingForScreen), and the crossing
+    // (WindowTracker::setWindowFloatingForScreen), and the crossing
     // drops what the screen it left still remembers (memory_clears_on_move).
     // Its free rect is filed where it now floats.
     releaseWindowTracking(windowId, fromScreenId);

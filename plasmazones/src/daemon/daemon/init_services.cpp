@@ -69,7 +69,7 @@
 #include "core/platform/logging.h"
 #include "core/interfaces/shaderregistry.h"
 #include "dbus/layoutadaptor/layoutadaptor.h"
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/windowtracker/windowtracker.h"
 #include "dbus/snapadaptor/snapadaptor.h"
 
 namespace PlasmaZones {
@@ -529,7 +529,7 @@ void Daemon::initLayoutAndSettingsWiring()
         // The scrolling arm is the master-switch twin: its released windows
         // fell through updateEngineScreens' derive pass to snapping in the
         // same recompute above.
-        if (((autotileToggled && !autotileNow) || (scrollingToggled && !scrollingNow)) && m_windowTrackingAdaptor
+        if (((autotileToggled && !autotileNow) || (scrollingToggled && !scrollingNow)) && m_windowTracker
             && m_snapAdaptor && m_snapEngine) {
             // Silent, and only the screens that went from tiling to snapping.
             // None left is none to resnap: reapplySnapZones reads an empty

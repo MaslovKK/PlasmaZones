@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #include "snapadaptor.h"
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/windowtracker/windowtracker.h"
 #include "core/interfaces/interfaces.h"
 #include "core/platform/logging.h"
 #include <PhosphorPlacement/WindowTrackingService.h>
@@ -27,7 +27,7 @@ namespace {
 // is empty and zones would be computed against the unreserved full-screen rect —
 // handing the effect coordinates that place the window partially behind the panel.
 //
-// The effect already waits for WindowTrackingAdaptor::pendingRestoresAvailable before
+// The effect already waits for WindowTracker::pendingRestoresAvailable before
 // issuing initial restore calls, and that signal is gated on panelGeometryReady (see
 // tryEmitPendingRestoresAvailable in persistence.cpp). This helper is belt-and-suspenders:
 // if a snap slot is nevertheless invoked before panel geometry is known — a bug in the

@@ -17,8 +17,8 @@
 #include "core/interfaces/interfaces.h"
 #include "core/types/zoneselectorlayout.h"
 #include "core/utils/utils.h"
-#include "dbus/windowtrackingadaptor/internal.h"
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/windowtracker/internal.h"
+#include "runtime/windowtracker/windowtracker.h"
 
 #include <PhosphorContext/ContextHandle.h>
 #include <PhosphorContext/IContextResolver.h>

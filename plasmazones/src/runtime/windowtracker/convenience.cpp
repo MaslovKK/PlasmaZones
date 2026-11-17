@@ -7,7 +7,7 @@
 // getWindowState, getAllWindowStates stay — they are cross-mode queries
 // over every engine's state.
 
-#include "windowtrackingadaptor.h"
+#include "windowtracker.h"
 #include "core/platform/logging.h"
 #include <PhosphorPlacement/WindowTrackingService.h>
 #include <PhosphorZones/LayoutRegistry.h>
@@ -16,7 +16,7 @@
 
 namespace PlasmaZones {
 
-PhosphorProtocol::WindowStateEntry WindowTrackingAdaptor::stateRowFor(const QString& windowId) const
+PhosphorProtocol::WindowStateEntry WindowTracker::stateRowFor(const QString& windowId) const
 {
     // A window a tiling engine tracks reads as that engine has it, unless snap
     // holds it on a context that runs snapping: a snap zone kept on a context
@@ -71,7 +71,7 @@ PhosphorProtocol::WindowStateEntry WindowTrackingAdaptor::stateRowFor(const QStr
     };
 }
 
-PhosphorProtocol::WindowStateEntry WindowTrackingAdaptor::getWindowState(const QString& windowId)
+PhosphorProtocol::WindowStateEntry WindowTracker::getWindowState(const QString& windowId)
 {
     if (windowId.isEmpty()) {
         qCWarning(lcDbusWindow) << "getWindowState: empty window ID";
@@ -80,7 +80,7 @@ PhosphorProtocol::WindowStateEntry WindowTrackingAdaptor::getWindowState(const Q
     return stateRowFor(windowId);
 }
 
-PhosphorProtocol::WindowStateList WindowTrackingAdaptor::getAllWindowStates()
+PhosphorProtocol::WindowStateList WindowTracker::getAllWindowStates()
 {
     // Every window an engine holds: snap's snapped and floating windows, and
     // every registered window a tiling engine tracks in any context (a

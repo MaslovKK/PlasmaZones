@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// WindowTrackingAdaptor — rule-driven restore predicates and per-window params
+// WindowTracker — rule-driven restore predicates and per-window params
 //
 // Per-window rule resolution for the restore and appearance paths: the
 // evaluator constructor, the mode-neutral screen resolver, the contextual
@@ -15,7 +15,7 @@
 // rules_admission.h.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-#include "windowtrackingadaptor.h"
+#include "windowtracker.h"
 #include "internal.h"
 #include "rules_admission.h"
 
@@ -106,7 +106,7 @@ void readHexColorSlot(const PhosphorRules::ResolvedActions& resolved, QLatin1Str
 
 } // namespace
 
-void WindowTrackingAdaptor::ensureRuleEvaluator()
+void WindowTracker::ensureRuleEvaluator()
 {
     // See the declaration doc: the single construction site for the
     // full-store evaluator, so the placement-only terminal scope is applied
@@ -122,7 +122,7 @@ void WindowTrackingAdaptor::ensureRuleEvaluator()
         {QString(PhosphorRules::ActionType::Exclude), QString(PhosphorRules::ActionType::ExcludePlacement)});
 }
 
-QString WindowTrackingAdaptor::resolveScreenForWindow(const QString& windowId) const
+QString WindowTracker::resolveScreenForWindow(const QString& windowId) const
 {
     // Mode-neutral: the service's accessor is snap-only (it reads the owning
     // SnapState), so on its own it returns empty for every tiling-tracked
@@ -162,8 +162,8 @@ QString WindowTrackingAdaptor::resolveScreenForWindow(const QString& windowId) c
     return QString();
 }
 
-std::optional<PhosphorRules::WindowQuery>
-WindowTrackingAdaptor::buildContextualRuleQuery(const QString& windowId, const QString& screenIdHint) const
+std::optional<PhosphorRules::WindowQuery> WindowTracker::buildContextualRuleQuery(const QString& windowId,
+                                                                                  const QString& screenIdHint) const
 {
     std::optional<PhosphorRules::WindowQuery> query = buildRuleQueryForWindow(m_windowRegistry, windowId, m_settings);
     if (!query) {
@@ -190,9 +190,8 @@ WindowTrackingAdaptor::buildContextualRuleQuery(const QString& windowId, const Q
     return query;
 }
 
-bool WindowTrackingAdaptor::shouldRestoreFloatedPosition(const QString& windowId,
-                                                         PhosphorZones::AssignmentEntry::Mode mode, bool useCache,
-                                                         const QString& screenIdHint)
+bool WindowTracker::shouldRestoreFloatedPosition(const QString& windowId, PhosphorZones::AssignmentEntry::Mode mode,
+                                                 bool useCache, const QString& screenIdHint)
 {
     // m_settings is a hard ctor dependency (qFatal on null), so it is non-null
     // here — deref unguarded like every other method in this class. The global
@@ -276,7 +275,7 @@ bool WindowTrackingAdaptor::shouldRestoreFloatedPosition(const QString& windowId
     return globalDefault;
 }
 
-bool WindowTrackingAdaptor::shouldRestoreToZoneOnLogin(const QString& windowId)
+bool WindowTracker::shouldRestoreToZoneOnLogin(const QString& windowId)
 {
     // Mirror shouldRestoreFloatedPosition for the snapped-to-zone policy: a matched
     // SetRestoreToZoneOnLogin rule wins, otherwise the global setting decides.
@@ -299,7 +298,7 @@ bool WindowTrackingAdaptor::shouldRestoreToZoneOnLogin(const QString& windowId)
     return globalDefault;
 }
 
-bool WindowTrackingAdaptor::shouldRestoreSizeOnUnsnap(const QString& windowId)
+bool WindowTracker::shouldRestoreSizeOnUnsnap(const QString& windowId)
 {
     // A matched SetRestoreSizeOnUnsnap rule wins, otherwise the global setting decides.
     const bool globalDefault = m_settings->restoreOriginalSizeOnUnsnap();
@@ -343,7 +342,7 @@ bool WindowTrackingAdaptor::shouldRestoreSizeOnUnsnap(const QString& windowId)
     return globalDefault;
 }
 
-bool WindowTrackingAdaptor::shouldUnfloatFallbackToZone(const QString& windowId, const QString& screenId)
+bool WindowTracker::shouldUnfloatFallbackToZone(const QString& windowId, const QString& screenId)
 {
     // A matched SetUnfloatFallbackToZone rule wins, otherwise the global
     // setting decides — the rule ?? config layering the SnapEngine's
@@ -374,7 +373,7 @@ bool WindowTrackingAdaptor::shouldUnfloatFallbackToZone(const QString& windowId,
     return globalDefault;
 }
 
-void WindowTrackingAdaptor::stampScreenContext(PhosphorRules::WindowQuery& query, const QString& screenId) const
+void WindowTracker::stampScreenContext(PhosphorRules::WindowQuery& query, const QString& screenId) const
 {
     if (screenId.isEmpty()) {
         return;
@@ -416,8 +415,8 @@ void WindowTrackingAdaptor::stampScreenContext(PhosphorRules::WindowQuery& query
     m_layoutManager->stampScreenShape(query, screenId);
 }
 
-void WindowTrackingAdaptor::stampScreenAndMode(PhosphorRules::WindowQuery& query, const QString& windowId,
-                                               const QString& screenId) const
+void WindowTracker::stampScreenAndMode(PhosphorRules::WindowQuery& query, const QString& windowId,
+                                       const QString& screenId) const
 {
     stampScreenContext(query, screenId);
     if (screenId.isEmpty() || !m_layoutManager) {
@@ -445,7 +444,7 @@ void WindowTrackingAdaptor::stampScreenAndMode(PhosphorRules::WindowQuery& query
     query.mode = modeMatchToken(m_layoutManager->modeForScreen(screenId, desktop, activity));
 }
 
-bool WindowTrackingAdaptor::shouldFloatByRule(const QString& windowId, const QString& screenId)
+bool WindowTracker::shouldFloatByRule(const QString& windowId, const QString& screenId)
 {
     // Float is purely rule-driven: there is no global "float on open" setting, so
     // absent a matching rule the answer is "do not float".
@@ -479,7 +478,7 @@ bool WindowTrackingAdaptor::shouldFloatByRule(const QString& windowId, const QSt
     return resolved.slot(QString(PhosphorRules::ActionSlot::Float)).has_value();
 }
 
-QVariantMap WindowTrackingAdaptor::tabColorRuleParams(const QString& windowId)
+QVariantMap WindowTracker::tabColorRuleParams(const QString& windowId)
 {
     if (!m_ruleStore) {
         return {};
@@ -555,7 +554,7 @@ QVariantMap WindowTrackingAdaptor::tabColorRuleParams(const QString& windowId)
     return colors;
 }
 
-void WindowTrackingAdaptor::invalidateRuleMemosForColorSchemeChange()
+void WindowTracker::invalidateRuleMemosForColorSchemeChange()
 {
     // Only the tab-colour memo. This deliberately does NOT clear the shared
     // RuleEvaluator cache, and that restraint is load-bearing: the six cached
@@ -577,7 +576,7 @@ void WindowTrackingAdaptor::invalidateRuleMemosForColorSchemeChange()
     m_tabColorMemo.clear();
 }
 
-QVariantMap WindowTrackingAdaptor::tabColorsFromResolved(const PhosphorRules::ResolvedActions& resolved)
+QVariantMap WindowTracker::tabColorsFromResolved(const PhosphorRules::ResolvedActions& resolved)
 {
     QVariantMap out;
     // readHexColorSlot (shared with the drop-indicator builder) carries the
@@ -588,7 +587,7 @@ QVariantMap WindowTrackingAdaptor::tabColorsFromResolved(const PhosphorRules::Re
     return out;
 }
 
-QVariantMap WindowTrackingAdaptor::dropIndicatorRuleParams(const QString& windowId)
+QVariantMap WindowTracker::dropIndicatorRuleParams(const QString& windowId)
 {
     if (!m_ruleStore) {
         return {};
@@ -622,7 +621,7 @@ QVariantMap WindowTrackingAdaptor::dropIndicatorRuleParams(const QString& window
     return out;
 }
 
-QVariantMap WindowTrackingAdaptor::scrollOpenRuleParams(const QString& windowId, const QString& screenId)
+QVariantMap WindowTracker::scrollOpenRuleParams(const QString& windowId, const QString& screenId)
 {
     QVariantMap out;
     if (!m_ruleStore) {

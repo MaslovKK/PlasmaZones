@@ -29,7 +29,7 @@
 #include "core/utils/utils.h"
 
 /**
- * @brief Mock/stub implementation of WindowTrackingAdaptor logic for isolated testing
+ * @brief Mock/stub implementation of WindowTracker logic for isolated testing
  *
  * Replicates core tracking logic including floating window management and
  * close cleanup without D-Bus or daemon dependencies.

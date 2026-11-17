@@ -18,7 +18,7 @@
 #include "dbus/layoutadaptor/layoutadaptor.h"
 #include "dbus/settingsadaptor/settingsadaptor.h"
 #include "dbus/windowdragadaptor/windowdragadaptor.h"
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/windowtracker/windowtracker.h"
 #include "core/types/constants.h"
 #include <PhosphorContext/ContextResolver.h>
 #include <PhosphorZones/LayoutRegistry.h>
@@ -70,7 +70,7 @@ void Daemon::connectShortcutSignals()
     connect(m_shortcutManager.get(), &ShortcutManager::openEditorRequested, this, [this]() {
         // Screen-targeted (edits a screen's layout) — resolve cursor-first.
         // See layoutPickerRequested below for the rationale.
-        QString screenId = resolveCursorScreenId(m_screenManager.get(), m_windowTrackingAdaptor);
+        QString screenId = resolveCursorScreenId(m_screenManager.get(), m_windowTracker);
         if (screenId.isEmpty() && m_unifiedLayoutController) {
             screenId = m_unifiedLayoutController->currentScreenName();
         }
@@ -94,7 +94,7 @@ void Daemon::connectShortcutSignals()
         }
         // Screen-targeted (applies a layout to a screen) — resolve
         // cursor-first. See layoutPickerRequested below for the rationale.
-        const QString screenId = resolveCursorScreenId(m_screenManager.get(), m_windowTrackingAdaptor);
+        const QString screenId = resolveCursorScreenId(m_screenManager.get(), m_windowTracker);
         if (screenId.isEmpty()) {
             qCDebug(lcDaemon) << "QuickLayout shortcut: no screen info";
             return;
@@ -164,7 +164,7 @@ void Daemon::connectShortcutSignals()
         }
         // Screen-targeted (cycles a screen's layout) — resolve cursor-first.
         // See layoutPickerRequested below for the rationale.
-        const QString screenId = resolveCursorScreenId(m_screenManager.get(), m_windowTrackingAdaptor);
+        const QString screenId = resolveCursorScreenId(m_screenManager.get(), m_windowTracker);
         if (screenId.isEmpty()) {
             qCDebug(lcDaemon) << "PreviousLayout shortcut: no screen info";
             return;
@@ -183,7 +183,7 @@ void Daemon::connectShortcutSignals()
         }
         // Screen-targeted (cycles a screen's layout) — resolve cursor-first.
         // See layoutPickerRequested below for the rationale.
-        const QString screenId = resolveCursorScreenId(m_screenManager.get(), m_windowTrackingAdaptor);
+        const QString screenId = resolveCursorScreenId(m_screenManager.get(), m_windowTracker);
         if (screenId.isEmpty()) {
             qCDebug(lcDaemon) << "NextLayout shortcut: no screen info";
             return;
@@ -274,7 +274,7 @@ void Daemon::connectShortcutSignals()
         // screen when the cursor rests on a different VS than the focused
         // window (e.g. just dropped a window on vs:1 while the focused
         // window is still on vs:0).
-        const QString screenId = resolveCursorScreenId(m_screenManager.get(), m_windowTrackingAdaptor);
+        const QString screenId = resolveCursorScreenId(m_screenManager.get(), m_windowTracker);
         if (screenId.isEmpty()) {
             qCDebug(lcDaemon) << "LayoutPicker shortcut: no screen info";
             return;
@@ -500,7 +500,7 @@ void Daemon::connectShortcutSignals()
     connect(m_shortcutManager.get(), &ShortcutManager::toggleLayoutLockRequested, this, [this]() {
         // Screen-targeted (locks a screen's layout) — resolve cursor-first.
         // See layoutPickerRequested above for the rationale.
-        const QString screenId = resolveCursorScreenId(m_screenManager.get(), m_windowTrackingAdaptor);
+        const QString screenId = resolveCursorScreenId(m_screenManager.get(), m_windowTracker);
         // m_layoutManager is in the guard because the unlock card below derefs
         // it — the sibling handlers that resolve a layout carry it too, and
         // this one only ever reached it after a settings write, so a shutdown

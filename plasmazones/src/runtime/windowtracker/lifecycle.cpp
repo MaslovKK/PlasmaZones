@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// WindowTrackingAdaptor — window lifecycle
+// WindowTracker — window lifecycle
 //
 // Placement capture, close, metadata upserts, frame-geometry tracking, the
 // interactive-resize report and drag subject, the sticky bit, the compositor's
@@ -11,13 +11,11 @@
 // activation.cpp and the stale-window prune in prune.cpp.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-#include "windowtrackingadaptor.h"
+#include "windowtracker.h"
 #include "lifecyclerelay.h"
 #include "internal.h"
 #include "core/platform/logging.h"
 #include "core/utils/utils.h"
-#include "core/utils/dbusvariantutils.h"
-#include "dbus/dbushelpers.h"
 
 #include <PhosphorIdentity/WindowId.h>
 #include <PhosphorScrollEngine/ScrollEngine.h>
@@ -32,8 +30,8 @@
 
 namespace PlasmaZones {
 
-void WindowTrackingAdaptor::captureWindowPlacement(const QString& windowId, const QString& authoritativeScreen,
-                                                   bool fromStateChange)
+void WindowTracker::captureWindowPlacement(const QString& windowId, const QString& authoritativeScreen,
+                                           bool fromStateChange)
 {
     if (windowId.isEmpty() || !m_service) {
         return;
@@ -372,12 +370,12 @@ void WindowTrackingAdaptor::captureWindowPlacement(const QString& windowId, cons
     }
 }
 
-QString WindowTrackingAdaptor::shadowWindowId(const QString& windowId) const
+QString WindowTracker::shadowWindowId(const QString& windowId) const
 {
     return m_service ? m_service->canonicalizeForLookup(windowId) : windowId;
 }
 
-void WindowTrackingAdaptor::refreshOpenWindowPlacements()
+void WindowTracker::refreshOpenWindowPlacements()
 {
     // Re-capture EVERY open window into the unified store at save time. This is the
     // generic, engine-agnostic snapshot: captureWindowPlacement asks each engine's
@@ -403,7 +401,7 @@ void WindowTrackingAdaptor::refreshOpenWindowPlacements()
     }
 }
 
-void WindowTrackingAdaptor::pruneExcludedPlacements(const QStringList& patterns)
+void WindowTracker::pruneExcludedPlacements(const QStringList& patterns)
 {
     if (patterns.isEmpty() || !m_service) {
         return;
@@ -427,11 +425,8 @@ void WindowTrackingAdaptor::pruneExcludedPlacements(const QStringList& patterns)
     }
 }
 
-void WindowTrackingAdaptor::setWindowSticky(const QString& windowId, bool sticky)
+void WindowTracker::setWindowSticky(const QString& windowId, bool sticky)
 {
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return;
-    }
     if (windowId.isEmpty()) {
         return;
     }
@@ -443,11 +438,8 @@ void WindowTrackingAdaptor::setWindowSticky(const QString& windowId, bool sticky
 // Window Lifecycle - Delegate to Service
 // ═══════════════════════════════════════════════════════════════════════════════
 
-void WindowTrackingAdaptor::windowClosed(const QString& windowId, int windowKind, const QString& screenId)
+void WindowTracker::windowClosed(const QString& windowId, int windowKind, const QString& screenId)
 {
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return;
-    }
     if (!validateWindowId(windowId, QStringLiteral("clean up closed window"))) {
         return;
     }
@@ -569,14 +561,10 @@ void WindowTrackingAdaptor::windowClosed(const QString& windowId, int windowKind
     qCDebug(lcDbusWindow) << "Cleaned up tracking data for closed window" << windowId;
 }
 
-void WindowTrackingAdaptor::setWindowMetadata(const QString& instanceId, const QString& appId,
-                                              const QString& desktopFile, const QString& title,
-                                              const QString& windowRole, int pid, int virtualDesktop,
-                                              const QString& activity, int windowType, const QVariantMap& extended)
+void WindowTracker::setWindowMetadata(const QString& instanceId, const QString& appId, const QString& desktopFile,
+                                      const QString& title, const QString& windowRole, int pid, int virtualDesktop,
+                                      const QString& activity, int windowType, const QVariantMap& extended)
 {
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return;
-    }
     if (!m_windowRegistry) {
         // Teardown or a registry-less unit test. The effect re-emits anyway.
         return;
@@ -762,10 +750,11 @@ void WindowTrackingAdaptor::setWindowMetadata(const QString& instanceId, const Q
                 // Multi-desktop span list (absent for single-desktop / sticky
                 // windows, so an absent key correctly clears a previous span).
                 // Over the bus it arrives as a QDBusArgument, which toList()
-                // reads as empty, so it is unwrapped first (F1003). A repeated
+                // reads as empty, so WindowTracker unwraps it before
+                // it gets here (F1003). A repeated
                 // desktop is dropped like a repeated activity below, so a
                 // malformed [1, 1] cannot pass the two-or-more span invariant.
-                const QVariantList list = DBusVariantUtils::convertDbusArgument(v).toList();
+                const QVariantList list = v.toList();
                 meta.virtualDesktops.reserve(list.size());
                 for (const QVariant& d : list) {
                     const int desktop = d.toInt();
@@ -776,8 +765,8 @@ void WindowTrackingAdaptor::setWindowMetadata(const QString& instanceId, const Q
                 }
             } else if (k == Key::Activities) {
                 // Multi-activity list, absent unless the window is on several
-                // (F426). Unwrapped like the desktop span.
-                const QVariantList list = DBusVariantUtils::convertDbusArgument(v).toList();
+                // (F426). Unwrapped by the adaptor like the desktop span.
+                const QVariantList list = v.toList();
                 for (const QVariant& a : list) {
                     const QString activityId = a.toString();
                     if (!activityId.isEmpty() && !meta.activities.contains(activityId)) {
@@ -816,11 +805,8 @@ void WindowTrackingAdaptor::setWindowMetadata(const QString& instanceId, const Q
     m_windowRegistry->upsert(instanceId, meta);
 }
 
-void WindowTrackingAdaptor::setFrameGeometry(const QString& windowId, int x, int y, int width, int height)
+void WindowTracker::setFrameGeometry(const QString& windowId, int x, int y, int width, int height)
 {
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return;
-    }
     if (windowId.isEmpty() || width <= 0 || height <= 0) {
         return;
     }
@@ -842,19 +828,13 @@ void WindowTrackingAdaptor::setFrameGeometry(const QString& windowId, int x, int
     m_pendingOpenSize.remove(shadowId);
 }
 
-void WindowTrackingAdaptor::setInteractiveDragWindow(const QString& windowId)
+void WindowTracker::setInteractiveDragWindow(const QString& windowId)
 {
     m_interactiveDragWindow = windowId.isEmpty() ? QString() : shadowWindowId(windowId);
 }
 
-void WindowTrackingAdaptor::reportPerOutputDesktopsMode(bool enabled)
+void WindowTracker::reportPerOutputDesktopsMode(bool enabled)
 {
-    // Gated like its siblings screenDesktopChanged and seedScreenDesktop: this
-    // report arms or disarms the whole dynamic-workspaces feature, so a bus
-    // caller other than the registered compositor must not be able to flip it.
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return;
-    }
     if (m_perOutputDesktopsMode.has_value() && *m_perOutputDesktopsMode == enabled) {
         return;
     }
@@ -862,18 +842,15 @@ void WindowTrackingAdaptor::reportPerOutputDesktopsMode(bool enabled)
     Q_EMIT m_lifecycleRelay->perOutputDesktopsModeReported(enabled);
 }
 
-bool WindowTrackingAdaptor::isInteractiveDragWindow(const QString& windowId) const
+bool WindowTracker::isInteractiveDragWindow(const QString& windowId) const
 {
     return !windowId.isEmpty() && !m_interactiveDragWindow.isEmpty()
         && m_interactiveDragWindow == shadowWindowId(windowId);
 }
 
-void WindowTrackingAdaptor::notifyWindowResized(const QString& windowId, int oldX, int oldY, int oldWidth,
-                                                int oldHeight, int newX, int newY, int newWidth, int newHeight)
+void WindowTracker::notifyWindowResized(const QString& windowId, int oldX, int oldY, int oldWidth, int oldHeight,
+                                        int newX, int newY, int newWidth, int newHeight)
 {
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return;
-    }
     if (!validateWindowId(windowId, QStringLiteral("reflow after interactive resize"))) {
         return;
     }
@@ -912,12 +889,12 @@ void WindowTrackingAdaptor::notifyWindowResized(const QString& windowId, int old
     m_autotileEngine->onWindowResized(windowId, oldFrame, newFrame, screenId);
 }
 
-void WindowTrackingAdaptor::setDesktopSpanQuery(PhosphorEngine::DesktopSpanQuery query)
+void WindowTracker::setDesktopSpanQuery(PhosphorEngine::DesktopSpanQuery query)
 {
     m_desktopSpanQuery = std::move(query);
 }
 
-void WindowTrackingAdaptor::releaseSnapOutsideLiveContext(const QString& rawWindowId, const QString& screenId)
+void WindowTracker::releaseSnapOutsideLiveContext(const QString& rawWindowId, const QString& screenId)
 {
     PhosphorSnapEngine::SnapEngine* const snap = snapEngine();
     if (!snap || rawWindowId.isEmpty() || screenId.isEmpty()) {
@@ -991,7 +968,7 @@ void WindowTrackingAdaptor::releaseSnapOutsideLiveContext(const QString& rawWind
     }
 }
 
-void WindowTrackingAdaptor::relayWindowReleasedFromContext(const QString& windowId, const QString& screenId)
+void WindowTracker::relayWindowReleasedFromContext(const QString& windowId, const QString& screenId)
 {
     if (windowId.isEmpty()) {
         return;

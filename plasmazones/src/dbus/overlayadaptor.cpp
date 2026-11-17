@@ -242,7 +242,7 @@ void OverlayAdaptor::clearHighlight()
 }
 
 // Window tracking and zone detection methods moved to separate adaptors
-// See WindowTrackingAdaptor and ZoneDetectionAdaptor
+// See WindowTracker and ZoneDetectionAdaptor
 
 int OverlayAdaptor::getPollIntervalMs()
 {

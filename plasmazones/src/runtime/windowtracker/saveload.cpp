@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 fuddlesworth
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#include "windowtrackingadaptor.h"
+#include "windowtracker.h"
 #include "persistenceworker.h"
 #include <PhosphorSnapEngine/SnapEngine.h>
 #include "config/configbackends.h"
@@ -33,8 +33,8 @@ namespace {
 constexpr int MaxScreenPixelExtent = 65535;
 } // namespace
 
-bool WindowTrackingAdaptor::isPersistedContextDisabled(const QString& screenId, int virtualDesktop,
-                                                       const QString& activity) const
+bool WindowTracker::isPersistedContextDisabled(const QString& screenId, int virtualDesktop,
+                                               const QString& activity) const
 {
     // Empty screen means the entry never carried a usable context tag (legacy
     // snap entries pre-multi-monitor, sticky windows, etc.). Loading and
@@ -58,7 +58,7 @@ bool WindowTrackingAdaptor::isPersistedContextDisabled(const QString& screenId, 
     return m_contextResolver->isDisabled(m_contextResolver->handleForPersisted(screenId, virtualDesktop, activity));
 }
 
-void WindowTrackingAdaptor::saveState()
+void WindowTracker::saveState()
 {
     using D = PhosphorPlacement::WindowTrackingService;
     // Refresh open floating windows' live geometry into the unified store BEFORE
@@ -242,12 +242,12 @@ void WindowTrackingAdaptor::saveState()
                          << "userSnapped=" << m_service->userSnappedClasses().size();
 }
 
-void WindowTrackingAdaptor::requestReapplyWindowGeometries()
+void WindowTracker::requestReapplyWindowGeometries()
 {
     Q_EMIT reapplyWindowGeometriesRequested();
 }
 
-void WindowTrackingAdaptor::saveStateOnShutdown()
+void WindowTracker::saveStateOnShutdown()
 {
     if (m_saveTimer && m_saveTimer->isActive()) {
         m_saveTimer->stop();
@@ -271,7 +271,7 @@ void WindowTrackingAdaptor::saveStateOnShutdown()
     m_shutdownSaveGuard = true;
 }
 
-void WindowTrackingAdaptor::loadState()
+void WindowTracker::loadState()
 {
     // Read config via the PhosphorConfig::IBackend group API (readString/readInt).
     // This correctly handles values stored as native JSON objects/arrays
@@ -460,7 +460,7 @@ void WindowTrackingAdaptor::loadState()
     }
 }
 
-void WindowTrackingAdaptor::setKnownDesktopIds(const QStringList& ids)
+void WindowTracker::setKnownDesktopIds(const QStringList& ids)
 {
     if (ids == m_knownDesktopIds) {
         return;
@@ -471,7 +471,7 @@ void WindowTrackingAdaptor::setKnownDesktopIds(const QStringList& ids)
     }
 }
 
-void WindowTrackingAdaptor::recordScreenPixelSizes(const QHash<QString, QSize>& sizes)
+void WindowTracker::recordScreenPixelSizes(const QHash<QString, QSize>& sizes)
 {
     bool changed = false;
     for (auto it = sizes.constBegin(); it != sizes.constEnd(); ++it) {
@@ -490,7 +490,7 @@ void WindowTrackingAdaptor::recordScreenPixelSizes(const QHash<QString, QSize>& 
     }
 }
 
-void WindowTrackingAdaptor::renameScreenPixelSize(const QString& oldId, const QString& newId)
+void WindowTracker::renameScreenPixelSize(const QString& oldId, const QString& newId)
 {
     if (oldId.isEmpty() || newId.isEmpty() || oldId == newId) {
         return;
@@ -507,7 +507,7 @@ void WindowTrackingAdaptor::renameScreenPixelSize(const QString& oldId, const QS
     }
 }
 
-void WindowTrackingAdaptor::scheduleSaveState()
+void WindowTracker::scheduleSaveState()
 {
     // After saveStateOnShutdown(), block all saves. During Qt object destruction,
     // PhosphorZones::LayoutRegistry teardown can trigger onLayoutChanged() → scheduleSaveState()

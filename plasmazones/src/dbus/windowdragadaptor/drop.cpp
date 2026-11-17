@@ -3,8 +3,8 @@
 
 #include "windowdragadaptor.h"
 #include "dragactivation.h"
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
-#include "dbus/windowtrackingadaptor/internal.h"
+#include "runtime/windowtracker/windowtracker.h"
+#include "runtime/windowtracker/internal.h"
 #include "dbus/snapadaptor/snapadaptor.h"
 #include <PhosphorSnapEngine/SnapEngine.h>
 #include <PhosphorEngine/PlacementEngineBase.h>
@@ -157,7 +157,7 @@ void WindowDragAdaptor::dragStopped(const QString& windowId, int cursorX, int cu
     // contract NOW — before any destination-side snap/tile logic runs.
     // During a drag the effect holds every crossing back, so this is where an
     // activated drag's cross-screen transfer happens (a pending or dead drag
-    // goes through WindowTrackingAdaptor::dragEndedOnScreen from endDrag).
+    // goes through WindowTracker::dragEndedOnScreen from endDrag).
     //
     // The release uses the contract so both source modes (snap zone, autotile
     // tile) drop tracking via the same call; the receive only fires when the
@@ -535,7 +535,7 @@ void WindowDragAdaptor::dragStopped(const QString& windowId, int cursorX, int cu
     if (!shouldApplyGeometry && capturedWasSnapped && !capturedExternallyCancelled) {
         qCInfo(lcDbusWindow) << "Drag-out unsnap for" << windowId << "releaseScreen:" << releaseScreenId;
         // Latch the pre-snap float-back BEFORE the float write (twin of
-        // WindowTrackingAdaptor::notifyDragOutUnsnap): syncWindowFloating's
+        // WindowTracker::notifyDragOutUnsnap): syncWindowFloating's
         // capture refresh records the live dragged frame into the same
         // per-screen map this read consumes.
         std::optional<QSize> preSnapSize;

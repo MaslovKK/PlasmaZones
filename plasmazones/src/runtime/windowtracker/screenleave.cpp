@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// WindowTrackingAdaptor — leaving a screen
+// WindowTracker — leaving a screen
 //
 // A window is on one screen. What an engine still holds of it on another is
 // stale memory: a zone there names another layout, a tile there belongs to
@@ -13,11 +13,10 @@
 // between two screens no tiling engine manages.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-#include "windowtrackingadaptor.h"
+#include "windowtracker.h"
 #include "internal.h"
 #include "core/platform/logging.h"
 #include "core/utils/utils.h"
-#include "dbus/dbushelpers.h"
 #include <PhosphorEngine/WindowPlacement.h>
 #include <PhosphorIdentity/VirtualScreenId.h>
 #include <PhosphorScreens/Manager.h>
@@ -118,8 +117,8 @@ void releaseSlotsLeftBehind(PhosphorPlacement::WindowTrackingService* service, c
 
 } // namespace
 
-void WindowTrackingAdaptor::releaseLeftScreens(const QString& windowId, const QString& keepScreenId,
-                                               const PhosphorEngine::IPlacementEngine* arrival)
+void WindowTracker::releaseLeftScreens(const QString& windowId, const QString& keepScreenId,
+                                       const PhosphorEngine::IPlacementEngine* arrival)
 {
     if (!m_service || windowId.isEmpty() || keepScreenId.isEmpty()) {
         return;
@@ -185,12 +184,9 @@ void WindowTrackingAdaptor::releaseLeftScreens(const QString& windowId, const QS
     }
 }
 
-void WindowTrackingAdaptor::windowCrossedScreens(const QString& windowId, const QString& fromScreenId,
-                                                 const QString& toScreenId)
+void WindowTracker::windowCrossedScreens(const QString& windowId, const QString& fromScreenId,
+                                         const QString& toScreenId)
 {
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return;
-    }
     if (!m_service || !validateWindowId(windowId, QStringLiteral("crossed screens"))) {
         return;
     }
@@ -240,7 +236,7 @@ void WindowTrackingAdaptor::windowCrossedScreens(const QString& windowId, const 
     }
 }
 
-std::optional<QSize> WindowTrackingAdaptor::preSnapSizeOn(const QString& windowId, const QString& screenId) const
+std::optional<QSize> WindowTracker::preSnapSizeOn(const QString& windowId, const QString& screenId) const
 {
     if (!m_service) {
         return std::nullopt;
@@ -263,8 +259,7 @@ std::optional<QSize> WindowTrackingAdaptor::preSnapSizeOn(const QString& windowI
     return size;
 }
 
-bool WindowTrackingAdaptor::dragEndedOnScreen(const QString& windowId, const QString& releaseScreenId,
-                                              bool floatIfSnapped)
+bool WindowTracker::dragEndedOnScreen(const QString& windowId, const QString& releaseScreenId, bool floatIfSnapped)
 {
     if (!m_service || windowId.isEmpty() || releaseScreenId.isEmpty()) {
         return false;
@@ -323,9 +318,8 @@ bool WindowTrackingAdaptor::dragEndedOnScreen(const QString& windowId, const QSt
     return true;
 }
 
-bool WindowTrackingAdaptor::dragEndedOnTilingScreen(PhosphorEngine::PlacementEngineBase* engine,
-                                                    const QString& windowId, const QString& releaseScreenId,
-                                                    bool plainDrop)
+bool WindowTracker::dragEndedOnTilingScreen(PhosphorEngine::PlacementEngineBase* engine, const QString& windowId,
+                                            const QString& releaseScreenId, bool plainDrop)
 {
     // A dead drag, and a window the engine already holds there, are the
     // engine's own drag handling.
@@ -380,9 +374,8 @@ bool WindowTrackingAdaptor::dragEndedOnTilingScreen(PhosphorEngine::PlacementEng
     return true;
 }
 
-void WindowTrackingAdaptor::announceOutputMove(const QString& windowId, const QString& targetScreenId,
-                                               const QString& sourceScreenId,
-                                               const PhosphorEngine::IPlacementEngine* arrival)
+void WindowTracker::announceOutputMove(const QString& windowId, const QString& targetScreenId,
+                                       const QString& sourceScreenId, const PhosphorEngine::IPlacementEngine* arrival)
 {
     // Every daemon-driven move onto another output leaves the screens it left
     // first, so no move can skip it (hook 1).
@@ -390,11 +383,8 @@ void WindowTrackingAdaptor::announceOutputMove(const QString& windowId, const QS
     Q_EMIT windowOutputMoveExpected(windowId, targetScreenId, sourceScreenId);
 }
 
-void WindowTrackingAdaptor::windowScreenChanged(const QString& windowId, const QString& newScreenId)
+void WindowTracker::windowScreenChanged(const QString& windowId, const QString& newScreenId)
 {
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return;
-    }
     if (!m_service)
         return;
     if (!validateWindowId(windowId, QStringLiteral("screen changed"))) {

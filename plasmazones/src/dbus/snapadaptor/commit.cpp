@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #include "snapadaptor.h"
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
-#include "dbus/windowtrackingadaptor/internal.h"
+#include "runtime/windowtracker/windowtracker.h"
+#include "runtime/windowtracker/internal.h"
 #include "core/platform/logging.h"
 #include "dbus/dbushelpers.h"
 #include <PhosphorEngine/WindowPlacement.h>
@@ -274,7 +274,7 @@ void SnapAdaptor::swapWindowsById(const QString& windowId1, const QString& windo
 // Snap-mode float D-Bus slots
 //
 // Snap-mode only, gated through admitBusFloat (busgate.cpp). The effect floats
-// through WindowTrackingAdaptor::setWindowFloatingForScreen, which routes to
+// through WindowTracker::setWindowFloatingForScreen, which routes to
 // whichever engine owns the screen.
 // ═══════════════════════════════════════════════════════════════════════════════
 

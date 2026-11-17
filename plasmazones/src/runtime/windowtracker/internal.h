@@ -35,7 +35,7 @@ class SnapEngine;
 }
 
 namespace PlasmaZones {
-class WindowTrackingAdaptor;
+class WindowTracker;
 namespace WindowTrackingInternal {
 
 /// The screen of a store that holds @p windowId as a member with a zone, on a
@@ -184,7 +184,7 @@ inline std::optional<int> desktopShowing(const std::optional<QSet<int>>& desktop
 
 /// The desktop @p screenId shows: the per-output value, else the global current
 /// one the layout registry holds; 0 ("unknown") with neither (queries.cpp).
-int shownDesktop(const WindowTrackingAdaptor& adaptor, const QString& screenId);
+int shownDesktop(const WindowTracker& adaptor, const QString& screenId);
 
 /// Where a window's own context meets a screen showing @p shownDesktop (0:
 /// unknown) in @p currentActivity (empty: unknown): desktopShowing, and
@@ -205,35 +205,33 @@ inline std::optional<int> ownDesktopOn(const std::optional<::PhosphorEngine::Win
 /// ("autotile:none"): Autotile mode with no algorithm, so nothing tiles there and no engine owns a float (user
 /// decision autotile_none_float_owner). Read from the same cascade entry as ScreenModeRouter::modeFor's opt-out arm
 /// and Daemon::runningModeForContext's routerOptOut (float.cpp).
-PLASMAZONES_EXPORT bool isOptOutContext(const WindowTrackingAdaptor& adaptor, const QString& screenId, int desktop,
+PLASMAZONES_EXPORT bool isOptOutContext(const WindowTracker& adaptor, const QString& screenId, int desktop,
                                         const QString& activity);
 
 /// Whether @p windowId's own context on @p screenId (empty: its live screen) is the tiling opt-out. False for one
 /// whose context there cannot be told: on several hidden desktops, or on another activity.
-PLASMAZONES_EXPORT bool onOptOutContext(const WindowTrackingAdaptor& adaptor, const QString& windowId,
-                                        const QString& screenId);
+PLASMAZONES_EXPORT bool onOptOutContext(const WindowTracker& adaptor, const QString& windowId, const QString& screenId);
 
 /// No float for @p windowId where it is on an opt-out context: snap's float bit and pre-float home go from every
 /// store whose context is the opt-out (the screenless bit with them when its own store is one or it has none), so
 /// does a floating snap slot its record keeps for one, and subscribers hear on @p screenId that it is not floating.
-PLASMAZONES_EXPORT void dropOptOutFloat(WindowTrackingAdaptor& adaptor, const QString& windowId,
-                                        const QString& screenId);
+PLASMAZONES_EXPORT void dropOptOutFloat(WindowTracker& adaptor, const QString& windowId, const QString& screenId);
 
 /// dropOptOutFloat for every window snap floats in a store whose context is the opt-out: a desktop given
 /// "autotile:none" while snap floated windows on it. The daemon runs it at the end of every engine-set recompute.
-PLASMAZONES_EXPORT void dropOptOutFloats(WindowTrackingAdaptor* adaptor);
+PLASMAZONES_EXPORT void dropOptOutFloats(WindowTracker* adaptor);
 
 /// Of @p screens, the ones whose context in view just became the tiling opt-out release the windows snap holds in
 /// zones there, in place: subscribers hear each "unsnapped" and nothing moves. Snap keeps the zones as frozen memory,
 /// as it does for a context that went to a tiling engine, and the resnap of the flip back to snapping re-applies them.
 /// The daemon passes every screen whose active assignment changed (Daemon::diffActiveAssignments).
-PLASMAZONES_EXPORT void releaseOptOutZones(WindowTrackingAdaptor* adaptor, const QSet<QString>& screens);
+PLASMAZONES_EXPORT void releaseOptOutZones(WindowTracker* adaptor, const QSet<QString>& screens);
 
 /// A window a scrolling strip let go of on the tiling opt-out, where nothing places it: back at @p freeGeometry,
 /// its pre-scroll free spot, when that lies on @p screenId, else moved on screen at its size when its frame is off
 /// the screen's available area. Stated as a re-statement, with no zone and no float. Nothing for a screen that is gone.
-PLASMAZONES_EXPORT void placeReleasedOnOptOut(WindowTrackingAdaptor& adaptor, const QString& windowId,
-                                              const QString& screenId, const QRect& freeGeometry);
+PLASMAZONES_EXPORT void placeReleasedOnOptOut(WindowTracker& adaptor, const QString& windowId, const QString& screenId,
+                                              const QRect& freeGeometry);
 
 } // namespace WindowTrackingInternal
 

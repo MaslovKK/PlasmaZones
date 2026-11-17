@@ -14,7 +14,7 @@
 #include "helpers.h"
 
 #include "dbus/snapadaptor/snapadaptor.h"
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/windowtracker/windowtracker.h"
 
 #include <PhosphorContext/ContextResolver.h>
 #include <PhosphorLayoutApi/LayoutId.h>
@@ -39,7 +39,7 @@ namespace PlasmaZones {
 void Daemon::handleAssignmentChangesApplied(const QStringList& changedScreenIdsList)
 {
     const QSet<QString> changedScreenIds(changedScreenIdsList.begin(), changedScreenIdsList.end());
-    if (!m_snapEngine || !m_windowTrackingAdaptor || !m_screenManager || !m_layoutManager) {
+    if (!m_snapEngine || !m_windowTracker || !m_screenManager || !m_layoutManager) {
         // Refresh the snapshot even when the resnap work below cannot run.
         // The tail of this function calls diffActiveAssignments, which is what
         // republishes each screen's active layout to the KWin effect, and the
@@ -166,7 +166,7 @@ void Daemon::handleAssignmentChangesApplied(const QStringList& changedScreenIdsL
     // The resnap is silent, so the mode card is the only feedback. An
     // opted-out screen among changedScreenIds needs no filtering here: its
     // layout resolves null downstream, so no window is moved on its account.
-    m_windowTrackingAdaptor->resnapScreensToTheirLayouts(engineManagedScreens, changedScreenIds, currentDesktop());
+    m_windowTracker->resnapScreensToTheirLayouts(engineManagedScreens, changedScreenIds, currentDesktop());
     // The resnap placed those screens' windows under their current gap verdict,
     // so record it. A rule-driven apply runs inside reconcileActiveAssignments,
     // whose gap pass would otherwise restate the same windows a second time.

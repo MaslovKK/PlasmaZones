@@ -16,7 +16,7 @@
 #include "phosphor_i18n.h"
 #include "config/configdefaults.h"
 #include <PhosphorShortcuts/IAdhocRegistrar.h>
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/windowtracker/windowtracker.h"
 #include <PhosphorSnapEngine/SnapEngine.h>
 #include "core/interfaces/interfaces.h"
 #include <PhosphorZones/LayoutRegistry.h>
@@ -49,7 +49,7 @@ static constexpr auto kCancelOverlayId = QLatin1String("cancel_overlay_during_dr
 WindowDragAdaptor::WindowDragAdaptor(IOverlayService* overlay, PhosphorZones::IZoneDetector* detector,
                                      PhosphorZones::LayoutRegistry* layoutManager,
                                      PhosphorScreens::ScreenManager* screenManager, ISettings* settings,
-                                     WindowTrackingAdaptor* windowTracking, QObject* parent)
+                                     WindowTracker* windowTracking, QObject* parent)
     : QDBusAbstractAdaptor(parent)
     , m_overlayService(overlay)
     , m_zoneDetector(detector)
@@ -68,7 +68,7 @@ WindowDragAdaptor::WindowDragAdaptor(IOverlayService* overlay, PhosphorZones::IZ
     // otherwise produce a silently-no-op (but D-Bus-callable) object
     // that crashes on the first slot dispatch instead of at
     // construction. qFatal aborts in both debug and release, matching
-    // the sibling WindowTrackingAdaptor + SnapAdaptor defensive
+    // the sibling WindowTracker + SnapAdaptor defensive
     // pattern, so a wiring regression is loud and immediate.
     if (!overlay || !detector || !layoutManager || !settings || !windowTracking) {
         qFatal(

@@ -12,11 +12,10 @@
 // requestMoveSpecificWindowToZone and reportNavigationFeedback stay — they are
 // pure signal emitters used cross-mode.
 
-#include "windowtrackingadaptor.h"
+#include "windowtracker.h"
 #include "core/platform/logging.h"
 #include "core/interfaces/interfaces.h"
 #include "core/resolve/screenmoderouter.h"
-#include "dbus/dbushelpers.h"
 #include <PhosphorZones/LayoutRegistry.h>
 #include <PhosphorPlacement/WindowTrackingService.h>
 #include <PhosphorScreens/Manager.h>
@@ -24,7 +23,7 @@
 
 namespace PlasmaZones {
 
-QStringList WindowTrackingAdaptor::resolveSnapModeScreensForResnap(const QString& screenFilter) const
+QStringList WindowTracker::resolveSnapModeScreensForResnap(const QString& screenFilter) const
 {
     QStringList candidates;
     if (!screenFilter.isEmpty()) {
@@ -54,21 +53,18 @@ QStringList WindowTrackingAdaptor::resolveSnapModeScreensForResnap(const QString
     return candidates;
 }
 
-void WindowTrackingAdaptor::requestMoveSpecificWindowToZone(const QString& windowId, const QString& zoneId,
-                                                            const QRect& geometry)
+void WindowTracker::requestMoveSpecificWindowToZone(const QString& windowId, const QString& zoneId,
+                                                    const QRect& geometry)
 {
     qCDebug(lcDbusWindow) << "requestMoveSpecificWindowToZone: window=" << windowId << "zone=" << zoneId;
     Q_EMIT moveSpecificWindowToZoneRequested(windowId, zoneId, geometry.x(), geometry.y(), geometry.width(),
                                              geometry.height());
 }
 
-void WindowTrackingAdaptor::reportNavigationFeedback(bool success, const QString& action, const QString& reason,
-                                                     const QString& sourceZoneId, const QString& targetZoneId,
-                                                     const QString& screenId)
+void WindowTracker::reportNavigationFeedback(bool success, const QString& action, const QString& reason,
+                                             const QString& sourceZoneId, const QString& targetZoneId,
+                                             const QString& screenId)
 {
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return;
-    }
     qCDebug(lcDbusWindow) << "Navigation feedback: success=" << success << "action=" << action << "reason=" << reason
                           << "sourceZone=" << sourceZoneId << "targetZone=" << targetZoneId << "screen=" << screenId;
     Q_EMIT navigationFeedback(success, action, reason, sourceZoneId, targetZoneId, screenId);

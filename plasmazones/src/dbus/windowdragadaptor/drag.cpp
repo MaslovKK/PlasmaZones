@@ -8,7 +8,7 @@
 #include <cmath>
 #include "config/configdefaults.h"
 #include "core/types/enums.h"
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/windowtracker/windowtracker.h"
 #include "core/interfaces/interfaces.h"
 #include <PhosphorContext/ContextResolver.h>
 #include <PhosphorSnapEngine/SnapEngine.h>
@@ -124,7 +124,7 @@ void WindowDragAdaptor::dragStarted(const QString& windowId, double x, double y,
     }
 
     // Check if window started inside a zone (for restoreOriginalSizeOnUnsnap feature)
-    // Primary method: Check if window is tracked as snapped in WindowTrackingAdaptor
+    // Primary method: Check if window is tracked as snapped in WindowTracker
     // This is more reliable than geometry matching because KWin may report window
     // positions differently (decorations, shadows, etc.) than how we calculated zones
     m_wasSnapped = false;

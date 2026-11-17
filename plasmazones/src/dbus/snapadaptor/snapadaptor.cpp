@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #include "snapadaptor.h"
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/windowtracker/windowtracker.h"
 #include <PhosphorSnapEngine/SnapEngine.h>
 #include "core/platform/logging.h"
 
@@ -10,7 +10,7 @@
 
 namespace PlasmaZones {
 
-SnapAdaptor::SnapAdaptor(PhosphorSnapEngine::SnapEngine* engine, WindowTrackingAdaptor* adaptor, ISettings* settings,
+SnapAdaptor::SnapAdaptor(PhosphorSnapEngine::SnapEngine* engine, WindowTracker* adaptor, ISettings* settings,
                          QObject* parent)
     : QDBusAbstractAdaptor(parent)
     , m_engine(engine)
@@ -21,7 +21,7 @@ SnapAdaptor::SnapAdaptor(PhosphorSnapEngine::SnapEngine* engine, WindowTrackingA
     // wiring that constructs SnapAdaptor before its dependencies would
     // otherwise produce a silently-no-op D-Bus object that swallows every
     // method call. qFatal aborts unambiguously in both debug and release
-    // builds, matching the sibling WindowTrackingAdaptor's defensive
+    // builds, matching the sibling WindowTracker's defensive
     // pattern — a wiring regression is loud and immediate at construction,
     // not at the first D-Bus call.
     if (!m_engine || !m_adaptor || !m_settings) {
@@ -39,7 +39,7 @@ SnapAdaptor::SnapAdaptor(PhosphorSnapEngine::SnapEngine* engine, WindowTrackingA
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // Signal relay: SnapEngine → WindowTrackingAdaptor D-Bus signals
+    // Signal relay: SnapEngine → WindowTracker D-Bus signals
     //
     // Each connection handle is stored in m_connections so clearEngine()
     // can disconnect exactly what this class wired — not a broad
@@ -54,13 +54,13 @@ SnapAdaptor::SnapAdaptor(PhosphorSnapEngine::SnapEngine* engine, WindowTrackingA
 
     // Navigation feedback (shared OSD path — both engines use the same signal)
     m_connections.append(connect(m_engine, &PhosphorSnapEngine::SnapEngine::navigationFeedback, adaptor,
-                                 &WindowTrackingAdaptor::navigationFeedback));
+                                 &WindowTracker::navigationFeedback));
 
     // Float state changes — through the relay chokepoint, never
     // signal-to-signal: a direct emission bypasses m_broadcastFloating and
     // desyncs the syncWindowFloating dedup gate (see relayWindowFloatingChanged).
     m_connections.append(connect(m_engine, &PhosphorSnapEngine::SnapEngine::windowFloatingChanged, adaptor,
-                                 &WindowTrackingAdaptor::relayWindowFloatingChanged));
+                                 &WindowTracker::relayWindowFloatingChanged));
 
     // Daemon-driven geometry application, each with its placement purpose.
     m_connections.append(connect(m_engine, &PhosphorSnapEngine::SnapEngine::applyGeometryRequested, adaptor,
@@ -71,7 +71,7 @@ SnapAdaptor::SnapAdaptor(PhosphorSnapEngine::SnapEngine* engine, WindowTrackingA
                                          static_cast<int>(PhosphorProtocol::PlacementPurpose::UserVerb));
                                  }));
     m_connections.append(connect(m_engine, &PhosphorSnapEngine::SnapEngine::fullscreenHandBackRequested, adaptor,
-                                 &WindowTrackingAdaptor::fullscreenHandBackRequested));
+                                 &WindowTracker::fullscreenHandBackRequested));
     // A re-statement is judged by the effect against the managed set it last
     // heard, like a batch (a maximize is kept only on a screen it does not
     // manage), and the desktop-switch pass states windows in the same turn
@@ -84,7 +84,7 @@ SnapAdaptor::SnapAdaptor(PhosphorSnapEngine::SnapEngine* engine, WindowTrackingA
 
     // Snap-all-windows (effect collects candidates, daemon calculates)
     m_connections.append(connect(m_engine, &PhosphorSnapEngine::SnapEngine::snapAllWindowsRequested, adaptor,
-                                 &WindowTrackingAdaptor::snapAllWindowsRequested));
+                                 &WindowTracker::snapAllWindowsRequested));
 
     // Batched resnap: the engine's own batches (emitBatchedResnap, the
     // autotile→snap transition, the desktop carry) are committed by the relay
@@ -107,10 +107,10 @@ SnapAdaptor::SnapAdaptor(PhosphorSnapEngine::SnapEngine* engine, WindowTrackingA
     // window back where the newer command moved it from. Both of the
     // WindowTracking placement signals, whoever emits them.
     m_connections.append(
-        connect(adaptor, &WindowTrackingAdaptor::applyGeometryRequested, this, [this](const QString& windowId) {
+        connect(adaptor, &WindowTracker::applyGeometryRequested, this, [this](const QString& windowId) {
             supersedeHeldPlacements({windowId});
         }));
-    m_connections.append(connect(adaptor, &WindowTrackingAdaptor::applyGeometriesBatch, this,
+    m_connections.append(connect(adaptor, &WindowTracker::applyGeometriesBatch, this,
                                  [this](const PhosphorProtocol::WindowGeometryList& geometries) {
                                      QStringList windowIds;
                                      windowIds.reserve(geometries.size());
@@ -123,7 +123,7 @@ SnapAdaptor::SnapAdaptor(PhosphorSnapEngine::SnapEngine* engine, WindowTrackingA
     // Window activation: focus-in-direction and cycle operations resolve a
     // target window and ask the KWin effect to raise/focus it.
     m_connections.append(connect(m_engine, &PhosphorSnapEngine::SnapEngine::activateWindowRequested, adaptor,
-                                 &WindowTrackingAdaptor::activateWindowRequested));
+                                 &WindowTracker::activateWindowRequested));
 
     qCDebug(lcDbusWindow) << "SnapAdaptor initialized with" << m_connections.size() << "signal connections";
 }
@@ -232,7 +232,7 @@ void SnapAdaptor::emitRestatement(const QString& windowId, const QRect& geometry
     if (!m_adaptor) {
         return;
     }
-    const auto emitNow = [](WindowTrackingAdaptor* adaptor, const QString& windowId, const QRect& geometry,
+    const auto emitNow = [](WindowTracker* adaptor, const QString& windowId, const QRect& geometry,
                             const QString& zoneId, const QString& screenId) {
         Q_EMIT adaptor->applyGeometryRequested(windowId, geometry.x(), geometry.y(), geometry.width(),
                                                geometry.height(), zoneId, screenId, false,

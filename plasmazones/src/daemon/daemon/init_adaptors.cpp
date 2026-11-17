@@ -32,7 +32,8 @@
 #include "dbus/settingsadaptor/settingsadaptor.h"
 #include "dbus/overlayadaptor.h"
 #include "dbus/zonedetectionadaptor.h"
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/windowtracker/windowtracker.h"
+#include "dbus/windowtrackingadaptor.h"
 #include "dbus/windowdragadaptor/windowdragadaptor.h"
 #include "dbus/tilingadaptor/tilingadaptor.h"
 // Needed as COMPLETE types, not just forward declarations: the re-entry
@@ -82,8 +83,11 @@ void Daemon::initCoreAdaptors()
     m_scrollingAdaptor = nullptr;
     delete m_windowDragAdaptor;
     m_windowDragAdaptor = nullptr;
+    // The binding before the tracker it forwards to.
     delete m_windowTrackingAdaptor;
     m_windowTrackingAdaptor = nullptr;
+    delete m_windowTracker;
+    m_windowTracker = nullptr;
     delete m_zoneDetectionAdaptor;
     m_zoneDetectionAdaptor = nullptr;
     delete m_overlayAdaptor;
@@ -181,23 +185,23 @@ void Daemon::initCoreAdaptors()
     m_zoneDetectionAdaptor = new ZoneDetectionAdaptor(m_zoneDetector.get(), m_layoutManager.get(),
                                                       m_screenManager.get(), m_settings.get(), this);
 
-    // Window tracking adaptor - window-zone assignments
-    m_windowTrackingAdaptor =
-        new WindowTrackingAdaptor(m_layoutManager.get(), m_zoneDetector.get(), m_screenManager.get(), m_settings.get(),
-                                  m_virtualDesktopManager.get(), m_activityManager.get(), this);
-    m_windowTrackingAdaptor->setZoneDetectionAdaptor(m_zoneDetectionAdaptor);
-    m_windowTrackingAdaptor->setWindowRegistry(m_windowRegistry.get());
+    // Window tracking - window-zone assignments, and its D-Bus binding
+    m_windowTracker = new WindowTracker(m_layoutManager.get(), m_zoneDetector.get(), m_screenManager.get(),
+                                        m_settings.get(), m_virtualDesktopManager.get(), m_activityManager.get(), this);
+    m_windowTrackingAdaptor = new WindowTrackingAdaptor(m_windowTracker, this);
+    m_windowTracker->setZoneAdjacencyResolver(m_zoneDetectionAdaptor);
+    m_windowTracker->setWindowRegistry(m_windowRegistry.get());
     // Full rule set for per-window RestorePosition evaluation (overrides the
     // per-engine *RestoreFloatedWindowsOnLogin settings for matched windows).
-    m_windowTrackingAdaptor->setRuleStore(m_ruleStore.get());
+    m_windowTracker->setRuleStore(m_ruleStore.get());
     // The effect's settle report can name an output gone before the daemon's
     // own screen-removed handler runs; both retire it the same way.
-    m_windowTrackingAdaptor->setOutputRetirer([this](const QString& physicalScreenId) {
+    m_windowTracker->setOutputRetirer([this](const QString& physicalScreenId) {
         retireOutputPlacements(physicalScreenId);
     });
     // A window that left a screen leaves the saved engine orders of the
     // screens it left, or a mode round trip there tiles it back (F695).
-    m_windowTrackingAdaptor->setWindowLeftScreenHook([this](const QString& windowId, const QString& keepScreenId) {
+    m_windowTracker->setWindowLeftScreenHook([this](const QString& windowId, const QString& keepScreenId) {
         pruneEngineOrdersForWindow(PhosphorIdentity::WindowId::extractInstanceId(windowId), keepScreenId);
     });
     // The compositor bridge's screen-form floats act on the window where it
@@ -207,10 +211,9 @@ void Daemon::initCoreAdaptors()
     });
     // An evacuee on a hidden desktop floats by the mode that desktop runs,
     // decided as the engine screen sets decide it in view (F1122).
-    m_windowTrackingAdaptor->setContextModeResolver(
-        [this](const QString& screenId, int desktop, const QString& activity) {
-            return runningModeForContext(screenId, desktop, activity);
-        });
+    m_windowTracker->setContextModeResolver([this](const QString& screenId, int desktop, const QString& activity) {
+        return runningModeForContext(screenId, desktop, activity);
+    });
     // Each monitor's size as last accepted from the compositor, from the
     // session state the adaptor just loaded, stands in for the report until
     // this session's is accepted (onCompositorPixelSizeChanged). Here, before start()
@@ -218,7 +221,7 @@ void Daemon::initCoreAdaptors()
     // has it and a report that confirms it moves nothing. The manager tracks
     // no screen yet, so seeding emits nothing.
     {
-        const QHash<QString, QSize> lastSizes = m_windowTrackingAdaptor->screenPixelSizes();
+        const QHash<QString, QSize> lastSizes = m_windowTracker->screenPixelSizes();
         for (auto it = lastSizes.constBegin(); it != lastSizes.constEnd(); ++it) {
             m_screenManager->seedPixelSize(it.key(), it.value());
         }
@@ -239,8 +242,8 @@ void Daemon::initCoreAdaptors()
     // When the delayed panel requery completes it emits availableGeometryChanged, which triggers
     // the same debounce → processPendingGeometryUpdates → reapply path; no separate delay needed.
     m_reapplyGeometriesTimer.setSingleShot(true);
-    connect(&m_reapplyGeometriesTimer, &QTimer::timeout, m_windowTrackingAdaptor,
-            &WindowTrackingAdaptor::requestReapplyWindowGeometries);
+    connect(&m_reapplyGeometriesTimer, &QTimer::timeout, m_windowTracker,
+            &WindowTracker::requestReapplyWindowGeometries);
 
     // DBusScreenAdaptor::setVirtualScreenConfig writes to Settings (the source
     // of truth) via the IConfigStore — the daemon's single SettingsConfigStore
@@ -257,7 +260,7 @@ void Daemon::initCoreAdaptors()
     // Window drag adaptor - handles drag events from the KWin effect
     // All drag logic (modifiers, zones, snapping) handled here
     m_windowDragAdaptor = new WindowDragAdaptor(m_overlayService.get(), m_zoneDetector.get(), m_layoutManager.get(),
-                                                m_screenManager.get(), m_settings.get(), m_windowTrackingAdaptor, this);
+                                                m_screenManager.get(), m_settings.get(), m_windowTracker, this);
 
     // PhosphorZones::Zone selector methods are called directly from WindowDragAdaptor; QDBusAbstractAdaptor
     // signals are for D-Bus, not Qt connections.

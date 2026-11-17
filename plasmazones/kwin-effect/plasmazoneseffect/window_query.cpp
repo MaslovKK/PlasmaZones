@@ -331,7 +331,7 @@ PhosphorRules::WindowQuery ruleQueryFor(KWin::EffectWindow* w, const QString& sc
     //
     // They do NOT mirror the daemon's own CONTEXT cascade, and a rule author
     // should not expect them to: buildRuleQueryForWindow
-    // (src/dbus/windowtrackingadaptor/rules.cpp) resolves the governing
+    // (src/runtime/windowtracker/rules.cpp) resolves the governing
     // desktop / activity through WindowContext::effectiveDesktop /
     // effectiveActivity, which prefer the SCREEN's current desktop when a
     // window spans several and handle sticky windows. This builder sees only

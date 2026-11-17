@@ -26,7 +26,7 @@ class SnapEngine;
 
 namespace PlasmaZones {
 
-class WindowTrackingAdaptor;
+class WindowTracker;
 class ISettings;
 
 /**
@@ -42,7 +42,7 @@ class ISettings;
  * snap-mode float (toggleFloatForWindow, setWindowFloat, calculateUnfloatRestore,
  * windowUnsnappedForFloat).
  *
- * Signal relay from SnapEngine to WindowTrackingAdaptor is also wired
+ * Signal relay from SnapEngine to WindowTracker is also wired
  * here (navigationFeedback, windowFloatingChanged, applyGeometryRequested,
  * fullscreenHandBackRequested, restatementGeometryRequested,
  * snapAllWindowsRequested, applyGeometriesBatch, activateWindowRequested).
@@ -52,7 +52,7 @@ class ISettings;
  * The batches and the re-statements go out through the announce sequencer
  * (setAnnounceSequencer).
  *
- * @see SnapEngine, WindowTrackingAdaptor
+ * @see SnapEngine, WindowTracker
  */
 class PLASMAZONES_EXPORT SnapAdaptor : public QDBusAbstractAdaptor
 {
@@ -64,16 +64,16 @@ public:
      * @brief Construct a SnapAdaptor
      *
      * Connects the SnapEngine signals listed in the class doc to the
-     * WindowTrackingAdaptor for D-Bus relay; windowSnapStateChanged and
+     * WindowTracker for D-Bus relay; windowSnapStateChanged and
      * windowFloatingClearedForSnap are wired in the WTA's enginewiring.cpp.
      *
      * @param engine SnapEngine to relay signals from (not owned)
-     * @param adaptor WindowTrackingAdaptor to relay signals to (not owned)
+     * @param adaptor WindowTracker to relay signals to (not owned)
      * @param settings ISettings for the snapping master switch (snappingEnabled)
      *        the restore and bus gates read; not owned
      * @param parent Parent QObject (must be the D-Bus-registered daemon)
      */
-    explicit SnapAdaptor(PhosphorSnapEngine::SnapEngine* engine, WindowTrackingAdaptor* adaptor, ISettings* settings,
+    explicit SnapAdaptor(PhosphorSnapEngine::SnapEngine* engine, WindowTracker* adaptor, ISettings* settings,
                          QObject* parent = nullptr);
     ~SnapAdaptor() override = default;
 
@@ -504,7 +504,7 @@ private:
     void supersedeHeldPlacements(const QStringList& windowIds);
 
     PhosphorSnapEngine::SnapEngine* m_engine = nullptr;
-    WindowTrackingAdaptor* m_adaptor = nullptr;
+    WindowTracker* m_adaptor = nullptr;
     ISettings* m_settings = nullptr;
     /// One-shot latch for the "called before panel geometry ready" warning, so
     /// the four snap-restore slots log it once between them and then fall back

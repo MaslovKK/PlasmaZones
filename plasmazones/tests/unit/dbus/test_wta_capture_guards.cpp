@@ -3,7 +3,7 @@
 
 /**
  * @file test_wta_capture_guards.cpp
- * @brief Capture-orchestrator guards in WindowTrackingAdaptor::captureWindowPlacement:
+ * @brief Capture-orchestrator guards in WindowTracker::captureWindowPlacement:
  *        the managed-frame float-back refusal, the untracked-window
  *        no-engine contract (frozen per-mode snap slot preserved), and the
  *        excluded-window close guard (no new record for a window excluded by
@@ -43,7 +43,7 @@
 #include <PhosphorTileEngine/AutotileEngine.h>
 #include "FakePhysicalScreenSource.h"
 #include "dbus/tilingadaptor/tilingadaptor.h"
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/windowtracker/windowtracker.h"
 #include "helpers/AutotileTestHelpers.h"
 
 #include "helpers/IsolatedConfigGuard.h"
@@ -122,8 +122,8 @@ private Q_SLOTS:
         StubTileRectEngine scrollEngine;
         std::unique_ptr<SnapEngine> snap;
         QObject parent;
-        auto* wta = new WindowTrackingAdaptor(m_layoutManager, m_zoneDetector, &screenMgr, m_settings, nullptr, nullptr,
-                                              &parent);
+        auto* wta =
+            new WindowTracker(m_layoutManager, m_zoneDetector, &screenMgr, m_settings, nullptr, nullptr, &parent);
         snap = std::make_unique<SnapEngine>(m_layoutManager, wta->service(), m_zoneDetector, nullptr, nullptr);
         wta->service()->setSnapState(snap->snapState());
         wta->service()->setSnapEngine(snap.get());
@@ -183,8 +183,8 @@ private Q_SLOTS:
         // first while the service's snap resolver still points into it.
         std::unique_ptr<SnapEngine> snap;
         QObject parent;
-        auto* wta = new WindowTrackingAdaptor(m_layoutManager, m_zoneDetector, &screenMgr, m_settings, nullptr, nullptr,
-                                              &parent);
+        auto* wta =
+            new WindowTracker(m_layoutManager, m_zoneDetector, &screenMgr, m_settings, nullptr, nullptr, &parent);
         snap = std::make_unique<SnapEngine>(m_layoutManager, wta->service(), m_zoneDetector, nullptr, nullptr);
         wta->service()->setSnapState(snap->snapState());
         wta->service()->setSnapEngine(snap.get());
@@ -250,8 +250,8 @@ private Q_SLOTS:
         // Engine before parent — see testMinimizedCapturePreservesPreMinimizePlacement.
         std::unique_ptr<SnapEngine> snap;
         QObject parent;
-        auto* wta = new WindowTrackingAdaptor(m_layoutManager, m_zoneDetector, &screenMgr, m_settings, nullptr, nullptr,
-                                              &parent);
+        auto* wta =
+            new WindowTracker(m_layoutManager, m_zoneDetector, &screenMgr, m_settings, nullptr, nullptr, &parent);
         snap = std::make_unique<SnapEngine>(m_layoutManager, wta->service(), m_zoneDetector, nullptr, nullptr);
         wta->service()->setSnapState(snap->snapState());
         wta->service()->setSnapEngine(snap.get());
@@ -312,8 +312,8 @@ private Q_SLOTS:
         // rationale.)
         std::unique_ptr<SnapEngine> snap;
         QObject parent;
-        auto* wta = new WindowTrackingAdaptor(m_layoutManager, m_zoneDetector, &screenMgr, m_settings, nullptr, nullptr,
-                                              &parent);
+        auto* wta =
+            new WindowTracker(m_layoutManager, m_zoneDetector, &screenMgr, m_settings, nullptr, nullptr, &parent);
         wta->setWindowRegistry(&registry);
         snap = std::make_unique<SnapEngine>(m_layoutManager, wta->service(), m_zoneDetector, nullptr, nullptr);
         wta->service()->setSnapState(snap->snapState());
@@ -391,8 +391,8 @@ private Q_SLOTS:
         screenMgr.start();
 
         QObject parent;
-        auto* wta = new WindowTrackingAdaptor(m_layoutManager, m_zoneDetector, &screenMgr, m_settings, nullptr, nullptr,
-                                              &parent);
+        auto* wta =
+            new WindowTracker(m_layoutManager, m_zoneDetector, &screenMgr, m_settings, nullptr, nullptr, &parent);
         PhosphorTileEngine::AutotileEngine autotile(nullptr, wta->service(), nullptr,
                                                     PlasmaZones::TestHelpers::testRegistry());
         const QString screen = QStringLiteral("DP-1");
@@ -437,8 +437,8 @@ private Q_SLOTS:
         PhosphorEngine::WindowRegistry registry;
         std::unique_ptr<SnapEngine> snap;
         QObject parent;
-        auto* wta = new WindowTrackingAdaptor(m_layoutManager, m_zoneDetector, &screenMgr, m_settings, nullptr, nullptr,
-                                              &parent);
+        auto* wta =
+            new WindowTracker(m_layoutManager, m_zoneDetector, &screenMgr, m_settings, nullptr, nullptr, &parent);
         wta->setWindowRegistry(&registry);
         snap = std::make_unique<SnapEngine>(m_layoutManager, wta->service(), m_zoneDetector, nullptr, nullptr);
         wta->service()->setSnapState(snap->snapState());
@@ -497,8 +497,8 @@ private Q_SLOTS:
 
         PhosphorEngine::WindowRegistry registry;
         QObject parent;
-        auto* wta = new WindowTrackingAdaptor(m_layoutManager, m_zoneDetector, &screenMgr, m_settings, nullptr, nullptr,
-                                              &parent);
+        auto* wta =
+            new WindowTracker(m_layoutManager, m_zoneDetector, &screenMgr, m_settings, nullptr, nullptr, &parent);
         wta->setWindowRegistry(&registry);
 
         const QString instanceId = QStringLiteral("min-cross-instance");
@@ -546,8 +546,8 @@ private Q_SLOTS:
 
         PhosphorEngine::WindowRegistry registry;
         QObject parent;
-        auto* wta = new WindowTrackingAdaptor(m_layoutManager, m_zoneDetector, &screenMgr, m_settings, nullptr, nullptr,
-                                              &parent);
+        auto* wta =
+            new WindowTracker(m_layoutManager, m_zoneDetector, &screenMgr, m_settings, nullptr, nullptr, &parent);
         wta->setWindowRegistry(&registry);
 
         const QString instanceId = QStringLiteral("renamed-minimized-instance");
@@ -605,8 +605,8 @@ private Q_SLOTS:
 
         PhosphorEngine::WindowRegistry registry;
         QObject parent;
-        auto* wta = new WindowTrackingAdaptor(m_layoutManager, m_zoneDetector, &screenMgr, m_settings, nullptr, nullptr,
-                                              &parent);
+        auto* wta =
+            new WindowTracker(m_layoutManager, m_zoneDetector, &screenMgr, m_settings, nullptr, nullptr, &parent);
         wta->setWindowRegistry(&registry);
 
         const QString instanceId = QStringLiteral("renamed-visible-instance");
@@ -667,8 +667,8 @@ private Q_SLOTS:
         // Engine before parent — see testMinimizedCapturePreservesPreMinimizePlacement.
         std::unique_ptr<SnapEngine> snap;
         QObject parent;
-        auto* wta = new WindowTrackingAdaptor(m_layoutManager, m_zoneDetector, &screenMgr, m_settings, nullptr, nullptr,
-                                              &parent);
+        auto* wta =
+            new WindowTracker(m_layoutManager, m_zoneDetector, &screenMgr, m_settings, nullptr, nullptr, &parent);
         snap = std::make_unique<SnapEngine>(m_layoutManager, wta->service(), m_zoneDetector, nullptr, nullptr);
         wta->service()->setSnapState(snap->snapState());
         wta->service()->setSnapEngine(snap.get());
@@ -743,8 +743,8 @@ private Q_SLOTS:
         // Engine before parent — see testMinimizedCapturePreservesPreMinimizePlacement.
         std::unique_ptr<SnapEngine> snap;
         QObject parent;
-        auto* wta = new WindowTrackingAdaptor(m_layoutManager, m_zoneDetector, &screenMgr, m_settings, nullptr, nullptr,
-                                              &parent);
+        auto* wta =
+            new WindowTracker(m_layoutManager, m_zoneDetector, &screenMgr, m_settings, nullptr, nullptr, &parent);
         wta->setWindowRegistry(&registry);
         snap = std::make_unique<SnapEngine>(m_layoutManager, wta->service(), m_zoneDetector, nullptr, nullptr);
         snap->setEngineSettings(m_settings);
@@ -817,8 +817,8 @@ private Q_SLOTS:
         // Engine before parent — see testMinimizedCapturePreservesPreMinimizePlacement.
         std::unique_ptr<SnapEngine> snap;
         QObject parent;
-        auto* wta = new WindowTrackingAdaptor(m_layoutManager, m_zoneDetector, &screenMgr, m_settings, nullptr, nullptr,
-                                              &parent);
+        auto* wta =
+            new WindowTracker(m_layoutManager, m_zoneDetector, &screenMgr, m_settings, nullptr, nullptr, &parent);
         wta->setWindowRegistry(&registry);
         snap = std::make_unique<SnapEngine>(m_layoutManager, wta->service(), m_zoneDetector, nullptr, nullptr);
         snap->setEngineSettings(m_settings);
@@ -884,8 +884,8 @@ private Q_SLOTS:
         scroll->setActiveScreens({QStringLiteral("DP-1")});
         std::unique_ptr<SnapEngine> snap;
         QObject parent;
-        auto* wta = new WindowTrackingAdaptor(m_layoutManager, m_zoneDetector, &screenMgr, m_settings, nullptr, nullptr,
-                                              &parent);
+        auto* wta =
+            new WindowTracker(m_layoutManager, m_zoneDetector, &screenMgr, m_settings, nullptr, nullptr, &parent);
         snap = std::make_unique<SnapEngine>(m_layoutManager, wta->service(), m_zoneDetector, nullptr, nullptr);
         wta->service()->setSnapState(snap->snapState());
         wta->service()->setSnapEngine(snap.get());
@@ -945,8 +945,8 @@ private Q_SLOTS:
         // Engine before parent, for the destruction order the tests above give.
         std::unique_ptr<SnapEngine> snap;
         QObject parent;
-        auto* wta = new WindowTrackingAdaptor(m_layoutManager, m_zoneDetector, &screenMgr, m_settings, nullptr, nullptr,
-                                              &parent);
+        auto* wta =
+            new WindowTracker(m_layoutManager, m_zoneDetector, &screenMgr, m_settings, nullptr, nullptr, &parent);
         wta->setWindowRegistry(&registry);
         snap = std::make_unique<SnapEngine>(m_layoutManager, wta->service(), m_zoneDetector, nullptr, nullptr);
         wta->service()->setSnapState(snap->snapState());
@@ -1024,8 +1024,7 @@ private Q_SLOTS:
         StubTileRectEngine tileEngine; // outlives the adaptor, see the tests above
         std::unique_ptr<SnapEngine> snap;
         QObject parent;
-        auto* wta =
-            new WindowTrackingAdaptor(m_layoutManager, m_zoneDetector, nullptr, m_settings, nullptr, nullptr, &parent);
+        auto* wta = new WindowTracker(m_layoutManager, m_zoneDetector, nullptr, m_settings, nullptr, nullptr, &parent);
         snap = std::make_unique<SnapEngine>(m_layoutManager, wta->service(), m_zoneDetector, nullptr, nullptr);
         snap->setEngineSettings(m_settings);
         wta->service()->setSnapState(snap->snapState());
@@ -1066,8 +1065,7 @@ private Q_SLOTS:
         scrollEngine.captureState = QString(PhosphorEngine::WindowPlacement::stateTiled());
         std::unique_ptr<SnapEngine> snap;
         QObject parent;
-        auto* wta =
-            new WindowTrackingAdaptor(m_layoutManager, m_zoneDetector, nullptr, m_settings, nullptr, nullptr, &parent);
+        auto* wta = new WindowTracker(m_layoutManager, m_zoneDetector, nullptr, m_settings, nullptr, nullptr, &parent);
         snap = std::make_unique<SnapEngine>(m_layoutManager, wta->service(), m_zoneDetector, nullptr, nullptr);
         snap->setEngineSettings(m_settings);
         wta->service()->setSnapState(snap->snapState());

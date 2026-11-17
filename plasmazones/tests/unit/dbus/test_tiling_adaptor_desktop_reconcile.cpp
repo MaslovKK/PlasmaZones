@@ -31,7 +31,7 @@
 #include <PhosphorTiles/TilingState.h>
 
 #include "dbus/tilingadaptor/tilingadaptor.h"
-#include "dbus/windowtrackingadaptor/internal.h"
+#include "runtime/windowtracker/internal.h"
 #include "helpers/AutotileTestHelpers.h"
 
 #include <optional>

@@ -3,7 +3,7 @@
 
 /**
  * @file test_wta_shell_surface.cpp
- * @brief The Phosphor shell surface of WindowTrackingAdaptor
+ * @brief The Phosphor shell surface of WindowTracker
  * (shellsurface.cpp): the placement map's click/drag verbs and the
  * identity/urgency feed behind its cell labels.
  *
@@ -30,7 +30,7 @@
 #include <PhosphorWorkspaces/VirtualDesktopManager.h>
 #include <PhosphorZones/LayoutRegistry.h>
 
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/windowtracker/windowtracker.h"
 
 #include "helpers/IsolatedConfigGuard.h"
 #include "helpers/LayoutRegistryTestHelpers.h"
@@ -92,8 +92,7 @@ private Q_SLOTS:
         m_zoneDetector = new StubZoneDetector(nullptr);
         m_registry = new PhosphorEngine::WindowRegistry(nullptr);
         m_parent = new QObject(nullptr);
-        m_wta =
-            new WindowTrackingAdaptor(m_layoutManager, m_zoneDetector, nullptr, m_settings, nullptr, nullptr, m_parent);
+        m_wta = new WindowTracker(m_layoutManager, m_zoneDetector, nullptr, m_settings, nullptr, nullptr, m_parent);
         m_wta->setWindowRegistry(m_registry);
     }
 
@@ -158,7 +157,7 @@ private Q_SLOTS:
 
     void activateWindow_emitsForTrackedOnly()
     {
-        QSignalSpy spy(m_wta, &WindowTrackingAdaptor::activateWindowRequested);
+        QSignalSpy spy(m_wta, &WindowTracker::activateWindowRequested);
 
         // Unknown before any push, and an empty id: both silent.
         m_wta->activateWindow(windowId());
@@ -177,7 +176,7 @@ private Q_SLOTS:
 
     void getWindowMetadata_roundTripsAndAnnouncesChanges()
     {
-        QSignalSpy changed(m_wta, &WindowTrackingAdaptor::windowMetadataChanged);
+        QSignalSpy changed(m_wta, &WindowTracker::windowMetadataChanged);
 
         QString title;
         QString desktopFile;
@@ -217,7 +216,7 @@ private Q_SLOTS:
 
     void moveWindowToDesktop_emitsForTrackedAndValidDesktop()
     {
-        QSignalSpy spy(m_wta, &WindowTrackingAdaptor::windowDesktopMoveRequested);
+        QSignalSpy spy(m_wta, &WindowTracker::windowDesktopMoveRequested);
 
         m_wta->moveWindowToDesktop(windowId(), 2); // unknown yet
         QCOMPARE(spy.count(), 0);
@@ -239,13 +238,12 @@ private Q_SLOTS:
     {
         PhosphorWorkspaces::VirtualDesktopManager vdm(nullptr); // one desktop
         QObject parent;
-        auto* wta =
-            new WindowTrackingAdaptor(m_layoutManager, m_zoneDetector, nullptr, m_settings, &vdm, nullptr, &parent);
+        auto* wta = new WindowTracker(m_layoutManager, m_zoneDetector, nullptr, m_settings, &vdm, nullptr, &parent);
         wta->setWindowRegistry(m_registry);
         wta->setWindowMetadata(QLatin1String(Instance), QLatin1String(App), QStringLiteral("org.kde.dolphin.desktop"),
                                QStringLiteral("Home"), QString(), 1234, 1, QString(),
                                static_cast<int>(PhosphorProtocol::WindowType::Normal), snapshot(false));
-        QSignalSpy spy(wta, &WindowTrackingAdaptor::windowDesktopMoveRequested);
+        QSignalSpy spy(wta, &WindowTracker::windowDesktopMoveRequested);
 
         wta->moveWindowToDesktop(windowId(), vdm.desktopCount() + 1);
         QCOMPARE(spy.count(), 0);
@@ -256,7 +254,7 @@ private Q_SLOTS:
 
     void urgency_emitsOncePerEdgeAndClearsOnClose()
     {
-        QSignalSpy spy(m_wta, &WindowTrackingAdaptor::windowUrgencyChanged);
+        QSignalSpy spy(m_wta, &WindowTracker::windowUrgencyChanged);
 
         // Registered calm: no edge, empty set.
         push(QStringLiteral("Home"), snapshot(false));
@@ -311,7 +309,7 @@ private:
     StubZoneDetector* m_zoneDetector = nullptr;
     PhosphorEngine::WindowRegistry* m_registry = nullptr;
     QObject* m_parent = nullptr;
-    WindowTrackingAdaptor* m_wta = nullptr;
+    WindowTracker* m_wta = nullptr;
 };
 
 QTEST_MAIN(TestWtaShellSurface)
