@@ -101,7 +101,7 @@ private Q_SLOTS:
         s.setScrollingTemplateOrder({QStringLiteral("{33333333-3333-3333-3333-333333333333}")});
 
         // The one production caller that enables all three families
-        // (LayoutAdaptor::getLayoutList) depends on templates concatenating
+        // (LayoutService::getLayoutList) depends on templates concatenating
         // LAST: template ids landing before the manual/autotile ids would
         // displace those families' indices in sortPreviews' order map.
         QCOMPARE(buildCustomOrder(&s, /*includeManual=*/true, /*includeAutotile=*/true,

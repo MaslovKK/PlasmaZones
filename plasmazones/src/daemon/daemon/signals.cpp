@@ -9,12 +9,12 @@
 #include "core/types/constants.h"
 #include "daemon/controllers/unifiedlayoutcontroller.h"
 #include "daemon/overlayservice.h"
-#include "dbus/layoutadaptor/layoutadaptor.h"
-#include "dbus/settingsadaptor/settingsadaptor.h"
+#include "runtime/services/layoutservice/layoutservice.h"
+#include "runtime/services/settingsservice/settingsservice.h"
 // Complete types needed for the WindowLifecycleRelay PMF connects below
-// (TilingAdaptor::onTrackedWindowDestroyed / pruneStaleFloatBroadcasts) —
-// daemon.h forward declares TilingAdaptor only.
-#include "dbus/tilingadaptor/tilingadaptor.h"
+// (TilingService::onTrackedWindowDestroyed / pruneStaleFloatBroadcasts) —
+// daemon.h forward declares TilingService only.
+#include "runtime/services/tilingservice/tilingservice.h"
 #include "runtime/dragresolver/dragresolver.h"
 #include "runtime/windowtracker/lifecyclerelay.h"
 #include "runtime/windowtracker/windowtracker.h"
@@ -170,8 +170,8 @@ void Daemon::connectLayoutSignals()
                                                   diffActiveAssignments();
                                                   // Relay to the D-Bus surface so the settings app
                                                   // refreshes its template views on store CRUD.
-                                                  if (m_layoutAdaptor) {
-                                                      Q_EMIT m_layoutAdaptor->scrollingTemplatesChanged();
+                                                  if (m_layoutService) {
+                                                      Q_EMIT m_layoutService->scrollingTemplatesChanged();
                                                   }
                                               });
     }
@@ -504,18 +504,18 @@ void Daemon::connectOverlaySignals()
         connect(m_windowTracker->lifecycleRelay(), &WindowLifecycleRelay::windowClosed, m_dragResolver,
                 &DragResolver::handleWindowClosed, Qt::UniqueConnection);
     }
-    if (m_tilingAdaptor) {
-        // Same fan-out for TilingAdaptor's per-window caches: the effect
+    if (m_tilingService) {
+        // Same fan-out for TilingService's per-window caches: the effect
         // gates its Tiling.windowClosed relay on the close screen still
         // being engine-managed, so this in-process hook is the unconditional
         // teardown for the dedup cache and any parked open. PMF +
         // UniqueConnection for the same restart-stacking reason as above.
-        connect(m_windowTracker->lifecycleRelay(), &WindowLifecycleRelay::windowClosed, m_tilingAdaptor,
-                &TilingAdaptor::onTrackedWindowDestroyed, Qt::UniqueConnection);
+        connect(m_windowTracker->lifecycleRelay(), &WindowLifecycleRelay::windowClosed, m_tilingService,
+                &TilingService::onTrackedWindowDestroyed, Qt::UniqueConnection);
         // And the prune-path backstop for windows that die without any close
         // signal (instance-id key space; see the signal doc).
-        connect(m_windowTracker->lifecycleRelay(), &WindowLifecycleRelay::stalePruned, m_tilingAdaptor,
-                &TilingAdaptor::pruneStaleFloatBroadcasts, Qt::UniqueConnection);
+        connect(m_windowTracker->lifecycleRelay(), &WindowLifecycleRelay::stalePruned, m_tilingService,
+                &TilingService::pruneStaleFloatBroadcasts, Qt::UniqueConnection);
     }
 }
 
@@ -530,16 +530,16 @@ void Daemon::finalizeStartup()
     // store is wired (F236).
 
     // Signal that daemon is fully initialized and ready for queries
-    if (m_layoutAdaptor) {
-        Q_EMIT m_layoutAdaptor->daemonReady();
+    if (m_layoutService) {
+        Q_EMIT m_layoutService->daemonReady();
     }
 
     // Explicitly broadcast settingsChanged so the KWin effect re-fetches all
     // settings (including activation triggers) after daemonReady.  The effect's
     // initial async getSetting() calls can race with daemon construction and
     // return stale/empty values; this second broadcast guarantees a clean load.
-    if (m_settingsAdaptor)
-        Q_EMIT m_settingsAdaptor->settingsChanged();
+    if (m_settingsService)
+        Q_EMIT m_settingsService->settingsChanged();
 
     // Show the layout OSD on ALL screens so the user sees what's assigned everywhere.
     // The layoutApplied signal only fires for the focused screen; this covers the rest.
@@ -703,8 +703,8 @@ void Daemon::syncAutotileFloatStatePassive(const QString& windowId, bool floatin
     PhosphorPlacement::WindowTrackingService* wts = m_windowTracker->service();
     // The Tiling channel never hears this edge: its dedup memory goes, so the
     // next active float edge there goes out (F593).
-    if (m_tilingAdaptor) {
-        m_tilingAdaptor->forgetFloatBroadcast(windowId);
+    if (m_tilingService) {
+        m_tilingService->forgetFloatBroadcast(windowId);
     }
     if (floating) {
         m_windowTracker->syncWindowFloating(windowId, true);
@@ -745,8 +745,8 @@ void Daemon::syncScrollFloatStatePassive(const QString& windowId, bool floating,
         return;
     }
     // As in syncAutotileFloatStatePassive (F593).
-    if (m_tilingAdaptor) {
-        m_tilingAdaptor->forgetFloatBroadcast(windowId);
+    if (m_tilingService) {
+        m_tilingService->forgetFloatBroadcast(windowId);
     }
     if (floating) {
         m_windowTracker->syncWindowFloating(windowId, true);

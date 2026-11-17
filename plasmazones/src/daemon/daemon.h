@@ -106,7 +106,7 @@ public:
     /**
      * @brief Frozen-snapshot per-screen mode + disable/lock cascade façade.
      *
-     * Borrowed by the three D-Bus adaptors (SnapAdaptor, WindowTracker,
+     * Borrowed by the three D-Bus adaptors (SnapService, WindowTracker,
      * DragResolver) and the daemon's own navigation / OSD / overlay paths
      * so the cascade `(modeFor → currentDesktop → currentActivity →
      * isContextDisabled → isContextLocked)` resolves through one call instead of
@@ -799,7 +799,7 @@ private:
      *
      * Only a change to the ACTIVE context's resolved assignment needs windows
      * moved, so the screens the diff reports drive the legacy resnap/OSD path
-     * via LayoutAdaptor::applyAssignmentChangesFor, which carries that set
+     * via LayoutService::applyAssignmentChangesFor, which carries that set
      * explicitly rather than staging into the bus client's save-batch buffer.
      * A screen whose shape changed also counts when its verdict differs from
      * the one recorded before the change (@ref m_reshapeTracker's reshape
@@ -823,7 +823,7 @@ private:
      *        gap-rule verdict moved since @ref m_snapGapTracker last recorded it.
      *
      * The rule-driven twin of the settings gap restatement (m_gapResnapTimer):
-     * a no-OSD SnapAdaptor::reapplySnapZones batch, scoped to the screens whose
+     * a no-OSD SnapService::reapplySnapZones batch, scoped to the screens whose
      * verdict moved. reapplySnapZones itself keeps it to the screens snapping
      * runs on. Screens in @p alreadyPlaced are recorded without a restatement,
      * for a caller that has just put their windows back under the current
@@ -990,7 +990,7 @@ private:
      * a later rule edit lands).
      *
      * Not a pure query: after updating the snapshot it hands the whole map plus
-     * the changed set to LayoutAdaptor::publishActiveAssignments, refreshing the
+     * the changed set to LayoutService::publishActiveAssignments, refreshing the
      * adaptor's bus-facing mirror and emitting activeLayoutForScreenChanged once
      * per changed screen. Callers that only want the snapshot refreshed still
      * pay that broadcast, which is the point: it is the daemon's single
@@ -1008,7 +1008,7 @@ private:
     /**
      * @brief The KCM assignment-apply pass (init_assignment_apply.cpp).
      *
-     * Runs on LayoutAdaptor::assignmentChangesApplied, AFTER the KCM's batch
+     * Runs on LayoutService::assignmentChangesApplied, AFTER the KCM's batch
      * save has committed every assignment and setting. Classifies each
      * effective screen by LIVE router mode, resnaps the snapping ones in
      * @p changedScreenIdsList, and announces the outcome per screen (disabled
@@ -1274,7 +1274,7 @@ private:
     /// borrowed pointer to it; reverse-order destruction tears the service
     /// down before the registry, guaranteeing no UAF on shadersChanged
     /// disconnect during shutdown. Also declared before the D-Bus adaptors
-    /// (ShaderAdaptor, SettingsAdaptor) that borrow it.
+    /// (ShaderAdaptor, SettingsService) that borrow it.
     std::unique_ptr<ShaderRegistry> m_shaderRegistry;
     /// OverlayService takes ScreenManager* via constructor injection — must
     /// be declared AFTER m_screenManager so the initializer-list construction
@@ -1287,7 +1287,7 @@ private:
     /// inside the compositor, which SERVES that protocol rather than consuming it,
     /// so it cannot watch for its own session going idle. The daemon is already a
     /// Wayland client, so it watches and pushes the resolved boolean to the effect
-    /// over D-Bus (SettingsAdaptor::sessionIdleChanged).
+    /// over D-Bus (SettingsService::sessionIdleChanged).
     ///
     /// The effect pauses decoration-chain animation while idle, the only lever
     /// that lets the GPU leave its top performance state. An animated pack
@@ -1369,9 +1369,12 @@ private:
     // Domain-specific D-Bus adaptors
     // D-Bus adaptors need a parent (the adapted object); Qt requires it.
     // So we use raw pointers; Qt parent-child system manages their lifetime
-    LayoutAdaptor* m_layoutAdaptor = nullptr;
-    SettingsAdaptor* m_settingsAdaptor = nullptr;
-    OverlayAdaptor* m_overlayAdaptor = nullptr; // Overlay visibility only
+    LayoutService* m_layoutService = nullptr;
+    LayoutAdaptor* m_layoutAdaptor = nullptr; // D-Bus binding of m_layoutService, deleted before it
+    SettingsService* m_settingsService = nullptr;
+    SettingsAdaptor* m_settingsAdaptor = nullptr; // D-Bus binding of m_settingsService, deleted before it
+    OverlayControlService* m_overlayControlService = nullptr; // Overlay visibility only
+    OverlayAdaptor* m_overlayAdaptor = nullptr; // D-Bus binding of m_overlayControlService, deleted before it
     // Zone detection queries. A plain QObject child; its bus surface is
     // m_zoneDetectionAdaptor, which is deleted before it.
     ZoneQueryService* m_zoneQueryService = nullptr;
@@ -1390,19 +1393,23 @@ private:
     // unique_ptr member destructors, so without an explicit detach the
     // adaptors would see dangling pointers for a destruction-ordering
     // window (and any queued D-Bus call landing in that window would UAF).
-    ShaderAdaptor* m_shaderAdaptor = nullptr;
-    ControlAdaptor* m_controlAdaptor = nullptr;
-    // Unified Rule store + its D-Bus adaptor. The store owns rules.json
-    // (m_ruleStoreWatcher folds in outside writes) and the adaptor exposes it
-    // on org.phosphor_works.Placement.Rules. Adaptor is Qt-parented (raw pointer); it
-    // borrows the store, so stop() calls detach() before the store unique_ptr
-    // is destroyed.
-    RuleAdaptor* m_ruleAdaptor = nullptr;
+    ShaderService* m_shaderService = nullptr;
+    ShaderAdaptor* m_shaderAdaptor = nullptr; // D-Bus binding of m_shaderService, deleted before it
+    ControlService* m_controlService = nullptr;
+    ControlAdaptor* m_controlAdaptor = nullptr; // D-Bus binding of m_controlService, deleted before it
+    // Unified Rule store + its service. The store owns rules.json
+    // (m_ruleStoreWatcher folds in outside writes) and the service serves it,
+    // bound to org.phosphor_works.Placement.Rules by m_ruleAdaptor. Both are
+    // Qt-parented (raw pointers); the service borrows the store, so stop()
+    // calls detach() before the store unique_ptr is destroyed.
+    RuleService* m_ruleService = nullptr;
+    RuleAdaptor* m_ruleAdaptor = nullptr; // D-Bus binding of m_ruleService, deleted before it
     /// Scrolling-engine wire surface (org.phosphor_works.Placement.Scrolling) — the
     /// scroll-specific screen set; lifecycle traffic rides the shared
     /// tiling adaptor. Qt-parented; stop() clears its engine pointer
     /// before the engine unique_ptr resets.
-    ScrollingAdaptor* m_scrollingAdaptor = nullptr;
+    ScrollingService* m_scrollingService = nullptr;
+    ScrollingAdaptor* m_scrollingAdaptor = nullptr; // D-Bus binding of m_scrollingService, deleted before it
     // Compositor bridge adaptor (KWin effect ↔ daemon protocol endpoint).
     // Parented to `this`; holds only plain state, so it needs no detach().
     CompositorBridgeAdaptor* m_compositorBridge = nullptr;
@@ -1492,13 +1499,16 @@ private:
     /// Held as a member rather than reconstructed per-call so navigation
     /// handlers don't need to know about its dependencies.
     std::unique_ptr<PhosphorScreens::VirtualScreenSwapper> m_virtualScreenSwapper;
-    SnapAdaptor* m_snapAdaptor = nullptr;
-    TilingAdaptor* m_tilingAdaptor = nullptr;
+    SnapService* m_snapService = nullptr;
+    SnapAdaptor* m_snapAdaptor = nullptr; // D-Bus binding of m_snapService, deleted before it
+    TilingService* m_tilingService = nullptr;
+    TilingAdaptor* m_tilingAdaptor = nullptr; // D-Bus binding of m_tilingService, deleted before it
     /// Autotile-engine wire surface (org.phosphor_works.Placement.Autotile) — algorithm
     /// selection, master ops, and autotile config; lifecycle traffic rides
     /// the shared tiling adaptor. Qt-parented; stop() clears its engine
     /// pointer before the engine unique_ptr resets.
-    AutotileAdaptor* m_autotileAdaptor = nullptr;
+    AutotileService* m_autotileService = nullptr;
+    AutotileAdaptor* m_autotileAdaptor = nullptr; // D-Bus binding of m_autotileService, deleted before it
 
     /// Phase 6: animation shader effect discovery. Scans
     /// `plasmazones/animations` from XDG data dirs and monitors for
@@ -1777,7 +1787,7 @@ private:
     // after any apply so a later edit doesn't falsely re-resnap. See
     // reconcileActiveAssignments / diffActiveAssignments.
     //
-    // This map is also the SOURCE of the LayoutAdaptor's published mirror: every
+    // This map is also the SOURCE of the LayoutService's published mirror: every
     // diffActiveAssignments hands it to publishActiveAssignments, which is what
     // getActiveLayoutsForScreens returns and what activeLayoutForScreenChanged
     // reports. Writing it outside that function would desync the bus view.

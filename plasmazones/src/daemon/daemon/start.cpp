@@ -18,17 +18,17 @@
 #include "core/utils/geometryutils.h"
 #include "core/platform/logging.h"
 #include "core/utils/utils.h"
-#include "dbus/layoutadaptor/layoutadaptor.h"
-#include "dbus/settingsadaptor/settingsadaptor.h"
+#include "runtime/services/layoutservice/layoutservice.h"
+#include "runtime/services/settingsservice/settingsservice.h"
 #include "dbus/shaderadaptor.h"
 #include "dbus/compositorbridgeadaptor.h"
 #include "dbus/controladaptor.h"
 #include "dbus/overlayadaptor.h"
 #include "dbus/zonedetectionadaptor.h"
-#include "dbus/snapadaptor/snapadaptor.h"
+#include "runtime/services/snapservice/snapservice.h"
 #include "runtime/windowtracker/windowtracker.h"
 #include "runtime/dragresolver/dragresolver.h"
-#include "dbus/tilingadaptor/tilingadaptor.h"
+#include "runtime/services/tilingservice/tilingservice.h"
 #include <PhosphorEngine/DesktopRemap.h>
 #include <PhosphorEngine/PlacementEngineBase.h>
 #include <PhosphorEngine/WindowRegistry.h>
@@ -289,7 +289,7 @@ void Daemon::connectScreenSignals()
                 }
                 // The two per-screen tab paint-override maps for the removed
                 // output (virtual sub-screens included): the OverlayService's
-                // drop-indicator map and the TilingAdaptor's tab map that the
+                // drop-indicator map and the TilingService's tab map that the
                 // KWin effect replays. The departing-screen loop that
                 // ordinarily clears both is keyed on the engine's set, which
                 // the prune above already shrank, so nothing else ever sweeps
@@ -300,8 +300,8 @@ void Daemon::connectScreenSignals()
                 if (m_overlayService) {
                     m_overlayService->clearScrollDropIndicatorOverridesWhere(removedPhysical);
                 }
-                if (m_tilingAdaptor) {
-                    m_tilingAdaptor->clearScrollTabPaintOverridesWhere(removedPhysical);
+                if (m_tilingService) {
+                    m_tilingService->clearScrollTabPaintOverridesWhere(removedPhysical);
                 }
 
                 // Invalidate cached EDID serial so a different monitor on this connector is detected
@@ -662,7 +662,7 @@ void Daemon::connectDesktopActivity()
                 updateEngineScreens();
                 // [SEQ E¼] The desktop just entered gets its share of every window
                 // spanning it (after the pins and [SEQ E]; see the helper), per EFFECTIVE id.
-                reconcileMembershipsForScreens(m_tilingAdaptor, m_screenManager->virtualScreenIdsFor(screenId));
+                reconcileMembershipsForScreens(m_tilingService, m_screenManager->virtualScreenIdsFor(screenId));
                 // [SEQ E½] Re-announce the managed set UNCONDITIONALLY for this
                 // report. The effect's staleness gate rejects any announce whose
                 // per-screen desktop stamps disagree with what it last reported,
@@ -679,8 +679,8 @@ void Daemon::connectDesktopActivity()
                 // coalesces per event-loop turn and stamps desktops at emit
                 // time, so the burst's last announce carries a fully consistent
                 // map and is accepted.
-                if (m_tilingAdaptor) {
-                    m_tilingAdaptor->notifyEngineScreensChanged(/*isDesktopSwitch=*/true);
+                if (m_tilingService) {
+                    m_tilingService->notifyEngineScreensChanged(/*isDesktopSwitch=*/true);
                 }
                 // A desktop whose assignment is snapping demotes the screen out
                 // of tiling in the recompute above; nothing further on this path
@@ -872,7 +872,7 @@ void Daemon::connectDesktopActivity()
                     // Per-activity assignments may differ — recompute autotile screens
                     updateEngineScreens();
                     // Activity moves every screen's context at once; same ordering as [SEQ E¼].
-                    reconcileMembershipsForScreens(m_tilingAdaptor, m_screenManager->effectiveScreenIds());
+                    reconcileMembershipsForScreens(m_tilingService, m_screenManager->effectiveScreenIds());
                     // Same reason as the per-screen desktop switch above: this
                     // path has no consumer for the preserved snap-ZONE half, so
                     // windows released by an activity's snapping assignment need
@@ -1072,7 +1072,7 @@ void Daemon::pruneEngineOrdersForRemovedScreens(const QString& physicalScreenId)
     }
 
     // The two per-screen tab paint-override maps sit on the same boundary,
-    // the OverlayService's drop-indicator one and the TilingAdaptor's tab one
+    // the OverlayService's drop-indicator one and the TilingService's tab one
     // the KWin effect replays: the departing-screen loop that ordinarily
     // clears them cannot sweep a screen the engine no longer names, so
     // without this a dropped vs:N id keeps its overrides (and would replay
@@ -1084,8 +1084,8 @@ void Daemon::pruneEngineOrdersForRemovedScreens(const QString& physicalScreenId)
     if (m_overlayService) {
         m_overlayService->clearScrollDropIndicatorOverridesWhere(droppedSubScreen);
     }
-    if (m_tilingAdaptor) {
-        m_tilingAdaptor->clearScrollTabPaintOverridesWhere(droppedSubScreen);
+    if (m_tilingService) {
+        m_tilingService->clearScrollTabPaintOverridesWhere(droppedSubScreen);
     }
 
     // The strip-preview settle timers are keyed by the same screen ids and
@@ -1217,8 +1217,8 @@ void Daemon::onVirtualScreensReconfigured(const QString& physicalScreenId)
     // VS-aware via Utils::belongsToPhysicalScreen. The vs_reconfigure-tagged
     // variant suppresses the kwin-effect snap-assist continuation so users
     // don't get a thumbnail picker popping up after every VS swap/rotate.
-    if (m_snapAdaptor) {
-        m_snapAdaptor->resnapForVirtualScreenReconfigure(physicalScreenId);
+    if (m_snapService) {
+        m_snapService->resnapForVirtualScreenReconfigure(physicalScreenId);
     }
     // A survivor's new shape can also move a shape-keyed gap rule's verdict. The
     // resnap above just placed this output's windows under the current gaps, so
@@ -1291,8 +1291,8 @@ void Daemon::onVirtualScreenRegionsChanged(const QString& physicalScreenId)
     if (reshaped) {
         scheduleContextOverlayRefresh();
     }
-    if (m_snapAdaptor) {
-        m_snapAdaptor->resnapForVirtualScreenReconfigure(physicalScreenId);
+    if (m_snapService) {
+        m_snapService->resnapForVirtualScreenReconfigure(physicalScreenId);
     }
     // Same gap pass as the topology handler: this output's windows were just
     // placed under the current gaps, so only another screen's moved verdict is

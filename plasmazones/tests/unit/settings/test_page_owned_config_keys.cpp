@@ -74,7 +74,7 @@ const QSet<QString>& deliberatelyUnowned()
         // envelope, and the key moved into that page's manifest with it.
         // Tiling.Behavior/LockedScreens is runtime state, not a preference.
         // It records which screens the user has locked, is written only
-        // through the D-Bus setter (settingsadaptor_registry.cpp's
+        // through the D-Bus setter (settingsservice_registry.cpp's
         // "lockedScreens") and through setContextLocked, and no settings page
         // renders it. Giving it a page owner would be actively wrong: a Reset
         // on that page would silently unlock every screen the user had

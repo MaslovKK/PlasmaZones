@@ -12,7 +12,7 @@
  */
 
 #include "wta_convenience_fixture.h"
-#include "dbus/tilingadaptor/tilingadaptor.h"
+#include "runtime/services/tilingservice/tilingservice.h"
 #include "runtime/windowtracker/lifecyclerelay.h"
 
 #include <PhosphorEngine/DesktopRemap.h>
@@ -26,7 +26,7 @@
 
 namespace {
 /// The snap open path the pending-sweep slots drive: two monitors side by
-/// side, a local adaptor with a real SnapEngine and SnapAdaptor, a window of
+/// side, a local adaptor with a real SnapEngine and SnapService, a window of
 /// "sweepapp" on DP-1 at a known frame, and a bare RouteToScreen rule (no
 /// SnapToZone) sending that app to DP-2. Members are destroyed in reverse
 /// declaration order, after the destructor body detaches what the adaptor
@@ -48,7 +48,7 @@ struct RouteToDp2Rig
         wta->service()->setSnapState(snap->snapState());
         wta->service()->setSnapEngine(snap.get());
         wta->setEngines(snap.get(), nullptr, nullptr);
-        snapAdaptor = new SnapAdaptor(snap.get(), wta, settings, &parent);
+        snapAdaptor = new SnapService(snap.get(), wta, settings, &parent);
         wta->setWindowRegistry(&registry);
         wta->setWindowMetadata(instance, QStringLiteral("sweepapp"), QString(), QString(), QString(), 0, 0, QString(),
                                0, QVariantMap());
@@ -107,7 +107,7 @@ struct RouteToDp2Rig
     QObject parent;
     WindowTracker* wta = nullptr; // parent-owned
     std::unique_ptr<SnapEngine> snap;
-    SnapAdaptor* snapAdaptor = nullptr; // parent-owned
+    SnapService* snapAdaptor = nullptr; // parent-owned
     std::unique_ptr<QSignalSpy> geomSpy;
     bool ruleAdded = false;
 };
@@ -132,7 +132,7 @@ private Q_SLOTS:
     {
         // windowActivated is the PRODUCTION entry point for
         // SnapEngine::windowFocused (snap is deliberately not in the
-        // TilingAdaptor lifecycle vector), so this pins the wiring the
+        // TilingService lifecycle vector), so this pins the wiring the
         // engine-level switch suites bypass by calling windowFocused
         // directly — the layer-switch candidate memories are dead in a live
         // session if this relay is dropped.
@@ -343,7 +343,7 @@ private Q_SLOTS:
     }
 
     // The snap open path's RouteToDesktop emit (applyOpenDesktopRouting, called from
-    // SnapAdaptor::resolveWindowRestore) emits windowDesktopMoveRequested when a
+    // SnapService::resolveWindowRestore) emits windowDesktopMoveRequested when a
     // matched rule pins a desktop, and stays silent otherwise.
     void testApplyOpenDesktopRouting_emitsDesktopMoveForMatch()
     {
@@ -430,7 +430,7 @@ private Q_SLOTS:
             int w = 0;
             int h = 0;
             bool shouldSnap = false;
-            m_snapAdaptor->resolveWindowRestore(QStringLiteral("deskapp|") + instance, QStringLiteral("DP-1"), false,
+            m_snapService->resolveWindowRestore(QStringLiteral("deskapp|") + instance, QStringLiteral("DP-1"), false,
                                                 static_cast<int>(PhosphorEngine::WindowKind::Unknown),
                                                 static_cast<int>(reason), 0, 0, x, y, w, h, shouldSnap);
             return desktopSpy.count();
@@ -517,7 +517,7 @@ private Q_SLOTS:
         int w = 0;
         int h = 0;
         bool shouldSnap = false;
-        m_snapAdaptor->resolveWindowRestore(
+        m_snapService->resolveWindowRestore(
             opener, m_screenId, false, static_cast<int>(PhosphorEngine::WindowKind::Unknown),
             static_cast<int>(PhosphorEngine::RestoreReason::Open), 0, 0, x, y, w, h, shouldSnap);
 
@@ -594,7 +594,7 @@ private Q_SLOTS:
     }
 
     // The wire clamp, asserted directly. Its consumers are the reason gates in
-    // SnapAdaptor::resolveWindowRestore (sibling borrowing and placement
+    // SnapService::resolveWindowRestore (sibling borrowing and placement
     // rules), so a garbled value reading as anything but Open
     // would silently skip a genuine restore. Every named reason must survive the
     // round trip, and everything else must land on Open rather than on whichever
@@ -758,14 +758,14 @@ private Q_SLOTS:
         QObject parent;
         auto* wta = new WindowTracker(m_layoutManager, m_zoneDetector, &screenMgr, m_settings, &vdm, nullptr, &parent);
         auto* scroll = new PhosphorScrollEngine::ScrollEngine(nullptr, nullptr, &parent);
-        auto* tiling = new TilingAdaptor(&screenMgr, &parent);
+        auto* tiling = new TilingService(&screenMgr, &parent);
         tiling->setLifecycleEngines(QVector<PhosphorEngine::IPlacementEngine*>{scroll});
         tiling->setWindowTrackingAdaptor(wta);
         const auto teardown = qScopeGuard([tiling] {
             tiling->clearEngine();
             tiling->setWindowTrackingAdaptor(nullptr);
         });
-        QSignalSpy spy(tiling, &TilingAdaptor::managedScreensChanged);
+        QSignalSpy spy(tiling, &TilingService::managedScreensChanged);
 
         // A set change stamps both screens, so only a removed desktop a
         // screen was showing can owe the effect anything after it.
@@ -1302,7 +1302,7 @@ private Q_SLOTS:
         const QString w = QStringLiteral("app2|arrival");
         int x = 0, y = 0, width = 0, height = 0;
         bool shouldSnap = false;
-        m_snapAdaptor->snapToEmptyZone(w, m_screenId, false, x, y, width, height, shouldSnap);
+        m_snapService->snapToEmptyZone(w, m_screenId, false, x, y, width, height, shouldSnap);
 
         QVERIFY(shouldSnap);
         QVERIFY(width > 0 && height > 0);
@@ -1315,7 +1315,7 @@ private Q_SLOTS:
         m_snapEngine->commitSnap(QStringLiteral("app4|filler-b"), m_zoneIds[2], m_screenId);
 
         bool lateSnap = true;
-        m_snapAdaptor->snapToEmptyZone(QStringLiteral("app5|late"), m_screenId, false, x, y, width, height, lateSnap);
+        m_snapService->snapToEmptyZone(QStringLiteral("app5|late"), m_screenId, false, x, y, width, height, lateSnap);
         QVERIFY2(!lateSnap, "a full layout must decline the empty-zone hoist");
     }
 

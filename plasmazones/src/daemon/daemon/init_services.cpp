@@ -68,9 +68,9 @@
 #include "core/utils/utils.h"
 #include "core/platform/logging.h"
 #include "core/interfaces/shaderregistry.h"
-#include "dbus/layoutadaptor/layoutadaptor.h"
+#include "runtime/services/layoutservice/layoutservice.h"
 #include "runtime/windowtracker/windowtracker.h"
-#include "dbus/snapadaptor/snapadaptor.h"
+#include "runtime/services/snapservice/snapservice.h"
 
 namespace PlasmaZones {
 
@@ -409,8 +409,8 @@ void Daemon::initLayoutAndSettingsWiring()
     m_previewNotifyTimer.setInterval(100);
     m_layoutSettingsWiringConnections.append(connect(&m_previewNotifyTimer, &QTimer::timeout, this, [this]() {
         if (m_algorithmRegistry && m_algorithmRegistry->previewParams() != m_preRetilePreviewParams
-            && m_layoutAdaptor) {
-            m_layoutAdaptor->notifyLayoutListChanged();
+            && m_layoutService) {
+            m_layoutService->notifyLayoutListChanged();
         }
     }));
 
@@ -530,12 +530,12 @@ void Daemon::initLayoutAndSettingsWiring()
         // fell through updateEngineScreens' derive pass to snapping in the
         // same recompute above.
         if (((autotileToggled && !autotileNow) || (scrollingToggled && !scrollingNow)) && m_windowTracker
-            && m_snapAdaptor && m_snapEngine) {
+            && m_snapService && m_snapEngine) {
             // Silent, and only the screens that went from tiling to snapping.
             // None left is none to resnap: reapplySnapZones reads an empty
             // list as every snapping screen (F1042).
             if (!leftTiling.isEmpty()) {
-                m_snapAdaptor->reapplySnapZones(QStringList(leftTiling.begin(), leftTiling.end()), false);
+                m_snapService->reapplySnapZones(QStringList(leftTiling.begin(), leftTiling.end()), false);
             }
             // Batched float-restore: one resnap signal per autotile-disabled
             // toggle instead of per-window D-Bus chatter. Downcast mirrors
@@ -599,7 +599,7 @@ void Daemon::initLayoutAndSettingsWiring()
         // screens and leaves subscribers to activeLayoutForScreenChanged (the
         // KWin effect's ActiveLayout rule matching) pinned to the old layout.
         //
-        // During init()'s D-Bus retry loop this can run before m_layoutAdaptor
+        // During init()'s D-Bus retry loop this can run before m_layoutService
         // exists: the snapshot advances and the publish is dropped. Harmless —
         // the adaptor's mirror is seeded by the priming diffActiveAssignments()
         // in initEngines once the adaptor is up.
@@ -634,12 +634,12 @@ void Daemon::initLayoutAndSettingsWiring()
     m_gapResnapTimer.setSingleShot(true);
     m_gapResnapTimer.setInterval(100);
     m_layoutSettingsWiringConnections.append(connect(&m_gapResnapTimer, &QTimer::timeout, this, [this]() {
-        if (!m_snapAdaptor) {
+        if (!m_snapService) {
             return;
         }
         // Settings-driven reflow, not user navigation: a re-statement batch,
         // which raises no OSD and no Snap Assist.
-        m_snapAdaptor->reapplySnapZones();
+        m_snapService->reapplySnapZones();
     }));
     const auto scheduleGapResnap = [this]() {
         m_gapResnapTimer.start();

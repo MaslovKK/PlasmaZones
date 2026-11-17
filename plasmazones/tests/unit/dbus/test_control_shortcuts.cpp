@@ -3,7 +3,7 @@
 
 /**
  * @file test_control_shortcuts.cpp
- * @brief ControlAdaptor's shortcut catalog read (controladaptor_shortcuts.cpp)
+ * @brief ControlService's shortcut catalog read (controlservice_shortcuts.cpp)
  *        and its support report's shutdown answer.
  *
  *  1. getShortcutsJson answers "[]" without a provider, and after detach().
@@ -26,6 +26,7 @@
 #include <QTest>
 
 #include "dbus/controladaptor.h"
+#include "runtime/services/controlservice.h"
 
 #include <PhosphorProtocol/ServiceConstants.h>
 
@@ -55,16 +56,14 @@ private Q_SLOTS:
     void emptyWithoutAProvider()
     {
         QObject parent;
-        auto* control =
-            new ControlAdaptor(nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, &parent);
+        auto* control = new ControlService(nullptr, nullptr, nullptr, nullptr, &parent);
         QCOMPARE(control->getShortcutsJson(), QStringLiteral("[]"));
     }
 
     void serialisesTheProvidersRows()
     {
         QObject parent;
-        auto* control =
-            new ControlAdaptor(nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, &parent);
+        auto* control = new ControlService(nullptr, nullptr, nullptr, nullptr, &parent);
         int reads = 0;
         control->setShortcutCatalogProvider([&reads]() -> QVariantList {
             ++reads;
@@ -105,9 +104,8 @@ private Q_SLOTS:
     void notifyRelaysTheSignal()
     {
         QObject parent;
-        auto* control =
-            new ControlAdaptor(nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, &parent);
-        QSignalSpy spy(control, &ControlAdaptor::shortcutsChanged);
+        auto* control = new ControlService(nullptr, nullptr, nullptr, nullptr, &parent);
+        QSignalSpy spy(control, &ControlService::shortcutsChanged);
         control->notifyShortcutsChanged();
         control->notifyShortcutsChanged();
         QCOMPARE(spy.count(), 2);
@@ -120,8 +118,8 @@ private Q_SLOTS:
         QDBusConnection bus = QDBusConnection::sessionBus();
         QVERIFY(bus.isConnected());
         QObject host;
-        auto* control =
-            new ControlAdaptor(nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, &host);
+        auto* service = new ControlService(nullptr, nullptr, nullptr, nullptr, &host);
+        auto* control = new ControlAdaptor(service, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, &host);
         control->detach();
         const QString path = QStringLiteral("/TestControlReport");
         QVERIFY(bus.registerObject(path, &host));

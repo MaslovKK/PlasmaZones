@@ -17,7 +17,7 @@
  */
 
 #include "wta_snap_nav_fixture.h"
-#include "dbus/snapadaptor/snapadaptor.h"
+#include "runtime/services/snapservice/snapservice.h"
 
 #include <PhosphorEngine/EngineTypes.h>
 #include <PhosphorEngine/GeometryUtils.h>
@@ -31,14 +31,14 @@ namespace {
 const QRect kFreeLeft(300, 200, 640, 480);
 const QRect kFreeRight(2200, 200, 640, 480);
 
-/// The relay to the effect, through the SnapAdaptor as the daemon wires it,
+/// The relay to the effect, through the SnapService as the daemon wires it,
 /// and the routed float verdict and writer the daemon gives the tracking
 /// service on snapping screens.
 struct StatementFixture : SnapNavFixture
 {
     StatementFixture()
     {
-        adaptor = new SnapAdaptor(snap.get(), wta, &settings, &parent);
+        adaptor = new SnapService(snap.get(), wta, &settings, &parent);
         wta->service()->setEngineFloatResolver([this](const QString& windowId) {
             return snap->isFloating(windowId);
         });
@@ -87,7 +87,7 @@ struct StatementFixture : SnapNavFixture
         };
     }
 
-    SnapAdaptor* adaptor = nullptr; // parent-owned
+    SnapService* adaptor = nullptr; // parent-owned
 };
 } // namespace
 
