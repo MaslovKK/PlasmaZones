@@ -35,6 +35,7 @@
 #include "dbus/tilingadaptor.h"
 #include "runtime/services/snapservice/snapservice.h"
 #include "dbus/controladaptor.h"
+#include "runtime/services/controlservice.h"
 #include "runtime/services/ruleservice.h"
 
 #include <PhosphorIdentity/WindowId.h>
@@ -1230,21 +1231,24 @@ void Daemon::initEnginesAndWiring()
                 });
     }
 
-    // Control adaptor (the convenience API for third-party integrations): a member
-    // so stop() can detach() it before the unique_ptr members it borrows are destroyed.
+    // Control service (the convenience API for third-party integrations) and its
+    // D-Bus binding, which also carries the support report and quit: members
+    // so stop() can detach() both before the unique_ptr members they borrow
+    // are destroyed.
+    m_controlService = new ControlService(m_windowTracker, m_snapService, m_layoutManager.get(), autotileEngine, this);
     m_controlAdaptor =
-        new ControlAdaptor(m_windowTracker, m_snapService, m_layoutManager.get(), autotileEngine, m_screenManager.get(),
+        new ControlAdaptor(m_controlService, m_layoutManager.get(), autotileEngine, m_screenManager.get(),
                            m_compositorBridge, m_scrollEngine.get(), m_screenModeRouter.get(), this);
     // Control.toggleAutotileForScreen runs the mode-toggle shortcut's switch.
-    m_controlAdaptor->setModeToggleHandler([this](const QString& screenId) {
+    m_controlService->setModeToggleHandler([this](const QString& screenId) {
         toggleScreenMode(screenId, true);
     });
     // Control.getShortcutsJson's catalog, read through the member (it outlives adaptor rebuilds).
-    m_controlAdaptor->setShortcutCatalogProvider([this]() -> QVariantList {
+    m_controlService->setShortcutCatalogProvider([this]() -> QVariantList {
         return m_shortcutManager ? m_shortcutManager->shortcutCatalog() : QVariantList();
     });
-    connect(m_shortcutManager.get(), &ShortcutManager::cheatsheetModelChanged, m_controlAdaptor,
-            &ControlAdaptor::notifyShortcutsChanged);
+    connect(m_shortcutManager.get(), &ShortcutManager::cheatsheetModelChanged, m_controlService,
+            &ControlService::notifyShortcutsChanged);
 
     // Handle KCM assignment change resnap/OSD. This runs AFTER the KCM's batch
     // save completes (all setAssignmentEntry + notifyReload finished), so all

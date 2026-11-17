@@ -52,6 +52,7 @@
 #include "runtime/services/shaderservice.h"
 #include "dbus/compositorbridgeadaptor.h"
 #include "dbus/controladaptor.h"
+#include "runtime/services/controlservice.h"
 #include "dbus/ruleadaptor.h"
 #include "runtime/services/ruleservice.h"
 
@@ -74,6 +75,8 @@ void Daemon::initCoreAdaptors()
     // paths.
     delete m_controlAdaptor;
     m_controlAdaptor = nullptr;
+    delete m_controlService;
+    m_controlService = nullptr;
     delete m_snapAdaptor;
     m_snapAdaptor = nullptr;
     delete m_snapService;

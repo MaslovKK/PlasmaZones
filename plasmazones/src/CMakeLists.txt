@@ -172,8 +172,10 @@ set(plasmazones_core_SRCS
     dbus/compositorbridgeadaptor.cpp
     dbus/compositorbridgeadaptor.h
     dbus/controladaptor.cpp
-    dbus/controladaptor_shortcuts.cpp
     dbus/controladaptor.h
+    runtime/services/controlservice.cpp
+    runtime/services/controlservice_shortcuts.cpp
+    runtime/services/controlservice.h
     dbus/overlayadaptor.cpp
     dbus/overlayadaptor.h
     dbus/zonedetectionadaptor.cpp

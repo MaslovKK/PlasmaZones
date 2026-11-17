@@ -35,6 +35,7 @@
 #include "runtime/services/shaderservice.h"
 #include "dbus/compositorbridgeadaptor.h"
 #include "dbus/controladaptor.h"
+#include "runtime/services/controlservice.h"
 #include "runtime/services/ruleservice.h"
 
 #include <PhosphorServiceIdle/IdleService.h>
@@ -433,6 +434,9 @@ void Daemon::stop()
     }
     if (m_shaderService) {
         m_shaderService->detach();
+    }
+    if (m_controlService) {
+        m_controlService->detach();
     }
     if (m_controlAdaptor) {
         m_controlAdaptor->detach();

@@ -89,6 +89,7 @@ class SettingsAdaptor;
 class ShaderAdaptor;
 class ShaderService;
 class ControlAdaptor;
+class ControlService;
 class CompositorBridgeAdaptor;
 class OverlayAdaptor;
 class ZoneDetectionAdaptor;

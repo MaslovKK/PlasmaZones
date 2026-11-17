@@ -1392,7 +1392,8 @@ private:
     // window (and any queued D-Bus call landing in that window would UAF).
     ShaderService* m_shaderService = nullptr;
     ShaderAdaptor* m_shaderAdaptor = nullptr; // D-Bus binding of m_shaderService, deleted before it
-    ControlAdaptor* m_controlAdaptor = nullptr;
+    ControlService* m_controlService = nullptr;
+    ControlAdaptor* m_controlAdaptor = nullptr; // D-Bus binding of m_controlService, deleted before it
     // Unified Rule store + its service. The store owns rules.json
     // (m_ruleStoreWatcher folds in outside writes) and the service serves it,
     // bound to org.phosphor_works.Placement.Rules by m_ruleAdaptor. Both are
