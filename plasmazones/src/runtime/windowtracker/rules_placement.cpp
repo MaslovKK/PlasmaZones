@@ -154,7 +154,7 @@ PhosphorSnapEngine::PlacementDirective WindowTracker::placementZonesByRule(const
     // the FIRST resolver to touch a window seeds the verdict the others reuse, and
     // that seed must come from a screen-stamped query. On a first placement down
     // the snap open path the seeder is applyOpenDesktopRouting, which
-    // SnapAdaptor::resolveWindowRestore runs before the engine's
+    // SnapService::resolveWindowRestore runs before the engine's
     // SnapEngine::resolveWindowRestore reaches here. When nothing has seeded it
     // yet (a restore that is no first placement, so no routing ran), this
     // resolve does, through the cache, and resolveWindowRestore consults the
@@ -400,7 +400,7 @@ bool WindowTracker::applyOpenDesktopRouting(const QString& windowId, const QStri
     }
     // Pin the screen so a ScreenId-scoped rule resolves, mirroring placementZonesByRule.
     // resolveCached is keyed on windowId (+ rule-set revision). On the snap open path
-    // this runs first (SnapAdaptor::resolveWindowRestore calls it before the engine's
+    // this runs first (SnapService::resolveWindowRestore calls it before the engine's
     // resolveWindowRestore), so it is the resolve that seeds the window's memo with a
     // screen-stamped query, and the float / restore predicates read that verdict later.
     stampScreenContext(*query, screenId);
@@ -543,7 +543,7 @@ bool WindowTracker::applyOpenScreenRouting(const QString& windowId, const QStrin
     // and moving here would double-place the window.
     //
     // Both halves of that were wrong. This function's caller
-    // (SnapAdaptor::resolveWindowRestore) reaches it only when no snap happened,
+    // (SnapService::resolveWindowRestore) reaches it only when no snap happened,
     // and calculateSnapToPlacementRule is pure calculation whose every decline
     // returns before any commit — it declines when the routed (screen, desktop)
     // target is not in Snapping mode (the common case: a tiling-mode target), and

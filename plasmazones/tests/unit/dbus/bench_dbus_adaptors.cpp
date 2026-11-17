@@ -33,8 +33,10 @@
 #include <QDBusVariant>
 #include <QStringList>
 
-#include "dbus/settingsadaptor/settingsadaptor.h"
-#include "dbus/layoutadaptor/layoutadaptor.h"
+#include "dbus/settingsadaptor.h"
+#include "runtime/services/settingsservice/settingsservice.h"
+#include "dbus/layoutadaptor.h"
+#include "runtime/services/layoutservice/layoutservice.h"
 #include <PhosphorProtocol/ServiceConstants.h>
 #include <PhosphorZones/Layout.h>
 #include <PhosphorZones/LayoutRegistry.h>
@@ -62,7 +64,8 @@ private Q_SLOTS:
         // teardown. See test_settings_adaptor_batch.cpp for the same pattern.
         m_settings = new StubSettings(nullptr);
         m_parent = new QObject(nullptr);
-        m_settingsAdaptor = new SettingsAdaptor(m_settings, /*profileRegistry=*/nullptr, m_parent);
+        m_settingsAdaptor =
+            new SettingsAdaptor(new SettingsService(m_settings, /*profileRegistry=*/nullptr, m_parent), m_parent);
 
         m_layoutManager = PlasmaZones::TestHelpers::makeLayoutRegistry(QStringLiteral("plasmazones/layouts"), m_parent);
         auto* layout = new PhosphorZones::Layout(QStringLiteral("BenchLayout"));
@@ -73,7 +76,7 @@ private Q_SLOTS:
         }
         m_layoutManager->addLayout(layout);
         m_benchLayoutId = layout->id().toString();
-        m_layoutAdaptor = new LayoutAdaptor(m_layoutManager, m_parent);
+        m_layoutAdaptor = new LayoutAdaptor(new LayoutService(m_layoutManager, m_parent), m_parent);
     }
 
     void cleanup()

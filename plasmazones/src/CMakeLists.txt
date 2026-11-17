@@ -153,18 +153,22 @@ set(plasmazones_core_SRCS
     dbus/dbushelpers.cpp
     runtime/common/lookups.cpp
     runtime/common/lookups.h
-    dbus/layoutadaptor/layoutadaptor.cpp
-    dbus/layoutadaptor/assignment.cpp
-    dbus/layoutadaptor/assignment_batch.cpp
-    dbus/layoutadaptor/editor.cpp
-    dbus/layoutadaptor/layoutadaptor.h
-    dbus/settingsadaptor/settingsadaptor.cpp
-    dbus/settingsadaptor/settingsadaptor_batch.cpp
-    dbus/settingsadaptor/settingsadaptor_registry.cpp
-    dbus/settingsadaptor/settingsadaptor_registry_snapping.cpp
-    dbus/settingsadaptor/settingsadaptor_registry_autotile.cpp
-    dbus/settingsadaptor/settingsadaptor_registry_scrolling.cpp
-    dbus/settingsadaptor/settingsadaptor.h
+    dbus/layoutadaptor.cpp
+    dbus/layoutadaptor.h
+    runtime/services/layoutservice/layoutservice.cpp
+    runtime/services/layoutservice/assignment.cpp
+    runtime/services/layoutservice/assignment_batch.cpp
+    runtime/services/layoutservice/editor.cpp
+    runtime/services/layoutservice/layoutservice.h
+    dbus/settingsadaptor.cpp
+    dbus/settingsadaptor.h
+    runtime/services/settingsservice/settingsservice.cpp
+    runtime/services/settingsservice/settingsservice_batch.cpp
+    runtime/services/settingsservice/settingsservice_registry.cpp
+    runtime/services/settingsservice/settingsservice_registry_snapping.cpp
+    runtime/services/settingsservice/settingsservice_registry_autotile.cpp
+    runtime/services/settingsservice/settingsservice_registry_scrolling.cpp
+    runtime/services/settingsservice/settingsservice.h
     dbus/shaderadaptor.cpp
     dbus/shaderadaptor.h
     runtime/services/shaderservice.cpp
@@ -172,10 +176,14 @@ set(plasmazones_core_SRCS
     dbus/compositorbridgeadaptor.cpp
     dbus/compositorbridgeadaptor.h
     dbus/controladaptor.cpp
-    dbus/controladaptor_shortcuts.cpp
     dbus/controladaptor.h
+    runtime/services/controlservice.cpp
+    runtime/services/controlservice_shortcuts.cpp
+    runtime/services/controlservice.h
     dbus/overlayadaptor.cpp
     dbus/overlayadaptor.h
+    runtime/services/overlaycontrolservice.cpp
+    runtime/services/overlaycontrolservice.h
     dbus/zonedetectionadaptor.cpp
     dbus/zonedetectionadaptor.h
     runtime/services/zonequeryservice.cpp
@@ -235,17 +243,21 @@ set(plasmazones_core_SRCS
     runtime/services/autotileservice/autotileservice.cpp
     runtime/services/autotileservice/config.cpp
     runtime/services/autotileservice/autotileservice.h
-    dbus/tilingadaptor/tilingadaptor.cpp
-    dbus/tilingadaptor/relay.cpp
-    dbus/tilingadaptor/mapmodel.cpp
-    dbus/tilingadaptor/desktopreconcile.cpp
-    dbus/tilingadaptor/tilingadaptor.h
-    dbus/snapadaptor/snapadaptor.cpp
-    dbus/snapadaptor/busgate.cpp
-    dbus/snapadaptor/commit.cpp
-    dbus/snapadaptor/snaprestore.cpp
-    dbus/snapadaptor/navigation.cpp
-    dbus/snapadaptor/snapadaptor.h
+    dbus/tilingadaptor.cpp
+    dbus/tilingadaptor.h
+    runtime/services/tilingservice/tilingservice.cpp
+    runtime/services/tilingservice/relay.cpp
+    runtime/services/tilingservice/mapmodel.cpp
+    runtime/services/tilingservice/desktopreconcile.cpp
+    runtime/services/tilingservice/tilingservice.h
+    dbus/snapadaptor.cpp
+    dbus/snapadaptor.h
+    runtime/services/snapservice/snapservice.cpp
+    runtime/services/snapservice/busgate.cpp
+    runtime/services/snapservice/commit.cpp
+    runtime/services/snapservice/snaprestore.cpp
+    runtime/services/snapservice/navigation.cpp
+    runtime/services/snapservice/snapservice.h
     # TilingAlgorithm, TilingState, SplitTree, AlgorithmRegistry, scripted-algo
     # machinery live in phosphor-libs/libs/phosphor-tiles/. Consumers include canonical
     # <PhosphorTiles/...> headers directly; no forwarding shims remain.
@@ -343,13 +355,13 @@ target_link_libraries(plasmazones_core
         PhosphorRegistry::PhosphorRegistry
         # PhosphorRules: the unified LGPL rule engine. PUBLIC since
         # Phase 3 — config/settings.h owns a RuleStore for the per-mode
-        # disable lists, the RuleAdaptor exposes the store on D-Bus, and
+        # disable lists, the RuleService serves the store, and
         # config/configmigration.cpp builds rules during the v3→v4 conversion,
         # so consumers of plasmazones_core need the include path + link edge.
         PhosphorRules::PhosphorRules
         # Frozen-snapshot per-screen mode + disable/lock resolver. PUBLIC
-        # because D-Bus adaptors compiled into plasmazones_core
-        # (windowdragadaptor / windowtrackingadaptor / snapadaptor) hold
+        # because runtime classes compiled into plasmazones_core
+        # (DragResolver, WindowTracker, SnapService) hold
         # `PhosphorContext::IContextResolver*` members; consumers linking
         # plasmazones_core need the include path + link edge to read those.
         PhosphorContextResolver::PhosphorContextResolver

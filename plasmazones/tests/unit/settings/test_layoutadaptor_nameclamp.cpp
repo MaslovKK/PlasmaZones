@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 // The 40-unit name clamp every name-producing boundary re-applies, and
-// LayoutAdaptor::duplicateLayout — the boundary that has to re-apply it the
+// LayoutService::duplicateLayout — the boundary that has to re-apply it the
 // hard way, around a suffix the registry appended.
 //
 // The UI cap (QQuickTextInput::maximumLength) is advisory: a D-Bus caller can
@@ -15,7 +15,7 @@
 
 #include "core/types/constants.h"
 
-#include "dbus/layoutadaptor/layoutadaptor.h"
+#include "runtime/services/layoutservice/layoutservice.h"
 #include <PhosphorZones/Layout.h>
 #include <PhosphorZones/LayoutRegistry.h>
 
@@ -188,7 +188,7 @@ void TestLayoutAdaptorNameClamp::honoursReducedBudget()
 namespace {
 
 // The adaptor's duplicateLayout, driven end to end: register @p sourceName in
-// @p registry, duplicate it through a LayoutAdaptor, and hand back the
+// @p registry, duplicate it through a LayoutService, and hand back the
 // duplicate's stored name. The adaptor is a QDBusAbstractAdaptor but the slot
 // is called directly, so no bus is involved.
 QString duplicatedNameFor(PhosphorZones::LayoutRegistry* registry, QObject* parent, const QString& sourceName)
@@ -196,7 +196,7 @@ QString duplicatedNameFor(PhosphorZones::LayoutRegistry* registry, QObject* pare
     auto* source = new PhosphorZones::Layout(sourceName);
     registry->addLayout(source);
 
-    auto* adaptor = new PlasmaZones::LayoutAdaptor(registry, parent);
+    auto* adaptor = new PlasmaZones::LayoutService(registry, parent);
     const QString dupId = adaptor->duplicateLayout(source->id().toString());
     if (dupId.isEmpty()) {
         return QString();
