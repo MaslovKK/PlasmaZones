@@ -146,7 +146,7 @@ void SettingsController::setActivePage(const QString& page)
         // debug rather than warning, which is what kept the log-flooding concern honest.
         // The NAME is echoed: a trace that cannot say which page was wrong carries none of
         // the information a typo trace exists for, and debug is off in production anyway.
-        // Same treatment as the adaptor's unknown-key trace (settingsadaptor.cpp).
+        // Same treatment as the adaptor's unknown-key trace (settingsservice.cpp).
         qCDebug(PlasmaZones::lcCore) << "Unknown settings page requested:" << page;
         return;
     }

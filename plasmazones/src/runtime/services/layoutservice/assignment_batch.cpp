@@ -6,7 +6,7 @@
 // assignment.cpp by concern when that file crossed the size ceiling; the
 // single-context verbs, readers, and scrolling-template verbs stay there.
 
-#include "layoutadaptor.h"
+#include "layoutservice.h"
 #include <PhosphorZones/Layout.h>
 #include <PhosphorZones/LayoutRegistry.h>
 #include "core/platform/logging.h"
@@ -20,7 +20,7 @@
 
 namespace PlasmaZones {
 
-void LayoutAdaptor::stageOrApply(const QString& resolvedId)
+void LayoutService::stageOrApply(const QString& resolvedId)
 {
     m_changedScreenIds.insert(resolvedId);
     // A save batch is open (the settings app brackets its writes with
@@ -38,7 +38,7 @@ void LayoutAdaptor::stageOrApply(const QString& resolvedId)
     applyAssignmentChangesFor({resolvedId});
 }
 
-void LayoutAdaptor::markScreensWithStoredAssignments(AssignmentFamily family)
+void LayoutService::markScreensWithStoredAssignments(AssignmentFamily family)
 {
     // Every batch setter routes through LayoutRegistry::applyBatchAssignments,
     // which DROPS every rule of the family before rebuilding from the incoming
@@ -122,7 +122,7 @@ void LayoutAdaptor::markScreensWithStoredAssignments(AssignmentFamily family)
     }
 }
 
-void LayoutAdaptor::setAllScreenAssignments(const QVariantMap& assignments)
+void LayoutService::setAllScreenAssignments(const QVariantMap& assignments)
 {
     markScreensWithStoredAssignments(AssignmentFamily::Base);
     QHash<QString, QString> parsedAssignments;
@@ -162,7 +162,7 @@ void LayoutAdaptor::setAllScreenAssignments(const QVariantMap& assignments)
     qCInfo(lcDbusLayout) << "Batch set" << parsedAssignments.size() << "screen assignments";
 }
 
-void LayoutAdaptor::setAllDesktopAssignments(const QVariantMap& assignments)
+void LayoutService::setAllDesktopAssignments(const QVariantMap& assignments)
 {
     markScreensWithStoredAssignments(AssignmentFamily::Desktop);
     QHash<QPair<QString, int>, QString> parsedAssignments;
@@ -225,7 +225,7 @@ void LayoutAdaptor::setAllDesktopAssignments(const QVariantMap& assignments)
     qCInfo(lcDbusLayout) << "Batch set" << parsedAssignments.size() << "desktop assignments";
 }
 
-void LayoutAdaptor::setAllActivityAssignments(const QVariantMap& assignments)
+void LayoutService::setAllActivityAssignments(const QVariantMap& assignments)
 {
     markScreensWithStoredAssignments(AssignmentFamily::Activity);
     QHash<QPair<QString, QString>, QString> parsedAssignments;
@@ -276,7 +276,7 @@ void LayoutAdaptor::setAllActivityAssignments(const QVariantMap& assignments)
     qCInfo(lcDbusLayout) << "Batch set" << parsedAssignments.size() << "activity assignments";
 }
 
-void LayoutAdaptor::setAllCombinedAssignments(const QVariantMap& assignments)
+void LayoutService::setAllCombinedAssignments(const QVariantMap& assignments)
 {
     markScreensWithStoredAssignments(AssignmentFamily::Combined);
     QHash<PhosphorZones::CombinedAssignmentKey, QString> parsed;
@@ -319,12 +319,12 @@ void LayoutAdaptor::setAllCombinedAssignments(const QVariantMap& assignments)
     qCInfo(lcDbusLayout) << "Batch set" << parsed.size() << "combined assignments";
 }
 
-void LayoutAdaptor::setSaveBatchMode(bool enabled)
+void LayoutService::setSaveBatchMode(bool enabled)
 {
     m_suppressScreenLayoutSignal = enabled;
 }
 
-void LayoutAdaptor::clearSaveBatchMode()
+void LayoutService::clearSaveBatchMode()
 {
     // Self-healing counterpart to setSaveBatchMode(true). The XML calls the pair
     // "always paired", but nothing enforced it: a settings app that crashes
@@ -336,7 +336,7 @@ void LayoutAdaptor::clearSaveBatchMode()
     m_suppressScreenLayoutSignal = false;
 }
 
-void LayoutAdaptor::applyAssignmentChanges()
+void LayoutService::applyAssignmentChanges()
 {
     // Drains the CLIENT's buffer only — the set accumulated by this adaptor's
     // own assignment slots since the last apply. Nothing else writes it.
@@ -362,7 +362,7 @@ void LayoutAdaptor::applyAssignmentChanges()
     flushPendingActiveLayout();
 }
 
-void LayoutAdaptor::applyAssignmentChangesFor(const QSet<QString>& screenIds)
+void LayoutService::applyAssignmentChangesFor(const QSet<QString>& screenIds)
 {
     if (screenIds.isEmpty()) {
         return;
@@ -372,7 +372,7 @@ void LayoutAdaptor::applyAssignmentChangesFor(const QSet<QString>& screenIds)
     Q_EMIT assignmentChangesApplied(QStringList(screenIds.begin(), screenIds.end()));
 }
 
-void LayoutAdaptor::setActiveLayoutAtApply(PhosphorZones::Layout* layout)
+void LayoutService::setActiveLayoutAtApply(PhosphorZones::Layout* layout)
 {
     // Inside a save batch the global active layout lands at the close, after
     // the apply resnapped the windows out of the zones they hold. Set at once,
@@ -385,7 +385,7 @@ void LayoutAdaptor::setActiveLayoutAtApply(PhosphorZones::Layout* layout)
     m_layoutManager->setActiveLayout(layout);
 }
 
-void LayoutAdaptor::flushPendingActiveLayout()
+void LayoutService::flushPendingActiveLayout()
 {
     if (PhosphorZones::Layout* layout = std::exchange(m_pendingActiveLayout, nullptr).data()) {
         m_layoutManager->setActiveLayout(layout);

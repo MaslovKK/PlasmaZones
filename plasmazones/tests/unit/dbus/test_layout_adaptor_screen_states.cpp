@@ -3,7 +3,7 @@
 
 /**
  * @file test_layout_adaptor_screen_states.cpp
- * @brief LayoutAdaptor::getScreenStates' tiledWindowCount key, and the
+ * @brief LayoutService::getScreenStates' tiledWindowCount key, and the
  *        screenStatesChanged signal that announces a changed answer.
  *
  * The settings app evaluates a rule's conditions against each screen's live
@@ -32,7 +32,7 @@
 #include <PhosphorZones/LayoutRegistry.h>
 
 #include "FakePhysicalScreenSource.h"
-#include "dbus/layoutadaptor/layoutadaptor.h"
+#include "runtime/services/layoutservice/layoutservice.h"
 #include "helpers/IsolatedConfigGuard.h"
 #include "helpers/LayoutRegistryTestHelpers.h"
 
@@ -55,7 +55,7 @@ private Q_SLOTS:
         m_screenManager = std::make_unique<PhosphorScreens::ScreenManager>(
             PhosphorScreens::ScreenManagerConfig{.physicalScreenSource = m_source.get(), .useGeometrySensors = false});
         m_screenManager->start();
-        m_adaptor = new LayoutAdaptor(m_layoutManager, nullptr, m_screenManager.get(), m_parent);
+        m_adaptor = new LayoutService(m_layoutManager, nullptr, m_screenManager.get(), m_parent);
     }
 
     void cleanup()
@@ -113,7 +113,7 @@ private Q_SLOTS:
         m_adaptor->setTiledWindowCountProvider([&count](const QString& screenId) -> std::optional<int> {
             return screenId == QLatin1String("DP-1") ? std::optional<int>(count) : std::nullopt;
         });
-        QSignalSpy spy(m_adaptor, &LayoutAdaptor::screenStatesChanged);
+        QSignalSpy spy(m_adaptor, &LayoutService::screenStatesChanged);
 
         // The first comparison has nothing before it, so it announces.
         m_adaptor->scheduleScreenStatesCheck();
@@ -141,7 +141,7 @@ private Q_SLOTS:
         m_adaptor->setTiledWindowCountProvider([&count](const QString& screenId) -> std::optional<int> {
             return screenId == QLatin1String("DP-1") ? std::optional<int>(count) : std::nullopt;
         });
-        QSignalSpy spy(m_adaptor, &LayoutAdaptor::screenStatesChanged);
+        QSignalSpy spy(m_adaptor, &LayoutService::screenStatesChanged);
 
         m_adaptor->scheduleScreenStatesCheck();
         m_adaptor->cancelScreenStatesCheck();
@@ -171,7 +171,7 @@ private:
     PhosphorZones::LayoutRegistry* m_layoutManager = nullptr;
     std::unique_ptr<PhosphorScreens::FakePhysicalScreenSource> m_source;
     std::unique_ptr<PhosphorScreens::ScreenManager> m_screenManager;
-    LayoutAdaptor* m_adaptor = nullptr;
+    LayoutService* m_adaptor = nullptr;
 };
 
 QTEST_MAIN(TestLayoutAdaptorScreenStates)

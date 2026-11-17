@@ -28,8 +28,10 @@
 #include "core/platform/logging.h"
 #include "core/interfaces/shaderregistry.h"
 #include "dbus/dbushelpers.h"
-#include "dbus/layoutadaptor/layoutadaptor.h"
-#include "dbus/settingsadaptor/settingsadaptor.h"
+#include "runtime/services/layoutservice/layoutservice.h"
+#include "dbus/layoutadaptor.h"
+#include "runtime/services/settingsservice/settingsservice.h"
+#include "dbus/settingsadaptor.h"
 #include "dbus/overlayadaptor.h"
 #include "runtime/services/overlaycontrolservice.h"
 #include "dbus/zonedetectionadaptor.h"
@@ -132,8 +134,12 @@ void Daemon::initCoreAdaptors()
     m_shaderService = nullptr;
     delete m_settingsAdaptor;
     m_settingsAdaptor = nullptr;
+    delete m_settingsService;
+    m_settingsService = nullptr;
     delete m_layoutAdaptor;
     m_layoutAdaptor = nullptr;
+    delete m_layoutService;
+    m_layoutService = nullptr;
     // DBusScreenAdaptor is in this set for the same reason as the Tiling and
     // Scrolling pair above: it is a QDBusAbstractAdaptor child of the
     // D-Bus-registered Daemon and is re-newed unconditionally below, so
@@ -145,31 +151,33 @@ void Daemon::initCoreAdaptors()
     // Initialize domain-specific D-Bus adaptors
     // Each adaptor has its own D-Bus interface
     // D-Bus adaptors use raw new; Qt parent-child manages their lifetime.
-    m_layoutAdaptor =
-        new LayoutAdaptor(m_layoutManager.get(), m_virtualDesktopManager.get(), m_screenManager.get(), this);
-    m_layoutAdaptor->setActivityManager(m_activityManager.get());
-    m_layoutAdaptor->setSettings(m_settings.get());
-    m_layoutAdaptor->setLayoutsAvailableResolver([this](const QString& screenId) {
+    m_layoutService =
+        new LayoutService(m_layoutManager.get(), m_virtualDesktopManager.get(), m_screenManager.get(), this);
+    m_layoutAdaptor = new LayoutAdaptor(m_layoutService, this);
+    m_layoutService->setActivityManager(m_activityManager.get());
+    m_layoutService->setSettings(m_settings.get());
+    m_layoutService->setLayoutsAvailableResolver([this](const QString& screenId) {
         return !m_shuttingDown && anyModeEnabled()
             && layoutSupportForScreen(screenId) != PhosphorEngine::IPlacementEngine::LayoutSupport::None;
     });
-    m_layoutAdaptor->setAlgorithmRegistry(m_algorithmRegistry.get());
-    m_layoutAdaptor->setLayoutSource(m_layoutSources.composite());
+    m_layoutService->setAlgorithmRegistry(m_algorithmRegistry.get());
+    m_layoutService->setLayoutSource(m_layoutSources.composite());
     // Thread the bundle-owned autotile source through the adaptor's
     // buildUnifiedLayoutList path so its preview cache survives across
     // D-Bus calls. The full composite above drives the
     // getLayoutPreview* methods; this separate pointer targets only the
-    // autotile enumeration slot — see LayoutAdaptor::setAutotileLayoutSource.
-    m_layoutAdaptor->setAutotileLayoutSource(m_autotileLayoutSource);
+    // autotile enumeration slot — see LayoutService::setAutotileLayoutSource.
+    m_layoutService->setAutotileLayoutSource(m_autotileLayoutSource);
     // The live tiled-window count getScreenStates publishes, the same answer
     // the registry's TiledWindowCount provider gives the context cascade. The
     // engines are built later in init(); the lambda reads them per call.
-    m_layoutAdaptor->setTiledWindowCountProvider([this](const QString& screenId) {
+    m_layoutService->setTiledWindowCountProvider([this](const QString& screenId) {
         return tiledWindowCountForScreen(screenId);
     });
     // Invalidate D-Bus getActiveLayout() cache when the default layout changes in settings
-    connect(m_settings.get(), &Settings::defaultLayoutIdChanged, m_layoutAdaptor, &LayoutAdaptor::invalidateCache);
-    m_settingsAdaptor = new SettingsAdaptor(m_settings.get(), &m_profileRegistry, this);
+    connect(m_settings.get(), &Settings::defaultLayoutIdChanged, m_layoutService, &LayoutService::invalidateCache);
+    m_settingsService = new SettingsService(m_settings.get(), &m_profileRegistry, this);
+    m_settingsAdaptor = new SettingsAdaptor(m_settingsService, this);
 
     // Shader service - shader discovery, compilation lifecycle, file monitoring,
     // and its D-Bus binding. Held as a member so stop() can detach() it before
@@ -199,7 +207,7 @@ void Daemon::initCoreAdaptors()
     // and it is the existence of per-frame work — not how cheap that work is — that
     // keeps the card pinned in its top performance state.
     //
-    // Constructed AFTER m_settingsAdaptor (it emits through it) and AFTER
+    // Constructed AFTER m_settingsService (it emits through it) and AFTER
     // m_compositorBridge (it subscribes to bridgeRegistered to push the current idle
     // state to a freshly (re)started effect, since the signal is edge-triggered).
     setupIdleService();
@@ -357,8 +365,8 @@ void Daemon::initCoreAdaptors()
     // When scripted algorithms change (hot-reload), notify layout list consumers
     connect(m_scriptedAlgorithmLoader.get(), &PhosphorTiles::ScriptedAlgorithmLoader::algorithmsChanged, this,
             [this]() {
-                if (m_layoutAdaptor)
-                    m_layoutAdaptor->notifyLayoutListChanged();
+                if (m_layoutService)
+                    m_layoutService->notifyLayoutListChanged();
             });
     m_scriptedAlgorithmLoader->scanAndRegister();
 }
