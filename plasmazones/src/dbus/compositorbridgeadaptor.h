@@ -21,22 +21,19 @@ namespace PlasmaZones {
  *
  * Provides D-Bus interface: org.phosphor_works.Placement.CompositorBridge
  *
- * Compositor-agnostic bridge protocol: the registration handshake, and the
- * compositor's modifier-state and gesture reports (the latter only for a
- * bridge that registered the 'gestures' capability). Window manipulation
- * commands do NOT flow over
- * this interface — they ride org.phosphor_works.Placement.WindowTracking
+ * Compositor-agnostic bridge protocol: the registration handshake and the
+ * compositor's modifier-state report. Window manipulation commands do NOT
+ * flow over this interface — they ride org.phosphor_works.Placement.WindowTracking
  * (applyGeometryRequested, applyGeometriesBatch, ...),
  * which bridges subscribe to after a successful registration.
  *
  * The bus name registerBridge records is the identity every compositor-only
  * method on the daemon admits (DbusHelpers::admitCompositorReport, #1155):
- * reportModifierState and reportGesture here, and the compositor reports on
- * the other interfaces. Qt sets a call's QDBusContext on the exported object,
- * not on its adaptor, so the caller is read through DbusHelpers. The
- * registered capability list is daemon-wide state, not a property of whoever
- * is calling, so checking it alone would let any peer on the session bus drive
- * the shell's gesture surfaces.
+ * reportModifierState here, and the compositor reports on the other
+ * interfaces. Qt sets a call's QDBusContext on the exported object, not on its
+ * adaptor, so the caller is read through DbusHelpers. The registered
+ * capability list is daemon-wide state, not a property of whoever is calling,
+ * so it never stands in for that check.
  *
  * Registration itself is held to the compositor's process (see
  * setCompositorIdentityCheck), so no other peer can register first and keep
@@ -121,8 +118,6 @@ public Q_SLOTS:
      *   "borders"     — bridge supports native window border rendering
      *   "modifiers"   — bridge reports keyboard modifier state via
      *                   reportModifierState
-     *   "gestures"    — bridge forwards the shell's touchpad gestures via
-     *                   reportGesture
      */
     PhosphorProtocol::BridgeRegistrationResult registerBridge(const QString& compositorName, const QString& version,
                                                               const QStringList& capabilities);
@@ -142,23 +137,6 @@ public Q_SLOTS:
      */
     void reportModifierState(int modifiers, int mouseButtons);
 
-    /**
-     * @brief Report a completed touchpad gesture recognised for the shell
-     * @param kind "swipe" or "pinch"
-     * @param direction swipe: up/down/left/right; pinch: expanding/contracting
-     * @param fingerCount 1 to 5 (the KWin bridge sends 3 or 4)
-     * @note Compositor-only (DbusHelpers::admitCompositorReport): any other
-     *       bus caller is answered with AccessDenied, checked before
-     *       anything else.
-     * @note Re-emitted verbatim as gestureReported. The bridge registers
-     *       the gestures it forwards under the "gestures" capability; the
-     *       daemon keeps no state, it is the relay between the compositor
-     *       (which alone sees touchpad gestures) and the shell surface that
-     *       answers them. Input is validated here: an unknown kind or
-     *       direction, or a finger count outside 1..5, is dropped.
-     */
-    void reportGesture(const QString& kind, const QString& direction, uint fingerCount);
-
 Q_SIGNALS:
     // ═══════════════════════════════════════════════════════════════════════════
     // Bridge lifecycle
@@ -173,7 +151,6 @@ Q_SIGNALS:
 
     void bridgeRegistered(const QString& compositorName, const QString& version, const QStringList& capabilities);
     void modifierStateChanged(int modifiers, int mouseButtons);
-    void gestureReported(const QString& kind, const QString& direction, uint fingerCount);
 
 private:
     /// Whether the bus @p context's call arrived on says m_bridgeService has

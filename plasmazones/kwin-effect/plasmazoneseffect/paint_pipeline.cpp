@@ -49,8 +49,6 @@ using ShaderInternal::shaderClockNowMs;
 
 bool PlasmaZonesEffect::blocksDirectScanout() const
 {
-    if (m_shellOverview->active())
-        return true;
     // Crop mode needs the composite path: direct scanout would bypass the
     // per-output cull and expose a column's overhang on the next monitor.
     // Clamp mode commits the clipped geometry and needs no scanout block.
@@ -141,8 +139,6 @@ KWin::RenderDevice* PlasmaZonesEffect::currentPassRenderDevice() const
 
 void PlasmaZonesEffect::prePaintScreen(KWin::ScreenPrePaintData& data)
 {
-    if (m_shellOverview->onOutput(data.screen))
-        data.mask |= PAINT_SCREEN_WITH_TRANSFORMED_WINDOWS;
     // No presentTime is sampled or pushed to a clock here. KWin 6.7 stopped
     // passing one, and CompositorClock now reads steady_clock in now() for
     // every output, so there is nothing per-output to feed. See
@@ -506,11 +502,6 @@ KWinCompat::PaintResult PlasmaZonesEffect::paintScreen(const KWin::RenderTarget&
 bool PlasmaZonesEffect::paintScreenImpl(const KWin::RenderTarget& renderTarget, const KWin::RenderViewport& viewport,
                                         int mask, const KWin::Region& deviceRegion, KWin::LogicalOutput* screen)
 {
-    if (m_shellOverview->onOutput(screen)) {
-        // The overview owns this output's frame, so only the scene walk runs.
-        // Its outcome is still latched for postPaintScreen.
-        return notePaintOk(KWinCompat::paintScreenChecked(renderTarget, viewport, mask, deviceRegion, screen));
-    }
     // GL-current point reached on every pass the effect takes part in,
     // including the transition-owned ones below: textures retired by a strip
     // that went away are deleted here. The clear sites drain too (under a
@@ -1260,11 +1251,6 @@ void PlasmaZonesEffect::postPaintScreen()
 
 void PlasmaZonesEffect::prePaintWindow(KWin::RenderView* view, KWin::EffectWindow* w, KWin::WindowPrePaintData& data)
 {
-    if (m_shellOverview->appliesTo(w)) {
-        data.setTransformed();
-        KWin::effects->prePaintWindow(view, w, data);
-        return;
-    }
     // Derived ONCE. This runs per window, per output, per frame, and the three
     // branches below (padded transform, SetOpacity, chain translucency) each used to
     // re-derive the id and re-look-up the same decoration entry.
@@ -1508,9 +1494,6 @@ bool PlasmaZonesEffect::paintWindowImpl(const KWin::RenderTarget& renderTarget, 
                                         KWin::EffectWindow* w, int mask, const KWin::Region& fullDeviceRegion,
                                         KWin::WindowPaintData& data)
 {
-    if (m_shellOverview->appliesTo(w)) {
-        return notePaintOk(m_shellOverview->paint(renderTarget, viewport, w, mask, fullDeviceRegion, data));
-    }
     // A column on a virtual-screen strip draws inside that virtual screen only.
     // The tab pills take the full region: the painter cuts each band at its strip.
     const KWin::Region deviceRegion = scrollStripPaintRegion(w, viewport, fullDeviceRegion);

@@ -812,9 +812,8 @@ SurfaceFoldPlan PlasmaZonesEffect::planSurfaceFold(KWin::EffectWindow* w, const 
     plan.foldCursor = chainReadsCursor
         ? foldCursorFor(w, state.canvasGeo, decorationMayAnimate(w), m_shaderManager.m_cachedCursorGlobal)
         : kCursorOutside;
-    // The cache key and shader must agree on focus: shell surfaces stay lit,
-    // and Phosphor's last application keeps its identity while a popup is open.
-    const bool focusedNow = decorationFocused(windowId, w, deco);
+    // The cache key and shader must agree on focus: shell surfaces stay lit.
+    const bool focusedNow = decorationFocused(w, deco);
     if (!chainReadsFocus) {
         // Terminate a STRANDED ramp. advanceFocusFade is this map's only
         // advancer, and it is unreachable for a chain with no compiled
