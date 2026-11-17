@@ -3,10 +3,10 @@
 
 /**
  * @file test_compositor_bridge.cpp
- * @brief Unit tests for CompositorBridgeAdaptor and ControlAdaptor.
+ * @brief Unit tests for CompositorBridgeAdaptor and ControlService.
  *
  * CompositorBridgeAdaptor: bridge registration, capabilities, modifier state.
- * ControlAdaptor: API version, capabilities, full state snapshot.
+ * ControlService: API version, capabilities, full state snapshot.
  */
 
 #include <QTest>
@@ -22,8 +22,8 @@
 #include "dbus/compositorbridgeadaptor.h"
 
 #include <PhosphorProtocol/ServiceConstants.h>
-#include "dbus/controladaptor.h"
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/services/controlservice.h"
+#include "runtime/windowtracker/windowtracker.h"
 #include <PhosphorSnapEngine/SnapEngine.h>
 #include <PhosphorZones/LayoutRegistry.h>
 #include <PhosphorSnapEngine/SnapState.h>
@@ -50,7 +50,7 @@ using StubSettingsBridge = StubSettings;
 // Stub PhosphorZones::Zone Detector
 // =========================================================================
 
-// WindowTrackingAdaptor only null-checks the detector and SnapEngine only
+// WindowTracker only null-checks the detector and SnapEngine only
 // stores it, so the shared inert stub covers both. The former local copy
 // answered layout() with nullptr instead of remembering the set layout; no
 // caller in this suite reads it either way.
@@ -73,14 +73,13 @@ private Q_SLOTS:
         m_parent = new QObject(nullptr);
         m_bridgeAdaptor = new CompositorBridgeAdaptor(m_parent);
 
-        // For ControlAdaptor tests we need a WTA + PhosphorZones::LayoutRegistry
+        // For ControlService tests we need a WTA + PhosphorZones::LayoutRegistry
         m_layoutManager = PlasmaZones::TestHelpers::makeLayoutRegistry(QStringLiteral("plasmazones/layouts"));
         m_settings = new StubSettingsBridge(nullptr);
         m_zoneDetector = new StubZoneDetectorBridge(nullptr);
 
         m_wtaParent = new QObject(nullptr);
-        m_wta = new WindowTrackingAdaptor(m_layoutManager, m_zoneDetector, nullptr, m_settings, nullptr, nullptr,
-                                          m_wtaParent);
+        m_wta = new WindowTracker(m_layoutManager, m_zoneDetector, nullptr, m_settings, nullptr, nullptr, m_wtaParent);
 
         m_snapEngine = new SnapEngine(m_layoutManager, m_wta->service(), m_zoneDetector, nullptr, nullptr);
         m_snapEngine->setEngineSettings(m_settings);
@@ -98,8 +97,7 @@ private Q_SLOTS:
         m_layoutManager->setActiveLayout(layout);
 
         m_controlParent = new QObject(nullptr);
-        m_controlAdaptor = new ControlAdaptor(m_wta, nullptr, m_layoutManager, nullptr, nullptr, m_bridgeAdaptor,
-                                              nullptr, nullptr, m_controlParent);
+        m_controlAdaptor = new ControlService(m_wta, nullptr, m_layoutManager, nullptr, m_controlParent);
     }
 
     void cleanup()
@@ -305,7 +303,7 @@ private Q_SLOTS:
     }
 
     // =====================================================================
-    // ControlAdaptor: getFullState
+    // ControlService: getFullState
     // =====================================================================
 
     void testControlGetFullState_returnsValidJson()
@@ -340,10 +338,10 @@ private:
     StubSettingsBridge* m_settings = nullptr;
     StubZoneDetectorBridge* m_zoneDetector = nullptr;
     QObject* m_wtaParent = nullptr;
-    WindowTrackingAdaptor* m_wta = nullptr;
+    WindowTracker* m_wta = nullptr;
     SnapEngine* m_snapEngine = nullptr;
     QObject* m_controlParent = nullptr;
-    ControlAdaptor* m_controlAdaptor = nullptr;
+    ControlService* m_controlAdaptor = nullptr;
 };
 
 QTEST_MAIN(TestCompositorBridge)

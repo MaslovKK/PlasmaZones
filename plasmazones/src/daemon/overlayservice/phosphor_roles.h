@@ -151,7 +151,7 @@ inline const PhosphorLayer::Role SnapAssist =
 /// shell, and this role exists purely as the SurfaceAnimator config
 /// lookup key. Picker keyboard navigation (arrow keys + Return/Enter
 /// + Escape) is routed via KGlobalAccel ad-hoc shortcuts registered
-/// by `WindowDragAdaptor::ensureLayoutPickerNavShortcutsRegistered`
+/// by `DragResolver::ensureLayoutPickerNavShortcutsRegistered`
 /// on show and released on dismiss.
 inline const PhosphorLayer::Role LayoutPicker =
     PhosphorShellPatterns::Modal().withScopePrefix(QStringLiteral("plasmazones-layout-picker"));

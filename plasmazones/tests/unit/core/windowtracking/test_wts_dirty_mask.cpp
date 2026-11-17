@@ -6,7 +6,7 @@
  * @brief PhosphorPlacement::WindowTrackingService::DirtyMask invariants (Phase 3).
  *
  * Pins the contract between WTS mutators and the delta-persistence path
- * in WindowTrackingAdaptor::saveState():
+ * in WindowTracker::saveState():
  *
  *  1. PhosphorZones::Zone-assignment mutations set DirtyZoneAssignments (+ DirtyLastUsedZone
  *     when the last-used-zone tracking is cleared as a side effect).

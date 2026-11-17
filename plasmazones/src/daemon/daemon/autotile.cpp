@@ -3,7 +3,7 @@
 
 #include "daemon/daemon.h"
 #include "daemon/overlayservice.h"
-#include "dbus/tilingadaptor/tilingadaptor.h"
+#include "runtime/services/tilingservice/tilingservice.h"
 #include "daemon/controllers/unifiedlayoutcontroller.h"
 #include <PhosphorZones/LayoutRegistry.h>
 #include <PhosphorZones/LayoutComputeService.h>
@@ -17,11 +17,11 @@
 #include <PhosphorPlacement/WindowTrackingService.h>
 #include <PhosphorContext/ContextResolver.h>
 #include "config/settings.h"
-#include "dbus/layoutadaptor/layoutadaptor.h"
-#include "dbus/snapadaptor/snapadaptor.h"
-#include "dbus/windowdragadaptor/windowdragadaptor.h"
-#include "dbus/windowtrackingadaptor/internal.h"
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/services/layoutservice/layoutservice.h"
+#include "runtime/services/snapservice/snapservice.h"
+#include "runtime/dragresolver/dragresolver.h"
+#include "runtime/windowtracker/internal.h"
+#include "runtime/windowtracker/windowtracker.h"
 #include <PhosphorEngine/PlacementEngineBase.h>
 #include <PhosphorEngine/IPlacementEngine.h>
 #include <PhosphorEngine/WindowPlacement.h>
@@ -396,10 +396,10 @@ void Daemon::updateEngineScreens()
     // EDID id of one output, never a virtual-screen id with its physical
     // output. A wrong or stale id degrades harmlessly: the engine drops a seed
     // naming a window its strip does not contain, and drains it either way.
-    if (m_windowTrackingAdaptor && m_scrollEngine) {
-        const QString focusedId = m_windowTrackingAdaptor->lastActiveWindowId();
+    if (m_windowTracker && m_scrollEngine) {
+        const QString focusedId = m_windowTracker->lastActiveWindowId();
         if (!focusedId.isEmpty()) {
-            const QString focusedScreen = m_windowTrackingAdaptor->lastActiveScreenName();
+            const QString focusedScreen = m_windowTracker->lastActiveScreenName();
             const QSet<QString> autotileActive = m_autotileEngine->activeScreens();
             const QSet<QString> scrollActive = m_scrollEngine->activeScreens();
             for (const QString& screenId : scrollingScreens) {
@@ -652,7 +652,7 @@ void Daemon::updateEngineScreens()
     // zones (found the hard way).
     emitPendingSnapFloatRestoresForResnapBuffer(/*preserveZoneEntries=*/true);
     // A desktop just given the tiling opt-out drops the floats snap held there (autotile_none_float_owner).
-    WindowTrackingInternal::dropOptOutFloats(m_windowTrackingAdaptor);
+    WindowTrackingInternal::dropOptOutFloats(m_windowTracker);
 
     // Push the per-screen RULES-VISIBLE active layout map to the effect so
     // window-domain (appearance/animation) rules can match Field::ActiveLayout
@@ -662,14 +662,14 @@ void Daemon::updateEngineScreens()
     // sets-unchanged short-circuit: a desktop switch changes the map while
     // both engines' screen sets stay identical. The adaptor owns the
     // emit-on-change dedup, so the unconditional push costs one map compare.
-    if (m_tilingAdaptor) {
+    if (m_tilingService) {
         QVariantMap activeLayouts;
         for (const QString& screenId : effectiveIds) {
             activeLayouts.insert(
                 screenId,
                 m_layoutManager->rulesVisibleActiveLayoutId(screenId, currentDesktopForScreen(screenId), activity));
         }
-        m_tilingAdaptor->setActiveLayouts(activeLayouts);
+        m_tilingService->setActiveLayouts(activeLayouts);
     }
 }
 
@@ -728,20 +728,20 @@ QSet<QString> Daemon::diffActiveAssignments()
         return snapGapVerdict(screenId);
     });
     // A context that just became the tiling opt-out frees its snapped windows in place (autotile_none_float_owner).
-    WindowTrackingInternal::releaseOptOutZones(m_windowTrackingAdaptor, changed);
+    WindowTrackingInternal::releaseOptOutZones(m_windowTracker, changed);
     // Mirror the fresh snapshot onto the bus-facing adaptor and broadcast the
     // screens that moved. This is the ONE resolution of "which layout is active
     // on which screen" in the daemon, and every edge that can move that value
     // already routes through here, so publishing from this spot is what keeps a
     // remote ActiveLayout matcher (the KWin effect's window-rule queries) from
     // needing to re-derive the cascade itself.
-    if (m_layoutAdaptor) {
+    if (m_layoutService) {
         QHash<QString, QString> activeIds;
         activeIds.reserve(m_activeAssignmentByScreen.size());
         for (auto it = m_activeAssignmentByScreen.constBegin(); it != m_activeAssignmentByScreen.constEnd(); ++it) {
             activeIds.insert(it.key(), it.value().assignmentId);
         }
-        m_layoutAdaptor->publishActiveAssignments(activeIds, changed);
+        m_layoutService->publishActiveAssignments(activeIds, changed);
         // Every edge that moves a getScreenStates field other than the tiled
         // count (a desktop or activity switch, a screen add or removal, an
         // assignment apply, a rule reconcile) ends in a diff here, including
@@ -750,7 +750,7 @@ QSet<QString> Daemon::diffActiveAssignments()
         // queues its own (init_engines.cpp). Not once stop() has begun,
         // which cancels a queued one.
         if (!m_shuttingDown) {
-            m_layoutAdaptor->scheduleScreenStatesCheck();
+            m_layoutService->scheduleScreenStatesCheck();
         }
     }
     return changed;
@@ -836,7 +836,7 @@ void Daemon::restateSnapGapChanges(const QSet<QString>& alreadyPlaced)
 {
     // Nothing is recorded when nothing can restate: the move stays in the
     // tracker for the next pass instead of being taken and lost.
-    if (!m_snapAdaptor || !m_screenManager || !m_layoutManager || m_shuttingDown) {
+    if (!m_snapService || !m_screenManager || !m_layoutManager || m_shuttingDown) {
         return;
     }
     const QStringList moved =
@@ -856,7 +856,7 @@ void Daemon::restateSnapGapChanges(const QSet<QString>& alreadyPlaced)
     // A re-statement batch like the settings gap path (m_gapResnapTimer): no OSD,
     // no Snap Assist. reapplySnapZones keeps it to the screens snapping runs on,
     // so a tiled screen's frozen snap zones are left as memory (F469).
-    m_snapAdaptor->reapplySnapZones(toRestate, /*restatement=*/true);
+    m_snapService->reapplySnapZones(toRestate, /*restatement=*/true);
 }
 
 SnapGapTracker::Verdict Daemon::snapGapVerdict(const QString& screenId) const
@@ -877,10 +877,10 @@ SnapGapTracker::Verdict Daemon::snapGapVerdict(const QString& screenId) const
 
 void Daemon::applyChangedAssignments(const QSet<QString>& changed)
 {
-    if (changed.isEmpty() || !m_layoutAdaptor) {
+    if (changed.isEmpty() || !m_layoutService) {
         return;
     }
-    m_layoutAdaptor->applyAssignmentChangesFor(changed);
+    m_layoutService->applyAssignmentChangesFor(changed);
     // The apply resnaps and announces, but the controller's current layout,
     // the global active layout and the layout filter still describe the old
     // verdict, so the cycle shortcut, zone detection and an open cheatsheet's
@@ -959,7 +959,7 @@ void Daemon::scheduleReconcileActiveAssignments()
         // A trigger landing in the same event-loop turn as stop() leaves this
         // single-shot queued past teardown; without the gate a non-empty diff
         // would drive a full assignment-apply pass on a stopped daemon
-        // (m_layoutAdaptor is Qt-parented and outlives the per-sender
+        // (m_layoutService is Qt-parented and outlives the per-sender
         // connection sweep).
         if (m_shuttingDown) {
             return;
@@ -1295,13 +1295,13 @@ QVector<ZoneAssignmentEntry> Daemon::buildAutotileRestoreEntries(const QSet<QStr
                                                                  const QString& activity, const QString& onlyScreenId)
 {
     QVector<ZoneAssignmentEntry> entries;
-    if (!m_windowTrackingAdaptor || m_lastEngineOrders.isEmpty()) {
+    if (!m_windowTracker || m_lastEngineOrders.isEmpty()) {
         return entries;
     }
     // No null-check on service(): the adaptor constructs and owns its service
     // (never null once the adaptor exists) — the sibling callers in this file
     // rely on the same invariant.
-    PhosphorPlacement::WindowTrackingService* wts = m_windowTrackingAdaptor->service();
+    PhosphorPlacement::WindowTrackingService* wts = m_windowTracker->service();
     for (auto it = m_lastEngineOrders.constBegin(); it != m_lastEngineOrders.constEnd(); ++it) {
         // Independent scopes: the activity compare must not hide behind the
         // desktop sentinel, or a desktop-unscoped caller (the master-switch
@@ -1382,10 +1382,10 @@ void Daemon::presaveSnapFloats(const QString& screenId)
     // Reachable from `Settings::settingsChanged` (init_services.cpp) before the
     // engines exist — any synchronous re-entry into settingsChanged during the
     // D-Bus retry loop in init() would hit this path with null engine pointers.
-    if (!m_windowTrackingAdaptor || !m_windowTrackingAdaptor->service() || !m_autotileEngine || !m_snapEngine) {
+    if (!m_windowTracker || !m_windowTracker->service() || !m_autotileEngine || !m_snapEngine) {
         return;
     }
-    PhosphorPlacement::WindowTrackingService* wts = m_windowTrackingAdaptor->service();
+    PhosphorPlacement::WindowTrackingService* wts = m_windowTracker->service();
     // EVERY open window, not only the explicitly-floated set. A free window in
     // snapping mode (never snapped, never floated) has no live state anywhere,
     // and its CURRENT frame at the flip instant is the only correct restore
@@ -1395,7 +1395,7 @@ void Daemon::presaveSnapFloats(const QString& screenId)
     // slot-state gate keeps this safe for the rest of the sweep: snapped and
     // engine-tiled windows refresh their slots without any geometry write, and
     // minimized windows take its preserve path.
-    const QStringList allIds = m_windowTrackingAdaptor->knownWindowIds();
+    const QStringList allIds = m_windowTracker->knownWindowIds();
     for (const QString& fid : allIds) {
         // A window floated BY a tiling mode (either engine) is that mode's
         // own float, not a snap float: capturing it here would poison the
@@ -1416,14 +1416,14 @@ void Daemon::presaveSnapFloats(const QString& screenId)
                 continue;
             }
         }
-        m_windowTrackingAdaptor->captureWindowPlacement(fid);
+        m_windowTracker->captureWindowPlacement(fid);
         qCDebug(lcDaemon) << "Captured snap-float to record for" << fid << "screen=" << screenId;
     }
 }
 
 void Daemon::seedAutotileOrderForScreen(const QString& screenId)
 {
-    if (!m_autotileEngine || !m_windowTrackingAdaptor) {
+    if (!m_autotileEngine || !m_windowTracker) {
         return;
     }
 
@@ -1432,7 +1432,7 @@ void Daemon::seedAutotileOrderForScreen(const QString& screenId)
     // activation, or windows changed between toggles).
     TilingStateKey orderKey{screenId, currentDesktopForScreen(screenId), currentActivity()};
     QStringList order = m_lastEngineOrders.value(orderKey);
-    PhosphorPlacement::WindowTrackingService* wts = m_windowTrackingAdaptor->service();
+    PhosphorPlacement::WindowTrackingService* wts = m_windowTracker->service();
     if (!wts) {
         // Fail CLOSED: without the WTS the seed filter cannot drop live user
         // floats or durable snap-slot floats, and seeding a saved order
@@ -1519,7 +1519,7 @@ void Daemon::processPendingGeometryUpdates()
     // cap, and it is invalidated only by a pass that finds no session. A
     // real drag begun while the flag is still stranded is therefore not held
     // either, until a pass sees the flag clear.
-    if (m_windowDragAdaptor && m_windowDragAdaptor->isDragSessionActive()) {
+    if (m_dragResolver && m_dragResolver->isDragSessionActive()) {
         if (!m_geometryDeferralClock.isValid()) {
             m_geometryDeferralClock.start();
             m_geometryDeferralCapLogged = false;

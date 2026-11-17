@@ -28,8 +28,8 @@
 #include "helpers/AutotileTestHelpers.h"
 #include <PhosphorScreens/Manager.h>
 #include <PhosphorWorkspaces/VirtualDesktopManager.h>
-#include "dbus/tilingadaptor/tilingadaptor.h"
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/services/tilingservice/tilingservice.h"
+#include "runtime/windowtracker/windowtracker.h"
 #include "helpers/IsolatedConfigGuard.h"
 #include "helpers/LayoutRegistryTestHelpers.h"
 #include "helpers/StubSettings.h"
@@ -245,7 +245,7 @@ private Q_SLOTS:
         PhosphorScreens::ScreenManager mgr;
         RecordingEngine engine;
         QObject adaptorParent;
-        TilingAdaptor adaptor(&mgr, &adaptorParent);
+        TilingService adaptor(&mgr, &adaptorParent);
         adaptor.setLifecycleEngines({&engine});
         QVERIFY2(!mgr.isPanelGeometryReady(), "the gate must start closed, or nothing defers");
 
@@ -283,7 +283,7 @@ private Q_SLOTS:
         PhosphorScreens::ScreenManager mgr;
         RecordingEngine gatedEngine;
         QObject adaptorParent;
-        TilingAdaptor gated(&mgr, &adaptorParent);
+        TilingService gated(&mgr, &adaptorParent);
         gated.setLifecycleEngines({&gatedEngine});
         gated.windowOpened(QStringLiteral("open|q"), QStringLiteral("HDMI-1"), 0, 0);
         gated.windowReannounced(QStringLiteral("re|q"), QStringLiteral("HDMI-1"), 0, 0);
@@ -296,7 +296,7 @@ private Q_SLOTS:
 
         // Immediate: a null screen manager never engages the gate.
         RecordingEngine engine;
-        TilingAdaptor adaptor(nullptr, &adaptorParent);
+        TilingService adaptor(nullptr, &adaptorParent);
         adaptor.setLifecycleEngines({&engine});
         adaptor.windowOpened(QStringLiteral("open|i"), QStringLiteral("HDMI-1"), 0, 0);
         adaptor.windowReannounced(QStringLiteral("re|i"), QStringLiteral("HDMI-1"), 0, 0);
@@ -318,7 +318,7 @@ private Q_SLOTS:
         RecordingEngine autotile;
         RecordingEngine scroll;
         QObject adaptorParent;
-        TilingAdaptor adaptor(nullptr, &adaptorParent);
+        TilingService adaptor(nullptr, &adaptorParent);
         adaptor.setLifecycleEngines({&autotile, &scroll});
 
         const QString closing = QStringLiteral("app|close");
@@ -358,8 +358,7 @@ private Q_SLOTS:
         QObject parent;
         StubSettings settings(nullptr);
         StubZoneDetector zoneDetector(nullptr);
-        auto* wta =
-            new WindowTrackingAdaptor(layoutManager, &zoneDetector, nullptr, &settings, nullptr, nullptr, &parent);
+        auto* wta = new WindowTracker(layoutManager, &zoneDetector, nullptr, &settings, nullptr, nullptr, &parent);
         RecordingEngine engine;
         // The engine floats every window it tracks; the set stands in for a
         // float another engine holds.
@@ -374,10 +373,10 @@ private Q_SLOTS:
             wta->service()->setEngineFloatResolver({});
         });
         QObject adaptorParent;
-        TilingAdaptor adaptor(nullptr, &adaptorParent);
+        TilingService adaptor(nullptr, &adaptorParent);
         adaptor.setLifecycleEngines({&engine});
         adaptor.setWindowTrackingAdaptor(wta);
-        QSignalSpy spy(wta, &WindowTrackingAdaptor::windowFloatingChanged);
+        QSignalSpy spy(wta, &WindowTracker::windowFloatingChanged);
         QVERIFY(spy.isValid());
 
         const QString ended = QStringLiteral("app|minimized");
@@ -413,7 +412,7 @@ private Q_SLOTS:
         // Null screen manager: the panel gate never engages, so every open
         // dispatches synchronously and the assertions read dispatch order
         // directly rather than through a flush.
-        TilingAdaptor adaptor(nullptr, &adaptorParent);
+        TilingService adaptor(nullptr, &adaptorParent);
         adaptor.setLifecycleEngines({&engine});
 
         adaptor.windowOpened(QStringLiteral("kate|a"), QStringLiteral("HDMI-1"), 0, 0);
@@ -448,7 +447,7 @@ private Q_SLOTS:
         PhosphorScreens::ScreenManager mgr;
         RecordingEngine engine;
         QObject adaptorParent;
-        TilingAdaptor adaptor(&mgr, &adaptorParent);
+        TilingService adaptor(&mgr, &adaptorParent);
         adaptor.setLifecycleEngines({&engine});
         QVERIFY2(!mgr.isPanelGeometryReady(), "the gate must start closed, or nothing defers");
 
@@ -493,7 +492,7 @@ private Q_SLOTS:
         AutotileEngine engine(nullptr, nullptr, nullptr, PlasmaZones::TestHelpers::testRegistry());
         engine.setAutotileScreens({QStringLiteral("HDMI-1")});
         QObject adaptorParent;
-        TilingAdaptor adaptor(&mgr, &adaptorParent);
+        TilingService adaptor(&mgr, &adaptorParent);
         adaptor.setLifecycleEngines({&engine});
         QVERIFY2(!mgr.isPanelGeometryReady(), "the gate must start closed, or nothing defers");
 
@@ -532,7 +531,7 @@ private Q_SLOTS:
         AutotileEngine engine(nullptr, nullptr, nullptr, PlasmaZones::TestHelpers::testRegistry());
         engine.setAutotileScreens({QStringLiteral("HDMI-1")});
         QObject adaptorParent;
-        TilingAdaptor adaptor(nullptr, &adaptorParent);
+        TilingService adaptor(nullptr, &adaptorParent);
         adaptor.setLifecycleEngines({&engine});
 
         adaptor.windowOpened(QStringLiteral("app|now"), QStringLiteral("HDMI-1"), 0, 0);
@@ -551,7 +550,7 @@ private Q_SLOTS:
     {
         AutotileEngine engine(nullptr, nullptr, nullptr, PlasmaZones::TestHelpers::testRegistry());
         QObject adaptorParent;
-        TilingAdaptor adaptor(nullptr, &adaptorParent);
+        TilingService adaptor(nullptr, &adaptorParent);
         adaptor.setLifecycleEngines({&engine});
 
         adaptor.windowOpened(QStringLiteral("kitty|uuid-1"), QStringLiteral("HDMI-1"), 0, 0);
@@ -571,7 +570,7 @@ private Q_SLOTS:
     {
         AutotileEngine engine(nullptr, nullptr, nullptr, PlasmaZones::TestHelpers::testRegistry());
         QObject adaptorParent;
-        TilingAdaptor adaptor(nullptr, &adaptorParent);
+        TilingService adaptor(nullptr, &adaptorParent);
         adaptor.setLifecycleEngines({&engine});
 
         // Arm the coalesced announce (the flip marker), then deliver opens
@@ -607,10 +606,10 @@ private Q_SLOTS:
         AutotileEngine engine(nullptr, nullptr, nullptr, PlasmaZones::TestHelpers::testRegistry());
         engine.setAutotileScreens({QStringLiteral("HDMI-2"), QStringLiteral("HDMI-1")});
         QObject adaptorParent;
-        TilingAdaptor adaptor(nullptr, &adaptorParent);
+        TilingService adaptor(nullptr, &adaptorParent);
         adaptor.setLifecycleEngines({&engine});
 
-        QSignalSpy spy(&adaptor, &TilingAdaptor::managedScreensChanged);
+        QSignalSpy spy(&adaptor, &TilingService::managedScreensChanged);
         adaptor.notifyEngineScreensChanged(false);
         adaptor.notifyEngineScreensChanged(true);
         adaptor.notifyEngineScreensChanged(false);
@@ -640,17 +639,17 @@ private Q_SLOTS:
         QObject parent;
         StubSettings settings(nullptr);
         StubZoneDetector zoneDetector(nullptr);
-        auto* wta = new WindowTrackingAdaptor(layoutManager, &zoneDetector, nullptr, &settings, &vdm, nullptr, &parent);
+        auto* wta = new WindowTracker(layoutManager, &zoneDetector, nullptr, &settings, &vdm, nullptr, &parent);
         AutotileEngine engine(nullptr, nullptr, nullptr, PlasmaZones::TestHelpers::testRegistry());
         engine.setAutotileScreens({QStringLiteral("HDMI-1")});
         QObject adaptorParent;
-        TilingAdaptor adaptor(nullptr, &adaptorParent);
+        TilingService adaptor(nullptr, &adaptorParent);
         adaptor.setLifecycleEngines({&engine});
         adaptor.setWindowTrackingAdaptor(wta);
         const auto unwire = qScopeGuard([&adaptor] {
             adaptor.setWindowTrackingAdaptor(nullptr);
         });
-        QSignalSpy spy(&adaptor, &TilingAdaptor::managedScreensChanged);
+        QSignalSpy spy(&adaptor, &TilingService::managedScreensChanged);
 
         adaptor.notifyEngineScreensChanged(true);
         QCoreApplication::processEvents();
@@ -690,7 +689,7 @@ private Q_SLOTS:
     {
         AutotileEngine engine(nullptr, nullptr, nullptr, PlasmaZones::TestHelpers::testRegistry());
         QObject adaptorParent;
-        TilingAdaptor adaptor(nullptr, &adaptorParent);
+        TilingService adaptor(nullptr, &adaptorParent);
         adaptor.setLifecycleEngines({&engine});
 
         adaptor.notifyEngineScreensChanged(false);
@@ -713,7 +712,7 @@ private Q_SLOTS:
         // its destructive per-window teardown. Spy attached BEFORE the
         // clear so even a synchronous flush inside clearEngine would be
         // caught.
-        QSignalSpy postClearSpy(&adaptor, &TilingAdaptor::managedScreensChanged);
+        QSignalSpy postClearSpy(&adaptor, &TilingService::managedScreensChanged);
         adaptor.clearEngine();
         QCOMPARE(adaptor.pendingUnclaimedOpensCount(), 0);
         QCoreApplication::processEvents();
@@ -731,7 +730,7 @@ private Q_SLOTS:
 
         AutotileEngine engine(nullptr, nullptr, nullptr, PlasmaZones::TestHelpers::testRegistry());
         QObject adaptorParent;
-        TilingAdaptor adaptor(&mgr, &adaptorParent);
+        TilingService adaptor(&mgr, &adaptorParent);
         adaptor.setLifecycleEngines({&engine});
 
         // Single-open path: queues.
@@ -767,7 +766,7 @@ private Q_SLOTS:
 
         AutotileEngine engine(nullptr, nullptr, nullptr, PlasmaZones::TestHelpers::testRegistry());
         QObject adaptorParent;
-        TilingAdaptor adaptor(&mgr, &adaptorParent);
+        TilingService adaptor(&mgr, &adaptorParent);
         adaptor.setLifecycleEngines({&engine});
 
         adaptor.windowOpened(QString(), QStringLiteral("HDMI-1"), 0, 0);
@@ -795,7 +794,7 @@ private Q_SLOTS:
 
         AutotileEngine engine(nullptr, nullptr, nullptr, PlasmaZones::TestHelpers::testRegistry());
         QObject adaptorParent;
-        TilingAdaptor adaptor(&mgr, &adaptorParent);
+        TilingService adaptor(&mgr, &adaptorParent);
         adaptor.setLifecycleEngines({&engine});
 
         PhosphorProtocol::WindowOpenedList batch;
@@ -838,7 +837,7 @@ private Q_SLOTS:
 
         AutotileEngine engine(nullptr, nullptr, nullptr, PlasmaZones::TestHelpers::testRegistry());
         QObject adaptorParent;
-        TilingAdaptor adaptor(&mgr, &adaptorParent);
+        TilingService adaptor(&mgr, &adaptorParent);
         adaptor.setLifecycleEngines({&engine});
 
         adaptor.windowOpened(QStringLiteral("a|1"), QStringLiteral("HDMI-1"), 0, 0);
@@ -871,7 +870,7 @@ private Q_SLOTS:
         second.setAutotileScreens({QStringLiteral("HDMI-2")});
 
         QObject adaptorParent;
-        TilingAdaptor adaptor(nullptr, &adaptorParent);
+        TilingService adaptor(nullptr, &adaptorParent);
         adaptor.setLifecycleEngines({&first, &second});
 
         // A screen only the SECOND engine claims. Dispatching to the first
@@ -893,7 +892,7 @@ private Q_SLOTS:
 
         // managedScreens is the UNION, sorted — a single-engine list could
         // never show the difference between a union and a passthrough.
-        QSignalSpy spy(&adaptor, &TilingAdaptor::managedScreensChanged);
+        QSignalSpy spy(&adaptor, &TilingService::managedScreensChanged);
         adaptor.notifyEngineScreensChanged(false);
         QCoreApplication::processEvents();
         QCOMPARE(spy.count(), 1);
@@ -911,8 +910,8 @@ private Q_SLOTS:
     {
         PhosphorProtocol::registerWireTypes();
         QObject adaptorParent;
-        TilingAdaptor adaptor(nullptr, &adaptorParent);
-        QSignalSpy spy(&adaptor, &TilingAdaptor::windowsTileRequested);
+        TilingService adaptor(nullptr, &adaptorParent);
+        QSignalSpy spy(&adaptor, &TilingService::windowsTileRequested);
 
         // The two validator drops below (c|3 illegal edge, d|4 flag on
         // floating) warn by design at this boundary — expected output, not
@@ -1025,17 +1024,17 @@ private Q_SLOTS:
         AutotileEngine engine(nullptr, nullptr, nullptr, PlasmaZones::TestHelpers::testRegistry());
         engine.setAutotileScreens({QStringLiteral("HDMI-1")});
         QObject adaptorParent;
-        TilingAdaptor adaptor(nullptr, &adaptorParent);
+        TilingService adaptor(nullptr, &adaptorParent);
         adaptor.setLifecycleEngines({&engine});
 
         // One recorder for BOTH signals: a pair of spies can count but not
         // order, and order is the whole property.
         QStringList wire;
-        connect(&adaptor, &TilingAdaptor::managedScreensChanged, &adaptorParent,
+        connect(&adaptor, &TilingService::managedScreensChanged, &adaptorParent,
                 [&wire](const QStringList&, bool, const QVariantMap&) {
                     wire.append(QStringLiteral("announce"));
                 });
-        connect(&adaptor, &TilingAdaptor::windowsTileRequested, &adaptorParent,
+        connect(&adaptor, &TilingService::windowsTileRequested, &adaptorParent,
                 [&wire](const PhosphorProtocol::TileRequestList& requests) {
                     wire.append(QStringLiteral("batch:") + requests.first().windowId);
                 });
@@ -1091,15 +1090,15 @@ private Q_SLOTS:
         PhosphorProtocol::registerWireTypes();
         RecordingEngine engine;
         QObject adaptorParent;
-        TilingAdaptor adaptor(nullptr, &adaptorParent);
+        TilingService adaptor(nullptr, &adaptorParent);
         adaptor.setLifecycleEngines({&engine});
 
         QStringList wire;
-        connect(&adaptor, &TilingAdaptor::managedScreensChanged, &adaptorParent,
+        connect(&adaptor, &TilingService::managedScreensChanged, &adaptorParent,
                 [&wire](const QStringList&, bool, const QVariantMap&) {
                     wire.append(QStringLiteral("announce"));
                 });
-        connect(&adaptor, &TilingAdaptor::windowsTileRequested, &adaptorParent,
+        connect(&adaptor, &TilingService::windowsTileRequested, &adaptorParent,
                 [&wire](const PhosphorProtocol::TileRequestList& requests) {
                     wire.append(QStringLiteral("batch:") + requests.first().windowId);
                 });

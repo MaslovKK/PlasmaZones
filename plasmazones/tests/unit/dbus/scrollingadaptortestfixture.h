@@ -3,7 +3,7 @@
 
 #pragma once
 
-// The ScrollingAdaptor test fixture, shared by test_scrolling_adaptor (the
+// The ScrollingService test fixture, shared by test_scrolling_adaptor (the
 // read-side surface: strip snapshots, screen set, relays, teardown) and
 // test_scrolling_adaptor_verbs (the wire verbs: the wheel pair and the
 // absolute setters). One engine with headless geometry providers, one
@@ -14,7 +14,8 @@
 #include <PhosphorEngine/PlacementEngineBase.h>
 #include <PhosphorScrollEngine/ScrollEngine.h>
 
-#include "dbus/scrollingadaptor/scrollingadaptor.h"
+#include "runtime/services/scrollingservice/scrollingservice.h"
+#include "dbus/scrollingadaptor.h"
 
 #include <QObject>
 #include <QRect>
@@ -70,7 +71,8 @@ protected:
                              m_engine->windowFocused(windowId, m_engine->screenForTrackedWindow(windowId));
                          });
         m_parent = new QObject(nullptr);
-        m_adaptor = new ScrollingAdaptor(m_engine, m_parent);
+        m_adaptor = new ScrollingService(m_engine, m_parent);
+        m_binding = new ScrollingAdaptor(m_adaptor, m_parent);
         // The adaptor fails CLOSED without a context gate, so the fixture
         // installs an open one the way the daemon installs its real one in
         // the same pass that creates the adaptor. The two gate tests swap in
@@ -90,13 +92,15 @@ protected:
         delete m_parent;
         m_parent = nullptr;
         m_adaptor = nullptr;
+        m_binding = nullptr;
         delete m_engine;
         m_engine = nullptr;
     }
 
     PhosphorScrollEngine::ScrollEngine* m_engine = nullptr;
     QObject* m_parent = nullptr;
-    ScrollingAdaptor* m_adaptor = nullptr;
+    ScrollingService* m_adaptor = nullptr;
+    ScrollingAdaptor* m_binding = nullptr; // m_parent-owned; the bus surface a wire test exports
 };
 
 } // namespace PlasmaZones

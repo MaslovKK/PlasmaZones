@@ -15,10 +15,10 @@
 #include "daemon/controllers/unifiedlayoutcontroller.h"
 #include "daemon/daemon/helpers.h"
 #include "daemon/overlayservice.h"
-#include "dbus/layoutadaptor/layoutadaptor.h"
-#include "dbus/settingsadaptor/settingsadaptor.h"
-#include "dbus/windowdragadaptor/windowdragadaptor.h"
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/services/layoutservice/layoutservice.h"
+#include "runtime/services/settingsservice/settingsservice.h"
+#include "runtime/dragresolver/dragresolver.h"
+#include "runtime/windowtracker/windowtracker.h"
 #include "core/types/constants.h"
 #include <PhosphorContext/ContextResolver.h>
 #include <PhosphorZones/LayoutRegistry.h>
@@ -70,16 +70,16 @@ void Daemon::connectShortcutSignals()
     connect(m_shortcutManager.get(), &ShortcutManager::openEditorRequested, this, [this]() {
         // Screen-targeted (edits a screen's layout) — resolve cursor-first.
         // See layoutPickerRequested below for the rationale.
-        QString screenId = resolveCursorScreenId(m_screenManager.get(), m_windowTrackingAdaptor);
+        QString screenId = resolveCursorScreenId(m_screenManager.get(), m_windowTracker);
         if (screenId.isEmpty() && m_unifiedLayoutController) {
             screenId = m_unifiedLayoutController->currentScreenName();
         }
         if (!screenId.isEmpty()) {
             // Pass the effective screen ID directly — the editor handles both
             // physical and virtual screen IDs (VS-aware since v2.9).
-            m_layoutAdaptor->openEditorForScreen(screenId);
+            m_layoutService->openEditorForScreen(screenId);
         } else {
-            m_layoutAdaptor->openEditor();
+            m_layoutService->openEditor();
         }
     });
     // Quick layout shortcuts (Meta+Alt+1-9). Quick slots are per slot ARRAY:
@@ -94,7 +94,7 @@ void Daemon::connectShortcutSignals()
         }
         // Screen-targeted (applies a layout to a screen) — resolve
         // cursor-first. See layoutPickerRequested below for the rationale.
-        const QString screenId = resolveCursorScreenId(m_screenManager.get(), m_windowTrackingAdaptor);
+        const QString screenId = resolveCursorScreenId(m_screenManager.get(), m_windowTracker);
         if (screenId.isEmpty()) {
             qCDebug(lcDaemon) << "QuickLayout shortcut: no screen info";
             return;
@@ -164,7 +164,7 @@ void Daemon::connectShortcutSignals()
         }
         // Screen-targeted (cycles a screen's layout) — resolve cursor-first.
         // See layoutPickerRequested below for the rationale.
-        const QString screenId = resolveCursorScreenId(m_screenManager.get(), m_windowTrackingAdaptor);
+        const QString screenId = resolveCursorScreenId(m_screenManager.get(), m_windowTracker);
         if (screenId.isEmpty()) {
             qCDebug(lcDaemon) << "PreviousLayout shortcut: no screen info";
             return;
@@ -183,7 +183,7 @@ void Daemon::connectShortcutSignals()
         }
         // Screen-targeted (cycles a screen's layout) — resolve cursor-first.
         // See layoutPickerRequested below for the rationale.
-        const QString screenId = resolveCursorScreenId(m_screenManager.get(), m_windowTrackingAdaptor);
+        const QString screenId = resolveCursorScreenId(m_screenManager.get(), m_windowTracker);
         if (screenId.isEmpty()) {
             qCDebug(lcDaemon) << "NextLayout shortcut: no screen info";
             return;
@@ -274,7 +274,7 @@ void Daemon::connectShortcutSignals()
         // screen when the cursor rests on a different VS than the focused
         // window (e.g. just dropped a window on vs:1 while the focused
         // window is still on vs:0).
-        const QString screenId = resolveCursorScreenId(m_screenManager.get(), m_windowTrackingAdaptor);
+        const QString screenId = resolveCursorScreenId(m_screenManager.get(), m_windowTracker);
         if (screenId.isEmpty()) {
             qCDebug(lcDaemon) << "LayoutPicker shortcut: no screen info";
             return;
@@ -363,8 +363,8 @@ void Daemon::connectShortcutSignals()
         // next successful open+dismiss or a compositor reconnect. Re-press of an
         // already-visible picker is fine: isLayoutPickerVisible() is true and
         // registration is idempotent.
-        if (m_windowDragAdaptor && m_overlayService->isLayoutPickerVisible()) {
-            m_windowDragAdaptor->ensureCancelOverlayShortcutRegistered();
+        if (m_dragResolver && m_overlayService->isLayoutPickerVisible()) {
+            m_dragResolver->ensureCancelOverlayShortcutRegistered();
             // Picker navigation accels — registered while picker is
             // shown, dropped on dismiss. The unified PassiveOverlayShell
             // is kbd-None so the QML Shortcuts in LayoutPickerContent
@@ -372,7 +372,7 @@ void Daemon::connectShortcutSignals()
             // Lambdas capture the long-lived OverlayService — outlives
             // the registration window.
             auto* svc = m_overlayService.get();
-            m_windowDragAdaptor->ensureLayoutPickerNavShortcutsRegistered(
+            m_dragResolver->ensureLayoutPickerNavShortcutsRegistered(
                 [svc](int dx, int dy) {
                     svc->pickerMoveSelection(dx, dy);
                 },
@@ -386,9 +386,9 @@ void Daemon::connectShortcutSignals()
     // Escape no longer exists), so we register the global Escape
     // accelerator on every snap-assist show — cancelSnap() routes
     // Escape to hideSnapAssist() via the existing
-    // isSnapAssistVisible() branch in WindowDragAdaptor::cancelSnap.
+    // isSnapAssistVisible() branch in DragResolver::cancelSnap.
     // The matching unregister fires on snapAssistDismissed via
-    // WindowDragAdaptor::onSnapAssistDismissed.
+    // DragResolver::onSnapAssistDismissed.
     connect(m_overlayService.get(), &IOverlayService::snapAssistShown, this,
             [this](const QString&, const PhosphorProtocol::EmptyZoneList&,
                    const PhosphorProtocol::SnapAssistCandidateList&) {
@@ -397,8 +397,8 @@ void Daemon::connectShortcutSignals()
                 // cancel-overlay grab registers, or Escape stays routed to a
                 // dismissed sheet.
                 m_overlayService->hideCheatsheet();
-                if (m_windowDragAdaptor) {
-                    m_windowDragAdaptor->ensureCancelOverlayShortcutRegistered();
+                if (m_dragResolver) {
+                    m_dragResolver->ensureCancelOverlayShortcutRegistered();
                 }
             });
 
@@ -433,9 +433,9 @@ void Daemon::connectShortcutSignals()
         // canonical cross-consumer guard (the picker is already hidden by the
         // time this fires). The 6 picker-nav grabs are picker-only, so always
         // drop them.
-        if (m_windowDragAdaptor) {
-            m_windowDragAdaptor->releaseCancelOverlayShortcutIfIdle();
-            m_windowDragAdaptor->releaseLayoutPickerNavShortcuts();
+        if (m_dragResolver) {
+            m_dragResolver->releaseCancelOverlayShortcutIfIdle();
+            m_dragResolver->releaseLayoutPickerNavShortcuts();
         }
     });
     connect(m_overlayService.get(), &OverlayService::layoutPickerSelected, this,
@@ -500,7 +500,7 @@ void Daemon::connectShortcutSignals()
     connect(m_shortcutManager.get(), &ShortcutManager::toggleLayoutLockRequested, this, [this]() {
         // Screen-targeted (locks a screen's layout) — resolve cursor-first.
         // See layoutPickerRequested above for the rationale.
-        const QString screenId = resolveCursorScreenId(m_screenManager.get(), m_windowTrackingAdaptor);
+        const QString screenId = resolveCursorScreenId(m_screenManager.get(), m_windowTracker);
         // m_layoutManager is in the guard because the unlock card below derefs
         // it — the sibling handlers that resolve a layout carry it too, and
         // this one only ever reached it after a settings write, so a shutdown
@@ -541,8 +541,8 @@ void Daemon::connectShortcutSignals()
         }
         m_settings->save();
         // Now that the file is written, notify external consumers
-        if (m_settingsAdaptor) {
-            Q_EMIT m_settingsAdaptor->settingsChanged();
+        if (m_settingsService) {
+            Q_EMIT m_settingsService->settingsChanged();
         }
 
         // Templates screens resolve their native TEMPLATE for the unlock

@@ -496,7 +496,7 @@ private Q_SLOTS:
         const QString instanceId = QStringLiteral("reseed-instance");
         const QString freshCanonical = QStringLiteral("fresh|reseed-instance");
         // A defensive row. Production never builds this shape, a record
-        // WITHOUT a canonical mapping: WindowTrackingAdaptor::setWindowMetadata
+        // WITHOUT a canonical mapping: WindowTracker::setWindowMetadata
         // seeds the canonical before its upsert. The row pins the registry's
         // own contract for a caller that does not.
         reg.upsert(instanceId, make(QStringLiteral("old")));

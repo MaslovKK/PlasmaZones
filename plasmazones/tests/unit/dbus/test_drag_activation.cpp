@@ -3,7 +3,7 @@
 
 /**
  * @file test_drag_activation.cpp
- * @brief Guards the pure per-tick resolvers the WindowDragAdaptor decides
+ * @brief Guards the pure per-tick resolvers the DragResolver decides
  *        drag trigger state with.
  *
  * resolveActivationActive() decides whether the snap overlay should be shown.
@@ -13,7 +13,7 @@
  * still counts as held, which is what lets a drop that lands just after the
  * button lifts still snap, or under always re-insert still float.
  *
- * These live in src/dbus/windowdragadaptor/dragactivation.cpp so they can be
+ * These live in src/runtime/dragresolver/dragactivation.cpp so they can be
  * exercised without standing up the adaptor + its compositor dependencies.
  * Pinning the activation table here means the always-active inversion (#249),
  * where the same activation triggers serve double duty as
@@ -26,7 +26,7 @@
 #include <limits>
 #include <QObject>
 
-#include "dbus/windowdragadaptor/dragactivation.h"
+#include "runtime/dragresolver/dragactivation.h"
 
 using namespace PlasmaZones;
 

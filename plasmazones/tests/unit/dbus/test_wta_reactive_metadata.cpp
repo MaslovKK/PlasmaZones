@@ -5,7 +5,7 @@
  * @file test_wta_reactive_metadata.cpp
  * @brief Regression tests for the reactive metadataChanged path.
  *
- * WindowTrackingAdaptor subscribes to WindowRegistry::metadataChanged in
+ * WindowTracker subscribes to WindowRegistry::metadataChanged in
  * setWindowRegistry(), once for the shell-surface mirror and once for the
  * class retag this file pins. The retag handler must update internal class
  * tracking but NEVER retroactively unsnap, re-snap, or re-evaluate rules on
@@ -42,7 +42,7 @@
 #include <PhosphorProtocol/ServiceConstants.h>
 #include <PhosphorProtocol/WindowTypeEnum.h>
 #include <PhosphorZones/Zone.h>
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/windowtracker/windowtracker.h"
 
 #include <QScopeGuard>
 #include <QTemporaryDir>
@@ -51,7 +51,7 @@
 #include "helpers/IsolatedConfigGuard.h"
 #include "helpers/LayoutRegistryTestHelpers.h"
 #include "helpers/StubSettings.h"
-// The reactive tests don't exercise detection: WindowTrackingAdaptor only
+// The reactive tests don't exercise detection: WindowTracker only
 // null-checks the detector and SnapEngine only stores it, so the shared inert
 // stub does. createTestLayout comes from the same header.
 #include "helpers/StubZoneDetector.h"
@@ -76,8 +76,7 @@ private Q_SLOTS:
         m_registry = new PhosphorEngine::WindowRegistry(nullptr);
 
         m_parent = new QObject(nullptr);
-        m_wta =
-            new WindowTrackingAdaptor(m_layoutManager, m_zoneDetector, nullptr, m_settings, nullptr, nullptr, m_parent);
+        m_wta = new WindowTracker(m_layoutManager, m_zoneDetector, nullptr, m_settings, nullptr, nullptr, m_parent);
         m_wta->setWindowRegistry(m_registry);
 
         m_snapEngine = new SnapEngine(m_layoutManager, m_wta->service(), m_zoneDetector, nullptr, nullptr);
@@ -882,7 +881,7 @@ private:
     StubZoneDetectorReactive* m_zoneDetector = nullptr;
     PhosphorEngine::WindowRegistry* m_registry = nullptr;
     QObject* m_parent = nullptr;
-    WindowTrackingAdaptor* m_wta = nullptr;
+    WindowTracker* m_wta = nullptr;
     SnapEngine* m_snapEngine = nullptr;
     PhosphorZones::Layout* m_testLayout = nullptr;
     QStringList m_zoneIds;

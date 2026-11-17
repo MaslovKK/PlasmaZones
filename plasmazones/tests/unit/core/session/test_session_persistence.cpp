@@ -11,7 +11,7 @@
  * hasn't changed. Only the in-memory primary key changed from composite to
  * instance id. Production persistence now uses
  * PhosphorPlacement::WindowTrackingService::currentAppIdFor() to derive the disk key from the
- * live instance; see src/dbus/windowtrackingadaptor/saveload.cpp.
+ * live instance; see src/runtime/windowtracker/saveload.cpp.
  */
 
 #include <QTest>

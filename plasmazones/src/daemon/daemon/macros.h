@@ -55,7 +55,7 @@
     {                                                                                                                  \
         if (!m_autotileEngine || !m_autotileEngine->isEnabled())                                                       \
             return;                                                                                                    \
-        const QString screenId = resolveShortcutScreenId(m_screenManager.get(), m_windowTrackingAdaptor);              \
+        const QString screenId = resolveShortcutScreenId(m_screenManager.get(), m_windowTracker);                      \
         if (screenId.isEmpty() || !m_screenModeRouter || !m_screenModeRouter->isAutotileMode(screenId))                \
             return;                                                                                                    \
         if (isFocusedContextGatedForMode(screenId, PhosphorZones::AssignmentEntry::Autotile))                          \

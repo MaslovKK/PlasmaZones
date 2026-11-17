@@ -9,7 +9,7 @@
  *
  * Seams that previously had no test:
  *
- *  1. WindowDragAdaptor's LIVE sweep derives dragStillActive from
+ *  1. DragResolver's LIVE sweep derives dragStillActive from
  *     isDragSessionActive() — replacing the derivation with a constant false
  *     used to leave the whole suite green while the mid-drag cancel resized
  *     the window in the user's hand.
@@ -19,18 +19,18 @@
  *     false, or the snap-back it exists to emit is suppressed by the mark
  *     (or by a phantom liveness derivation from the dead session's ids).
  *
- *  3. TilingAdaptor's coalesced managed-screens announce stamps per-screen
+ *  3. TilingService's coalesced managed-screens announce stamps per-screen
  *     desktops at EMIT time. The daemon's screenDesktopChanged handler leans
  *     on that: a global switch fans out one report per output, each calling
  *     notifyEngineScreensChanged(true), and only emit-time stamping makes
  *     the burst's single emission carry a fully consistent desktop map (the
  *     focus-follows-mouse leak fixed by [SEQ E½] in start.cpp).
  *
- *  4. TilingAdaptor::runBehindScreensAnnounce runs its work right behind a
+ *  4. TilingService::runBehindScreensAnnounce runs its work right behind a
  *     queued announce and the tile batches held with it, at once with none
  *     queued, and never for an announce clearEngine voided.
  *
- *  5. SnapAdaptor sends every snap batch and every re-statement through that
+ *  5. SnapService sends every snap batch and every re-statement through that
  *     sequencer (the settings reflow as well as the engine's own batches),
  *     and drops a held placement of a window another placement went out for
  *     in the meantime.
@@ -51,10 +51,10 @@
 
 #include "config/configdefaults.h"
 #include "config/configkeys.h"
-#include "dbus/snapadaptor/snapadaptor.h"
-#include "dbus/tilingadaptor/tilingadaptor.h"
-#include "dbus/windowdragadaptor/windowdragadaptor.h"
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/services/snapservice/snapservice.h"
+#include "runtime/services/tilingservice/tilingservice.h"
+#include "runtime/dragresolver/dragresolver.h"
+#include "runtime/windowtracker/windowtracker.h"
 
 #include "helpers/AutotileTestHelpers.h"
 #include "helpers/IsolatedConfigGuard.h"
@@ -113,13 +113,13 @@ bool batchCarries(const QSignalSpy& spy, const QString& windowId)
     return false;
 }
 
-/// A SnapAdaptor over a FloatBackFixture whose announce sequencer holds every
+/// A SnapService over a FloatBackFixture whose announce sequencer holds every
 /// piece of work until the test runs it, as a queued screens announce does.
 struct HeldSnapFixture
 {
     HeldSnapFixture()
     {
-        adaptor = new SnapAdaptor(f.snap.get(), f.wta, &f.settings, &adaptorParent);
+        adaptor = new SnapService(f.snap.get(), f.wta, &f.settings, &adaptorParent);
         adaptor->setAnnounceSequencer([this](std::function<void()> work) {
             held.append(std::move(work));
         });
@@ -138,7 +138,7 @@ struct HeldSnapFixture
 
     FloatBackFixture f;
     QObject adaptorParent; // dies before the fixture's engine and adaptor
-    SnapAdaptor* adaptor = nullptr; // parent-owned
+    SnapService* adaptor = nullptr; // parent-owned
     QList<std::function<void()>> held;
 };
 
@@ -151,7 +151,7 @@ class TestWindowDragCancelSweeps : public QObject
 private:
     static constexpr auto Screen = "eDP-1";
 
-    /// The full dependency set WindowDragAdaptor's ctor qFatals without,
+    /// The full dependency set DragResolver's ctor qFatals without,
     /// plus an autotile engine seeded with three windows and forced zones.
     struct Fixture
     {
@@ -163,8 +163,8 @@ private:
             QDir().mkpath(layoutDir);
             registry->setLayoutDirectory(layoutDir);
 
-            wta = new WindowTrackingAdaptor(registry.get(), &detector, nullptr, &settings, nullptr, nullptr, &parent);
-            adaptor = new WindowDragAdaptor(&overlay, &detector, registry.get(), nullptr, &settings, wta, &parent);
+            wta = new WindowTracker(registry.get(), &detector, nullptr, &settings, nullptr, nullptr, &parent);
+            adaptor = new DragResolver(&overlay, &detector, registry.get(), nullptr, &settings, wta, &parent);
 
             engine =
                 std::make_unique<AutotileEngine>(nullptr, nullptr, nullptr, PlasmaZones::TestHelpers::testRegistry());
@@ -189,8 +189,8 @@ private:
         StubSettings settings;
         std::unique_ptr<PhosphorRules::RuleStore> store;
         std::unique_ptr<PhosphorZones::LayoutRegistry> registry;
-        WindowTrackingAdaptor* wta = nullptr; // parent-owned
-        WindowDragAdaptor* adaptor = nullptr; // parent-owned
+        WindowTracker* wta = nullptr; // parent-owned
+        DragResolver* adaptor = nullptr; // parent-owned
         std::unique_ptr<AutotileEngine> engine;
     };
 
@@ -275,14 +275,14 @@ private Q_SLOTS:
         vdm.updateScreenDesktop(QStringLiteral("DP-1"), 1);
         vdm.updateScreenDesktop(QStringLiteral("DP-2"), 1);
 
-        auto* wta = new WindowTrackingAdaptor(registry.get(), &detector, &screenMgr, &settings, &vdm, nullptr, &parent);
+        auto* wta = new WindowTracker(registry.get(), &detector, &screenMgr, &settings, &vdm, nullptr, &parent);
         AutotileEngine engine(nullptr, nullptr, nullptr, PlasmaZones::TestHelpers::testRegistry());
         engine.setAutotileScreens({QStringLiteral("DP-1"), QStringLiteral("DP-2")});
-        TilingAdaptor adaptor(&screenMgr, &parent);
+        TilingService adaptor(&screenMgr, &parent);
         adaptor.setWindowTrackingAdaptor(wta);
         adaptor.setLifecycleEngines({&engine});
 
-        QSignalSpy spy(&adaptor, &TilingAdaptor::managedScreensChanged);
+        QSignalSpy spy(&adaptor, &TilingService::managedScreensChanged);
 
         // The burst: each per-output report updates ITS screen's desktop and
         // re-announces unconditionally, exactly as the daemon handler does.
@@ -318,9 +318,9 @@ private Q_SLOTS:
         screenMgr.start();
         AutotileEngine engine(nullptr, nullptr, nullptr, PlasmaZones::TestHelpers::testRegistry());
         engine.setAutotileScreens({QStringLiteral("DP-1")});
-        TilingAdaptor adaptor(&screenMgr, &parent);
+        TilingService adaptor(&screenMgr, &parent);
         adaptor.setLifecycleEngines({&engine});
-        QSignalSpy spy(&adaptor, &TilingAdaptor::managedScreensChanged);
+        QSignalSpy spy(&adaptor, &TilingService::managedScreensChanged);
 
         int ranAfterAnnounces = -1;
         adaptor.notifyEngineScreensChanged(/*isDesktopSwitch=*/true);
@@ -340,7 +340,7 @@ private Q_SLOTS:
 
         // Handed over BEFORE the tile batch, and still run after it: the held
         // batches go out first, whatever order the two arrived in.
-        QSignalSpy tiles(&adaptor, &TilingAdaptor::windowsTileRequested);
+        QSignalSpy tiles(&adaptor, &TilingService::windowsTileRequested);
         int tilesWhenWorkRan = -1;
         adaptor.notifyEngineScreensChanged(/*isDesktopSwitch=*/true);
         adaptor.runBehindScreensAnnounce([&] {
@@ -381,7 +381,7 @@ private Q_SLOTS:
         HeldSnapFixture h;
         const QString w = h.f.registerWindow(QStringLiteral("held-reflow"));
         h.f.snap->commitSnap(w, h.f.zone(0), kLeft);
-        QSignalSpy batch(h.f.wta, &WindowTrackingAdaptor::applyGeometriesBatch);
+        QSignalSpy batch(h.f.wta, &WindowTracker::applyGeometriesBatch);
 
         h.adaptor->reapplySnapZones();
         QCOMPARE(batch.count(), 0);
@@ -401,7 +401,7 @@ private Q_SLOTS:
         entry.targetZoneId = h.f.zone(1);
         entry.targetGeometry = h.f.zoneRect(1, kLeft);
         entry.targetScreenId = kLeft;
-        QSignalSpy batch(h.f.wta, &WindowTrackingAdaptor::applyGeometriesBatch);
+        QSignalSpy batch(h.f.wta, &WindowTracker::applyGeometriesBatch);
 
         h.f.snap->emitBatchedResnap({entry});
         QCOMPARE(h.f.snap->zoneForWindow(w), h.f.zone(1));
@@ -419,7 +419,7 @@ private Q_SLOTS:
         HeldSnapFixture h;
         const QString w = h.f.registerWindow(QStringLiteral("held-restate"));
         const QRect rect = h.f.zoneRect(0, kLeft);
-        QSignalSpy applies(h.f.wta, &WindowTrackingAdaptor::applyGeometryRequested);
+        QSignalSpy applies(h.f.wta, &WindowTracker::applyGeometryRequested);
 
         Q_EMIT h.f.snap->restatementGeometryRequested(w, rect.x(), rect.y(), rect.width(), rect.height(), h.f.zone(0),
                                                       kLeft);
@@ -442,7 +442,7 @@ private Q_SLOTS:
         const QString kept = h.f.registerWindow(QStringLiteral("held-kept"));
         h.f.snap->commitSnap(moved, h.f.zone(0), kLeft);
         h.f.snap->commitSnap(kept, h.f.zone(1), kLeft);
-        QSignalSpy batch(h.f.wta, &WindowTrackingAdaptor::applyGeometriesBatch);
+        QSignalSpy batch(h.f.wta, &WindowTracker::applyGeometriesBatch);
 
         h.adaptor->reapplySnapZones();
         QCOMPARE(h.held.size(), 1);

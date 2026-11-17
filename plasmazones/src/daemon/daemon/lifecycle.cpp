@@ -21,20 +21,22 @@
 #include "core/resolve/screenmoderouter.h"
 #include "core/utils/geometryutils.h"
 #include "core/utils/utils.h"
-#include "dbus/layoutadaptor/layoutadaptor.h"
-#include "dbus/settingsadaptor/settingsadaptor.h"
+#include "runtime/services/layoutservice/layoutservice.h"
+#include "runtime/services/settingsservice/settingsservice.h"
 #include "dbus/overlayadaptor.h"
 #include "dbus/zonedetectionadaptor.h"
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
-#include "dbus/windowdragadaptor/windowdragadaptor.h"
-#include "dbus/autotileadaptor/autotileadaptor.h"
-#include "dbus/tilingadaptor/tilingadaptor.h"
-#include "dbus/scrollingadaptor/scrollingadaptor.h"
-#include "dbus/snapadaptor/snapadaptor.h"
-#include "dbus/shaderadaptor.h"
+#include "runtime/windowtracker/windowtracker.h"
+#include "dbus/windowtrackingadaptor.h"
+#include "runtime/dragresolver/dragresolver.h"
+#include "runtime/services/autotileservice/autotileservice.h"
+#include "runtime/services/tilingservice/tilingservice.h"
+#include "runtime/services/scrollingservice/scrollingservice.h"
+#include "runtime/services/snapservice/snapservice.h"
+#include "runtime/services/shaderservice.h"
 #include "dbus/compositorbridgeadaptor.h"
 #include "dbus/controladaptor.h"
-#include "dbus/ruleadaptor.h"
+#include "runtime/services/controlservice.h"
+#include "runtime/services/ruleservice.h"
 
 #include <PhosphorServiceIdle/IdleService.h>
 #include <PhosphorShaders/ShaderPresetStore.h>
@@ -239,17 +241,17 @@ void Daemon::stop()
     // otherwise reach member destruction with the adaptor still holding pointers to the
     // about-to-die engines and ShortcutManager. The setters are null-safe and
     // idempotent, so running this on an already-stopped daemon costs nothing.
-    if (m_windowDragAdaptor) {
+    if (m_dragResolver) {
         // Cancel a live preview BEFORE dropping the engine borrows. The
         // adaptor reaches the engines only through those two pointers, so
         // nulling them first strands any preview: the engine keeps the window
         // detached with its restoration state held, and nothing left can
         // commit or cancel it. A stop() mid-drag is reachable from a settings
         // reload or a shutdown that races a drag.
-        m_windowDragAdaptor->cancelDragInsertPreviews();
-        m_windowDragAdaptor->setAutotileEngine(nullptr);
-        m_windowDragAdaptor->setScrollEngine(nullptr);
-        m_windowDragAdaptor->setShortcutRegistrar(nullptr);
+        m_dragResolver->cancelDragInsertPreviews();
+        m_dragResolver->setAutotileEngine(nullptr);
+        m_dragResolver->setScrollEngine(nullptr);
+        m_dragResolver->setShortcutRegistrar(nullptr);
     }
 
     // Null the QML static registry / manager pointers BEFORE the m_running
@@ -395,10 +397,10 @@ void Daemon::stop()
     // they borrow. ~QObject destroys these adaptors AFTER all unique_ptr
     // members have already run their destructors, so without detach the
     // adaptors would see dangling pointers during the destruction window —
-    // and the SettingsAdaptor dtor's save-on-teardown would deref a freed
+    // and the SettingsService dtor's save-on-teardown would deref a freed
     // Settings object. Each adaptor's detach() is null-safe + idempotent.
     //
-    // WHY ONLY THESE: SettingsAdaptor has the confirmed dtor-UAF
+    // WHY ONLY THESE: SettingsService has the confirmed dtor-UAF
     // (debounced save timer flush). ShaderAdaptor + ControlAdaptor have
     // non-trivial signal wiring + cached state that benefits from
     // explicit teardown for the same "queued D-Bus call lands during
@@ -410,10 +412,10 @@ void Daemon::stop()
     // raw-Qt-parented RuleAdaptor only runs its own destructor
     // *after* that, as part of QObject child cleanup.
     //
-    // The other raw-Qt-parented adaptors (LayoutAdaptor,
-    // OverlayAdaptor, ZoneDetectionAdaptor, WindowTrackingAdaptor,
-    // DBusScreenAdaptor, WindowDragAdaptor, CompositorBridgeAdaptor,
-    // SnapAdaptor, TilingAdaptor, AutotileAdaptor, ScrollingAdaptor) all
+    // The other raw-Qt-parented adaptors (LayoutService,
+    // OverlayAdaptor, ZoneDetectionAdaptor, WindowTracker,
+    // DBusScreenAdaptor, DragResolver, CompositorBridgeAdaptor,
+    // SnapService, TilingService, AutotileAdaptor, ScrollingService) all
     // ship destructors that don't
     // deref any borrowed pointer — they are `= default` or empty-body
     // (no member access); DBusScreenAdaptor's out-of-line body does
@@ -422,22 +424,25 @@ void Daemon::stop()
     // destructors" — confirmed by inspecting each header + cpp pair,
     // not header alone. Their borrowed pointers are still severed below
     // (the engine adaptors' clearEngine, and the WTA's, WDA's,
-    // TilingAdaptor's and SnapAdaptor's late-bound borrows), with the bus
+    // TilingService's and SnapService's late-bound borrows), with the bus
     // already unregistered above; none of them needs a detach() for its
     // DESTRUCTOR. If a future adaptor grows a dtor body that
     // derefs a borrowed member, add detach() to it AND wire the call here
     // — same pattern as these four.
-    if (m_settingsAdaptor) {
-        m_settingsAdaptor->detach();
+    if (m_settingsService) {
+        m_settingsService->detach();
     }
-    if (m_shaderAdaptor) {
-        m_shaderAdaptor->detach();
+    if (m_shaderService) {
+        m_shaderService->detach();
+    }
+    if (m_controlService) {
+        m_controlService->detach();
     }
     if (m_controlAdaptor) {
         m_controlAdaptor->detach();
     }
-    if (m_ruleAdaptor) {
-        m_ruleAdaptor->detach();
+    if (m_ruleService) {
+        m_ruleService->detach();
     }
 
     // Shader registries + preset store + warm-bake pool: torn down ABOVE the
@@ -515,8 +520,8 @@ void Daemon::stop()
     // layout-manager providers below (F343). Running-path only; its guard
     // blocks the later saves this teardown schedules, and nothing below
     // mutates placement.
-    if (m_running && m_windowTrackingAdaptor) {
-        m_windowTrackingAdaptor->saveStateOnShutdown();
+    if (m_running && m_windowTracker) {
+        m_windowTracker->saveStateOnShutdown();
     }
 
     // Drop the layout-manager provider lambdas right after that save, still
@@ -544,47 +549,49 @@ void Daemon::stop()
     // The layout adaptor's twin of the registry's tiled-count provider
     // (getScreenStates' tiledWindowCount) captures `this` and reads the
     // engines the same way, and the adaptor is a Qt child that outlives them.
-    if (m_layoutAdaptor) {
-        m_layoutAdaptor->setTiledWindowCountProvider({});
+    if (m_layoutService) {
+        m_layoutService->setTiledWindowCountProvider({});
         // A screen-states comparison queued before stop() would run after it
         // and announce a teardown's half-state. m_shuttingDown keeps any new
         // one from being queued.
-        m_layoutAdaptor->cancelScreenStatesCheck();
+        m_layoutService->cancelScreenStatesCheck();
     }
 
     // Clear adaptor engine pointers BEFORE destroying the engines. Adaptors are Qt
     // children of the daemon (destroyed later); a D-Bus call arriving between engine
     // destruction and adaptor destruction would otherwise access freed memory. After
     // clearing, ensureEngine() returns false.
-    if (m_tilingAdaptor) {
-        m_tilingAdaptor->clearEngine();
+    if (m_tilingService) {
+        m_tilingService->clearEngine();
     }
-    if (m_autotileAdaptor) {
-        m_autotileAdaptor->clearEngine();
+    if (m_autotileService) {
+        m_autotileService->clearEngine();
     }
-    if (m_scrollingAdaptor) {
-        m_scrollingAdaptor->clearEngine();
+    if (m_scrollingService) {
+        m_scrollingService->clearEngine();
     }
-    if (m_snapAdaptor) {
-        m_snapAdaptor->clearEngine();
+    if (m_snapService) {
+        m_snapService->clearEngine();
     }
 
-    // Null the WindowTrackingAdaptor's engine borrows for the same reason, and
+    // Null the WindowTracker's engine borrows for the same reason, and
     // every late-bound `this`-capturing daemon hook it holds (the contract of
     // the block below).
     if (m_windowTrackingAdaptor) {
-        m_windowTrackingAdaptor->setEngines(nullptr, nullptr, nullptr);
-        m_windowTrackingAdaptor->setOutputRetirer({});
-        m_windowTrackingAdaptor->setWindowLeftScreenHook({});
         m_windowTrackingAdaptor->setBridgeCallerCheck({});
-        m_windowTrackingAdaptor->setContextModeResolver({});
+    }
+    if (m_windowTracker) {
+        m_windowTracker->setEngines(nullptr, nullptr, nullptr);
+        m_windowTracker->setOutputRetirer({});
+        m_windowTracker->setWindowLeftScreenHook({});
+        m_windowTracker->setContextModeResolver({});
     }
 
     // Clear the late-bound WTS float / mode callbacks. All but the tiled predicate reach `this`
     // (directly or through the routing inputs); that one holds only QPointers and goes with
     // them, so the clear-before-teardown contract stays grep-discoverable.
-    if (m_windowTrackingAdaptor && m_windowTrackingAdaptor->service()) {
-        auto* wts = m_windowTrackingAdaptor->service();
+    if (m_windowTracker && m_windowTracker->service()) {
+        auto* wts = m_windowTracker->service();
         wts->setEngineFloatResolver({});
         wts->setEngineFloatWriter({});
         wts->setEngineFloatLister({});
@@ -620,36 +627,36 @@ void Daemon::stop()
     }
 
     // Drop the D-Bus borrowers' non-owning resolver / router / WTA pointers.
-    // Explicit symmetric clear across all three borrowers — SnapAdaptor's
+    // Explicit symmetric clear across all three borrowers — SnapService's
     // resolver is also nulled defensively by clearEngine() above, but doing
     // it here too keeps the teardown contract grep-discoverable and survives
     // a future refactor of clearEngine() that might stop touching the
     // resolver pointer.
-    if (m_snapAdaptor) {
-        m_snapAdaptor->setContextResolver(nullptr);
+    if (m_snapService) {
+        m_snapService->setContextResolver(nullptr);
     }
-    if (m_windowDragAdaptor) {
-        m_windowDragAdaptor->setContextResolver(nullptr);
+    if (m_dragResolver) {
+        m_dragResolver->setContextResolver(nullptr);
     }
-    if (m_windowTrackingAdaptor) {
-        m_windowTrackingAdaptor->setContextResolver(nullptr);
+    if (m_windowTracker) {
+        m_windowTracker->setContextResolver(nullptr);
         // m_screenModeRouter is destroyed on the running path below; null its
         // WTA borrow before that reset so nothing later in this teardown
         // derefs a freed router (the bus is already unregistered above).
-        // SnapAdaptor holds no router.
-        m_windowTrackingAdaptor->setScreenModeRouter(nullptr);
+        // SnapService holds no router.
+        m_windowTracker->setScreenModeRouter(nullptr);
     }
-    if (m_tilingAdaptor) {
+    if (m_tilingService) {
         // Sever the tiling adaptor's post-construction borrow of the WTA (wired
         // in init() so the tiling open path can resolve RouteToScreen /
         // RouteToDesktop rules). The tiling open path no-ops on a null WTA, so
         // a D-Bus open landing in the teardown gap can't drive routing against
         // half-torn-down state. Symmetric with the resolver / router clears above
         // and honours the shutdown-nullptr contract documented in tilingadaptor.h.
-        m_tilingAdaptor->setWindowTrackingAdaptor(nullptr);
+        m_tilingService->setWindowTrackingAdaptor(nullptr);
         // Same contract for the registry subscription: a metadata push landing
         // in the teardown gap must not walk engines that are being reset.
-        m_tilingAdaptor->setWindowRegistry(nullptr);
+        m_tilingService->setWindowRegistry(nullptr);
     }
 
     // Sever SnapEngine's borrow of m_excludeRuleSet (a daemon-owned value
@@ -681,19 +688,19 @@ void Daemon::stop()
         concreteSnap->setPersistenceDelegate({}, {});
     }
 
-    // Likewise sever WindowTrackingAdaptor's borrow of m_ruleStore (read by
+    // Likewise sever WindowTracker's borrow of m_ruleStore (read by
     // every per-window rule resolver) before the store is destroyed. Same
     // grep-discoverable teardown contract as the SnapEngine exclude borrow above.
-    if (m_windowTrackingAdaptor) {
-        m_windowTrackingAdaptor->setRuleStore(nullptr);
+    if (m_windowTracker) {
+        m_windowTracker->setRuleStore(nullptr);
         // The zone-detection borrow belongs in this block too, and was the one
         // late-bound pointer missing from it. Nothing can deref it in the
         // teardown gap today (its single use is at wiring time, never on a
         // D-Bus-reachable path), so this is the grep-discoverable contract
         // rather than a live fix.
-        m_windowTrackingAdaptor->setZoneDetectionAdaptor(nullptr);
+        m_windowTracker->setZoneAdjacencyResolver(nullptr);
         // And the registry borrow (the setter drops its recorded connections).
-        m_windowTrackingAdaptor->setWindowRegistry(nullptr);
+        m_windowTracker->setWindowRegistry(nullptr);
     }
 
     // Clear the autotile context-gap provider and context-mode resolver, which
@@ -701,7 +708,7 @@ void Daemon::stop()
     // currentActivity, and runningModeForContext). No live deref
     // can occur today — m_autotileEngine is destroyed on the running path below
     // while `this` is still alive — but clearing it keeps the engine-side clears
-    // complete and grep-discoverable (ScrollingAdaptor's step and gate providers
+    // complete and grep-discoverable (ScrollingService's step and gate providers
     // stay installed on purpose: its scroll slots refuse once clearEngine nulls
     // the engine), exactly like the SnapEngine exclude-rule borrow above.
     // `m_autotileEngine` is base-typed `PlacementEngineBase*`;
@@ -776,8 +783,8 @@ void Daemon::stop()
     if (m_overlayService) {
         m_overlayService->disconnect(this);
     }
-    if (m_windowTrackingAdaptor) {
-        m_windowTrackingAdaptor->disconnect(this);
+    if (m_windowTracker) {
+        m_windowTracker->disconnect(this);
     }
     // The restart-scoped handles too. connectLayoutSignals() drops them at its
     // own top on the NEXT start(), which is enough to prevent stacking, but it
@@ -995,8 +1002,8 @@ void Daemon::stop()
     // user's persisted strip structure. Clearing it makes saveState skip the
     // strips write instead, which is why it cannot happen any earlier — the
     // shutdown save above still needs a live engine to answer.
-    if (m_windowTrackingAdaptor) {
-        m_windowTrackingAdaptor->setScrollStripStateProvider({});
+    if (m_windowTracker) {
+        m_windowTracker->setScrollStripStateProvider({});
     }
     m_scrollEngine.reset();
 

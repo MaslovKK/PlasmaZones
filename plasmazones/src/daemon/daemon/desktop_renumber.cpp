@@ -9,9 +9,9 @@
 #include "daemon/daemon.h"
 #include "daemon/overlayservice.h"
 #include "core/platform/logging.h"
-#include "dbus/tilingadaptor/tilingadaptor.h"
-#include "dbus/windowdragadaptor/windowdragadaptor.h"
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/services/tilingservice/tilingservice.h"
+#include "runtime/dragresolver/dragresolver.h"
+#include "runtime/windowtracker/windowtracker.h"
 #include <PhosphorEngine/DesktopRemap.h>
 #include <PhosphorEngine/WindowPlacementStore.h>
 #include <PhosphorEngine/WindowRegistry.h>
@@ -122,7 +122,7 @@ void Daemon::onDesktopsRenumbered(const PhosphorEngine::DesktopRemap& remap)
                                                 unchangedStartupRule(std::exchange(m_lateStartupRules, {})))});
         int recordsMoved = 0;
         if (PhosphorPlacement::WindowTrackingService* service =
-                m_windowTrackingAdaptor ? m_windowTrackingAdaptor->service() : nullptr) {
+                m_windowTracker ? m_windowTracker->service() : nullptr) {
             recordsMoved = service->placementStore().remapRestoredDesktopZones(remap, *restoredUpTo);
             if (recordsMoved > 0) {
                 service->markDirty(PhosphorPlacement::WindowTrackingService::DirtyWindowPlacements);
@@ -154,8 +154,8 @@ void Daemon::onDesktopsRenumbered(const PhosphorEngine::DesktopRemap& remap)
     // state through a create-if-missing lookup, so a cancel arriving after the
     // prune would resurrect a state for the desktop that just went away. Ahead
     // of every engine change, the remaps' prunes included.
-    if (m_windowDragAdaptor) {
-        m_windowDragAdaptor->cancelDragInsertPreviews();
+    if (m_dragResolver) {
+        m_dragResolver->cancelDragInsertPreviews();
     }
     // KWin has already moved a removed desktop's windows to its successor, and
     // the effect may have re-announced them there, but every engine still
@@ -168,9 +168,9 @@ void Daemon::onDesktopsRenumbered(const PhosphorEngine::DesktopRemap& remap)
             removedDesktops.insert(oldDesktop);
         }
     }
-    const bool readoptEvictees = m_running && !removedDesktops.isEmpty() && m_tilingAdaptor && m_windowTrackingAdaptor;
+    const bool readoptEvictees = m_running && !removedDesktops.isEmpty() && m_tilingService && m_windowTracker;
     if (readoptEvictees) {
-        m_tilingAdaptor->noteRenumberEvictees(m_windowTrackingAdaptor->knownWindowIds(), removedDesktops);
+        m_tilingService->noteRenumberEvictees(m_windowTracker->knownWindowIds(), removedDesktops);
     }
     // Re-announce the managed set as a desktop switch when the renumber may
     // have cost the effect the last one (F692). The effect re-reads its
@@ -197,8 +197,8 @@ void Daemon::onDesktopsRenumbered(const PhosphorEngine::DesktopRemap& remap)
     // an announce is queued is held and sent right behind it, and no batch
     // of this pass may be in flight ahead of it. Not at start-up (m_running
     // false): no switch has been announced yet that this could correct.
-    if (m_running && m_tilingAdaptor) {
-        m_tilingAdaptor->reannounceAfterRenumber(remap);
+    if (m_running && m_tilingService) {
+        m_tilingService->reannounceAfterRenumber(remap);
     }
     // Every engine takes the change through the one map, an insert and a
     // reorder included: each prunes a removed desktop's state while the
@@ -260,7 +260,7 @@ void Daemon::onDesktopsRenumbered(const PhosphorEngine::DesktopRemap& remap)
     // screen's desktop are both in the new numbering: a window in view goes
     // back to the engine now, one out of view waits for the switch to it.
     if (readoptEvictees) {
-        m_tilingAdaptor->readoptRenumberEvictees(
+        m_tilingService->readoptRenumberEvictees(
             [this](const QString& screenId, const PhosphorEngine::DesktopSpan& span) {
                 return span.coversDesktop(m_virtualDesktopManager->currentDesktopForScreen(screenId))
                     && span.coversActivity(
@@ -316,8 +316,8 @@ void Daemon::onDesktopCountChanged(int newCount)
     // resolves its state via a create-if-missing lookup, so a cancel arriving
     // AFTER the prune would resurrect a state for the deleted desktop (the two
     // context-switch handlers carry the same ordering).
-    if (m_windowDragAdaptor) {
-        m_windowDragAdaptor->cancelDragInsertPreviews();
+    if (m_dragResolver) {
+        m_dragResolver->cancelDragInsertPreviews();
     }
 
     // Desktop numbers are 1-based. Any state with desktop > newCount is
@@ -377,8 +377,8 @@ void Daemon::onActivitiesChanged()
     // Same cancel-before-prune ordering as desktopCountChanged: an
     // after-the-fact cancel would re-create state for a removed activity
     // through autotile's create-if-missing lookup.
-    if (m_windowDragAdaptor) {
-        m_windowDragAdaptor->cancelDragInsertPreviews();
+    if (m_dragResolver) {
+        m_dragResolver->cancelDragInsertPreviews();
     }
 
     // All three engines carry their own per-(screen,desktop,activity) stores,
@@ -414,10 +414,10 @@ void Daemon::reconcileDesktopsAtStartup()
     const QStringList liveIds = m_virtualDesktopManager->desktopIds();
     m_lateStartupRenumberUpTo.reset();
     m_lateStartupRules.clear();
-    if (m_windowTrackingAdaptor) {
-        const QStringList knownIds = m_windowTrackingAdaptor->knownDesktopIds();
+    if (m_windowTracker) {
+        const QStringList knownIds = m_windowTracker->knownDesktopIds();
         if (liveIds.isEmpty() && !knownIds.isEmpty()) {
-            const PhosphorPlacement::WindowTrackingService* service = m_windowTrackingAdaptor->service();
+            const PhosphorPlacement::WindowTrackingService* service = m_windowTracker->service();
             m_lateStartupRenumberUpTo = service ? service->placementStore().sequence() : 0;
             m_lateStartupRules = m_ruleStore ? m_ruleStore->ruleSet().rules() : QList<PhosphorRules::Rule>();
         }
@@ -433,8 +433,8 @@ void Daemon::reconcileDesktopsAtStartup()
         // Remembered for the next start. The first snapshot's desktopsChanged
         // went out before connectDesktopActivity's connection that keeps it
         // current from here on.
-        if (m_windowTrackingAdaptor) {
-            m_windowTrackingAdaptor->setKnownDesktopIds(liveIds);
+        if (m_windowTracker) {
+            m_windowTracker->setKnownDesktopIds(liveIds);
         }
     }
     if (PhosphorWorkspaces::ActivityManager::isAvailable()) {

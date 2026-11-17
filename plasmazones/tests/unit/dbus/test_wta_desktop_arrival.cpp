@@ -3,7 +3,7 @@
 
 /**
  * @file test_wta_desktop_arrival.cpp
- * @brief SnapAdaptor::resolveWindowRestore for a window arriving on a desktop
+ * @brief SnapService::resolveWindowRestore for a window arriving on a desktop
  *        it was moved to while that desktop was hidden.
  *
  * DesktopArrival is the continuation of an open: it may run the whole restore
@@ -48,7 +48,7 @@ private Q_SLOTS:
 
     void cleanup()
     {
-        m_snapAdaptor->setContextResolver(nullptr);
+        m_snapService->setContextResolver(nullptr);
         m_resolver.m_disabled.clear();
         m_wta->setRuleStore(nullptr);
         m_wta->setWindowRegistry(nullptr);
@@ -120,7 +120,7 @@ private Q_SLOTS:
     {
         const QString w = QStringLiteral("app|arrival-disabled");
         m_wta->service()->assignWindowToZone(w, m_zoneIds[1], m_screenId, 1);
-        m_snapAdaptor->setContextResolver(&m_resolver);
+        m_snapService->setContextResolver(&m_resolver);
         m_resolver.m_disabled.insert(m_screenId);
         QVERIFY(!resolve(w, RestoreReason::DesktopReapply).shouldSnap);
 
@@ -174,7 +174,7 @@ private:
     {
         int x = 0, y = 0, w = 0, h = 0;
         bool shouldSnap = false;
-        m_snapAdaptor->resolveWindowRestore(windowId, screenId.isEmpty() ? m_screenId : screenId, false,
+        m_snapService->resolveWindowRestore(windowId, screenId.isEmpty() ? m_screenId : screenId, false,
                                             static_cast<int>(PhosphorEngine::WindowKind::Normal),
                                             static_cast<int>(reason), 0, 0, x, y, w, h, shouldSnap);
         return {shouldSnap, QRect(x, y, w, h)};

@@ -167,7 +167,7 @@ public:
     virtual void setAutotileDragInsertGraceMs(int ms) = 0;
 
     // Scrolling twins: hold-to-activate list for live re-inserting a dragged
-    // window into the scroll strip (WindowDragAdaptor reads them per drag,
+    // window into the scroll strip (DragResolver reads them per drag,
     // beside the autotile pair above).
     virtual QVariantList scrollingDragInsertTriggers() const = 0;
     virtual void setScrollingDragInsertTriggers(const QVariantList& triggers) = 0;
@@ -254,7 +254,7 @@ public:
     ///
     /// On the interface rather than only as Settings' static, so a consumer
     /// that stamps the ColorScheme match field through its INJECTED settings
-    /// (the WindowTrackingAdaptor query builder) can have a test double
+    /// (the WindowTracker query builder) can have a test double
     /// substitute a fixed scheme. Not every consumer takes that path: the
     /// daemon's registry colour-scheme provider calls the static
     /// Settings::systemColorSchemeToken() directly. Settings implements this by
@@ -369,10 +369,10 @@ public:
     // live alongside the global setting. Defaults are no-op bodies so backends
     // that don't persist per-screen state (test stubs) can inherit the
     // interface without implementing these. The concrete Settings class
-    // overrides every method; the D-Bus SettingsAdaptor depends only on
+    // overrides every method; the D-Bus SettingsService depends only on
     // these virtuals so it doesn't need a qobject_cast<Settings*>.
     // The has*() query methods are virtual with a "nothing persisted"
-    // default so the SettingsAdaptor can answer existence questions
+    // default so the SettingsService can answer existence questions
     // through the interface too.
     // ═══════════════════════════════════════════════════════════════════════════
     virtual QVariantMap getPerScreenAutotileSettings(const QString& /*screenIdOrName*/) const
@@ -434,7 +434,7 @@ public:
     /// most global keys are still registered behind a qobject_cast to the
     /// concrete Settings (the REGISTER_CONCRETE_* sites), which accepts exactly
     /// the loss described above. Those are a backlog to hoist, not a second
-    /// sanctioned pattern — see the note in settingsadaptor_registry.cpp.
+    /// sanctioned pattern — see the note in settingsservice_registry.cpp.
     virtual void setScrollingTabIndicatorEnabled(bool /*enabled*/)
     {
     }
@@ -616,7 +616,7 @@ public:
     }
 
     /// Float-position restore for scroll-floated windows. Virtual with an
-    /// always-on default so the WindowTrackingAdaptor's restore predicate
+    /// always-on default so the WindowTracker's restore predicate
     /// can resolve it through the interface, like its snap/autotile twins.
     virtual bool scrollingRestoreFloatedWindowsOnLogin() const
     {

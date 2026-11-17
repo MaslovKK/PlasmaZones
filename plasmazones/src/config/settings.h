@@ -131,7 +131,7 @@ public:
     // Per-mode disable lists are not exposed as Q_PROPERTYs because their
     // accessors take a Mode argument. QML / D-Bus consumers go through the
     // mode-aware Q_INVOKABLEs on SettingsController and the per-mode
-    // registrations in SettingsAdaptor instead.
+    // registrations in SettingsService instead.
     Q_PROPERTY(bool showZoneNumbers READ showZoneNumbers WRITE setShowZoneNumbers NOTIFY showZoneNumbersChanged)
     Q_PROPERTY(
         bool flashZonesOnSwitch READ flashZonesOnSwitch WRITE setFlashZonesOnSwitch NOTIFY flashZonesOnSwitchChanged)

@@ -498,7 +498,7 @@ int main(int argc, char* argv[])
     PhosphorSurfaceShaders::setSurfacePackDataSubdir(PlasmaZones::ConfigDefaults::surfacePacksSubdir());
 
     // Publish the daemon-private variables changed above, so spawn sites in
-    // plasmazones_core (e.g. LayoutAdaptor::launchEditor) can undo them for a
+    // plasmazones_core (e.g. LayoutService::launchEditor) can undo them for a
     // child through PlasmaZones::childProcessEnvironment() without a link
     // dependency on this target. The GPU-preference variables are published
     // with the rendering backend below, after the Vulkan instance has
@@ -787,7 +787,7 @@ int main(int argc, char* argv[])
     // exec() with stop() already applied.
     // O_CLOEXEC so the fds do not leak into the processes the daemon spawns
     // (the settings app via QProcess::startDetached, the editor via
-    // LayoutAdaptor). O_NONBLOCK so a hypothetically full pipe makes the
+    // LayoutService). O_NONBLOCK so a hypothetically full pipe makes the
     // handler's write() fail rather than block inside signal context, which is
     // the one thing this whole mechanism exists to avoid.
     if (::pipe2(g_signalPipe, O_CLOEXEC | O_NONBLOCK) == 0) {

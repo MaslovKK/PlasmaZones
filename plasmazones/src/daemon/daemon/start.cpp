@@ -18,17 +18,17 @@
 #include "core/utils/geometryutils.h"
 #include "core/platform/logging.h"
 #include "core/utils/utils.h"
-#include "dbus/layoutadaptor/layoutadaptor.h"
-#include "dbus/settingsadaptor/settingsadaptor.h"
+#include "runtime/services/layoutservice/layoutservice.h"
+#include "runtime/services/settingsservice/settingsservice.h"
 #include "dbus/shaderadaptor.h"
 #include "dbus/compositorbridgeadaptor.h"
 #include "dbus/controladaptor.h"
 #include "dbus/overlayadaptor.h"
 #include "dbus/zonedetectionadaptor.h"
-#include "dbus/snapadaptor/snapadaptor.h"
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
-#include "dbus/windowdragadaptor/windowdragadaptor.h"
-#include "dbus/tilingadaptor/tilingadaptor.h"
+#include "runtime/services/snapservice/snapservice.h"
+#include "runtime/windowtracker/windowtracker.h"
+#include "runtime/dragresolver/dragresolver.h"
+#include "runtime/services/tilingservice/tilingservice.h"
 #include <PhosphorEngine/DesktopRemap.h>
 #include <PhosphorEngine/PlacementEngineBase.h>
 #include <PhosphorEngine/WindowRegistry.h>
@@ -146,8 +146,8 @@ void Daemon::connectScreenSignals()
                 }
                 // The persisted pixel sizes are keyed the same way and follow
                 // the same flip (the manager has re-keyed its seeds already).
-                if (m_windowTrackingAdaptor) {
-                    m_windowTrackingAdaptor->renameScreenPixelSize(oldId, newId);
+                if (m_windowTracker) {
+                    m_windowTracker->renameScreenPixelSize(oldId, newId);
                 }
                 if (!m_settings) {
                     return;
@@ -289,7 +289,7 @@ void Daemon::connectScreenSignals()
                 }
                 // The two per-screen tab paint-override maps for the removed
                 // output (virtual sub-screens included): the OverlayService's
-                // drop-indicator map and the TilingAdaptor's tab map that the
+                // drop-indicator map and the TilingService's tab map that the
                 // KWin effect replays. The departing-screen loop that
                 // ordinarily clears both is keyed on the engine's set, which
                 // the prune above already shrank, so nothing else ever sweeps
@@ -300,8 +300,8 @@ void Daemon::connectScreenSignals()
                 if (m_overlayService) {
                     m_overlayService->clearScrollDropIndicatorOverridesWhere(removedPhysical);
                 }
-                if (m_tilingAdaptor) {
-                    m_tilingAdaptor->clearScrollTabPaintOverridesWhere(removedPhysical);
+                if (m_tilingService) {
+                    m_tilingService->clearScrollTabPaintOverridesWhere(removedPhysical);
                 }
 
                 // Invalidate cached EDID serial so a different monitor on this connector is detected
@@ -345,8 +345,8 @@ void Daemon::connectScreenSignals()
                 // longer holds. Scoped to the output that changed, keyed on
                 // its identifier the way the removal path is, so a rotation of
                 // monitor A leaves monitor B's preview alone.
-                if (m_windowDragAdaptor) {
-                    m_windowDragAdaptor->cancelDragInsertPreviewsForScreen(screen.identifier);
+                if (m_dragResolver) {
+                    m_dragResolver->cancelDragInsertPreviewsForScreen(screen.identifier);
                 }
                 m_geometryUpdatePending = true;
                 m_geometryUpdateTimer.start();
@@ -503,8 +503,8 @@ ScreenReshapeTracker::ReportVerdict Daemon::admitPixelSizeReport(const QString& 
     // had in the session state.
     return PlasmaZones::admitPixelSizeReport(m_reshapeTracker, *m_screenManager, connectorName,
                                              [this](const QString& screenIdentifier, const QSize& pixelSize) {
-                                                 if (m_windowTrackingAdaptor) {
-                                                     m_windowTrackingAdaptor->recordScreenPixelSizes(
+                                                 if (m_windowTracker) {
+                                                     m_windowTracker->recordScreenPixelSizes(
                                                          QHash<QString, QSize>{{screenIdentifier, pixelSize}});
                                                  }
                                              });
@@ -558,8 +558,8 @@ void Daemon::onCompositorPixelSizeChanged(const QString& connectorName)
     // Same cancel-before-context-change rule as the screenGeometryChanged
     // handler: the reconcile below can re-derive the output's engine and
     // reshape the strip a live drag-insert preview was detached into.
-    if (m_windowDragAdaptor) {
-        m_windowDragAdaptor->cancelDragInsertPreviewsForScreen(physId);
+    if (m_dragResolver) {
+        m_dragResolver->cancelDragInsertPreviewsForScreen(physId);
     }
     // Synchronous: see the declaration for the announce this has to beat.
     reconcileActiveAssignments();
@@ -618,14 +618,14 @@ void Daemon::connectDesktopActivity()
                 // per-output): a desktop flip on monitor A must not snap
                 // monitor B's live preview back mid-drag. The activity twin
                 // below stays unconditional — an activity switch is global.
-                if (m_windowDragAdaptor) {
-                    m_windowDragAdaptor->cancelDragInsertPreviewsForScreen(screenId);
+                if (m_dragResolver) {
+                    m_dragResolver->cancelDragInsertPreviewsForScreen(screenId);
                 }
                 // [SEQ B] Pin screens where all autotiled windows are sticky BEFORE
                 // changing the desktop context, so currentKeyForScreen() still
                 // resolves existing TilingStates ("virtualdesktopsonlyonprimary").
                 // The RELEASE half runs in [SEQ C½], after the context moves.
-                applyStickyScreenPins(m_windowTrackingAdaptor, m_autotileEngine.get(), m_scrollEngine.get(),
+                applyStickyScreenPins(m_windowTracker, m_autotileEngine.get(), m_scrollEngine.get(),
                                       PhosphorEngine::StickyPinPhase::Acquire);
                 // [SEQ C] Set THIS screen's engine desktop context (pure per-screen
                 // swap, no state migration) BEFORE updateEngineScreens() so the
@@ -649,7 +649,7 @@ void Daemon::connectDesktopActivity()
                 // desktop entered (the point of running it after [SEQ C]).
                 // Ahead of updateEngineScreens() so displaced-window releases
                 // are done before the managed set is recomputed and announced.
-                applyStickyScreenPins(m_windowTrackingAdaptor, m_autotileEngine.get(), m_scrollEngine.get(),
+                applyStickyScreenPins(m_windowTracker, m_autotileEngine.get(), m_scrollEngine.get(),
                                       PhosphorEngine::StickyPinPhase::Release);
                 // [SEQ D] Per-screen layout/overlay resolution context needs no
                 // push anymore: the layout registry (and the overlay service
@@ -662,7 +662,7 @@ void Daemon::connectDesktopActivity()
                 updateEngineScreens();
                 // [SEQ E¼] The desktop just entered gets its share of every window
                 // spanning it (after the pins and [SEQ E]; see the helper), per EFFECTIVE id.
-                reconcileMembershipsForScreens(m_tilingAdaptor, m_screenManager->virtualScreenIdsFor(screenId));
+                reconcileMembershipsForScreens(m_tilingService, m_screenManager->virtualScreenIdsFor(screenId));
                 // [SEQ E½] Re-announce the managed set UNCONDITIONALLY for this
                 // report. The effect's staleness gate rejects any announce whose
                 // per-screen desktop stamps disagree with what it last reported,
@@ -679,8 +679,8 @@ void Daemon::connectDesktopActivity()
                 // coalesces per event-loop turn and stamps desktops at emit
                 // time, so the burst's last announce carries a fully consistent
                 // map and is accepted.
-                if (m_tilingAdaptor) {
-                    m_tilingAdaptor->notifyEngineScreensChanged(/*isDesktopSwitch=*/true);
+                if (m_tilingService) {
+                    m_tilingService->notifyEngineScreensChanged(/*isDesktopSwitch=*/true);
                 }
                 // A desktop whose assignment is snapping demotes the screen out
                 // of tiling in the recompute above; nothing further on this path
@@ -766,23 +766,22 @@ void Daemon::connectDesktopActivity()
     // Remember the desktop list for the next start (reconcileDesktopsAtStartup).
     connect(m_virtualDesktopManager.get(), &PhosphorWorkspaces::VirtualDesktopManager::desktopsChanged, this, [this]() {
         const QStringList ids = m_virtualDesktopManager->desktopIds();
-        if (m_windowTrackingAdaptor && !ids.isEmpty()) {
+        if (m_windowTracker && !ids.isEmpty()) {
             // A late first list that matches the last session's is followed by
             // no desktopsRenumbered, the signal that would end the restored-only
             // hold (onDesktopsRenumbered, F1045), so it ends here. The same two
             // lists the desktop manager compares, read before this replaces one.
             if (m_lateStartupRenumberUpTo
-                && PhosphorEngine::DesktopRemap::fromIds(m_windowTrackingAdaptor->knownDesktopIds(), ids)
-                       .isIdentity()) {
+                && PhosphorEngine::DesktopRemap::fromIds(m_windowTracker->knownDesktopIds(), ids).isIdentity()) {
                 m_lateStartupRenumberUpTo.reset();
                 m_lateStartupRules.clear();
             }
-            m_windowTrackingAdaptor->setKnownDesktopIds(ids);
+            m_windowTracker->setKnownDesktopIds(ids);
         }
     });
 
     // Set initial virtual desktop on components that maintain their own copy
-    // (WindowDragAdaptor reads from PhosphorZones::LayoutRegistry directly via resolveLayoutForScreen())
+    // (DragResolver reads from PhosphorZones::LayoutRegistry directly via resolveLayoutForScreen())
     const int initialDesktop = currentDesktop();
     m_overlayService->setCurrentVirtualDesktop(initialDesktop);
     m_layoutManager->setCurrentVirtualDesktop(initialDesktop);
@@ -845,15 +844,15 @@ void Daemon::connectDesktopActivity()
                     // any active drag-insert preview before the engines' activity
                     // changes. Unconditional on purpose: an activity switch is
                     // global, unlike the per-output desktop switch above.
-                    if (m_windowDragAdaptor) {
-                        m_windowDragAdaptor->cancelDragInsertPreviews();
+                    if (m_dragResolver) {
+                        m_dragResolver->cancelDragInsertPreviews();
                     }
                     // Pin sticky screens before changing activity context. The
                     // release half runs after the switch below: activity is
                     // the other half of the same context key, so an early
                     // release migrates onto the activity being left exactly
                     // as it would onto the desktop being left.
-                    applyStickyScreenPins(m_windowTrackingAdaptor, m_autotileEngine.get(), m_scrollEngine.get(),
+                    applyStickyScreenPins(m_windowTracker, m_autotileEngine.get(), m_scrollEngine.get(),
                                           PhosphorEngine::StickyPinPhase::Acquire);
                     // Set engine's activity context BEFORE updateEngineScreens()
                     if (m_autotileEngine) {
@@ -868,12 +867,12 @@ void Daemon::connectDesktopActivity()
                     // Release half, now that the activity context has moved,
                     // so a migration targets the activity being entered. Same
                     // placement as the desktop path's [SEQ C½].
-                    applyStickyScreenPins(m_windowTrackingAdaptor, m_autotileEngine.get(), m_scrollEngine.get(),
+                    applyStickyScreenPins(m_windowTracker, m_autotileEngine.get(), m_scrollEngine.get(),
                                           PhosphorEngine::StickyPinPhase::Release);
                     // Per-activity assignments may differ — recompute autotile screens
                     updateEngineScreens();
                     // Activity moves every screen's context at once; same ordering as [SEQ E¼].
-                    reconcileMembershipsForScreens(m_tilingAdaptor, m_screenManager->effectiveScreenIds());
+                    reconcileMembershipsForScreens(m_tilingService, m_screenManager->effectiveScreenIds());
                     // Same reason as the per-screen desktop switch above: this
                     // path has no consumer for the preserved snap-ZONE half, so
                     // windows released by an activity's snapping assignment need
@@ -994,7 +993,7 @@ void Daemon::migrateStartupScreenAssignments()
     // m_settings and service() are unguarded below by the same invariant the
     // rest of the file relies on: both are ctor-owned / adaptor-constructed
     // and never null while the adaptor exists (autotile.cpp documents it).
-    if (!m_windowTrackingAdaptor || !m_screenManager || !m_windowTrackingAdaptor->service()) {
+    if (!m_windowTracker || !m_screenManager || !m_windowTracker->service()) {
         return;
     }
     const auto vsConfigs = m_settings->virtualScreenConfigs();
@@ -1006,8 +1005,7 @@ void Daemon::migrateStartupScreenAssignments()
         if (it.value().hasSubdivisions()) {
             physWithSubdivisions.insert(it.key());
             QStringList vsIds = m_screenManager->virtualScreenIdsFor(it.key());
-            m_windowTrackingAdaptor->service()->migrateScreenAssignmentsToVirtual(it.key(), vsIds,
-                                                                                  m_screenManager.get());
+            m_windowTracker->service()->migrateScreenAssignmentsToVirtual(it.key(), vsIds, m_screenManager.get());
         }
     }
 
@@ -1024,9 +1022,9 @@ void Daemon::migrateStartupScreenAssignments()
     // every future addition of a screen-id-bearing state store to mirror an
     // orphan-scan update here — exactly the bug class this fix is closing.
     const QSet<QString> orphanPhysIds =
-        m_windowTrackingAdaptor->service()->physicalScreensWithStaleVirtualAssignments(physWithSubdivisions);
+        m_windowTracker->service()->physicalScreensWithStaleVirtualAssignments(physWithSubdivisions);
     for (const QString& physId : orphanPhysIds) {
-        m_windowTrackingAdaptor->service()->migrateScreenAssignmentsFromVirtual(physId);
+        m_windowTracker->service()->migrateScreenAssignmentsFromVirtual(physId);
     }
 }
 
@@ -1074,7 +1072,7 @@ void Daemon::pruneEngineOrdersForRemovedScreens(const QString& physicalScreenId)
     }
 
     // The two per-screen tab paint-override maps sit on the same boundary,
-    // the OverlayService's drop-indicator one and the TilingAdaptor's tab one
+    // the OverlayService's drop-indicator one and the TilingService's tab one
     // the KWin effect replays: the departing-screen loop that ordinarily
     // clears them cannot sweep a screen the engine no longer names, so
     // without this a dropped vs:N id keeps its overrides (and would replay
@@ -1086,8 +1084,8 @@ void Daemon::pruneEngineOrdersForRemovedScreens(const QString& physicalScreenId)
     if (m_overlayService) {
         m_overlayService->clearScrollDropIndicatorOverridesWhere(droppedSubScreen);
     }
-    if (m_tilingAdaptor) {
-        m_tilingAdaptor->clearScrollTabPaintOverridesWhere(droppedSubScreen);
+    if (m_tilingService) {
+        m_tilingService->clearScrollTabPaintOverridesWhere(droppedSubScreen);
     }
 
     // The strip-preview settle timers are keyed by the same screen ids and
@@ -1105,7 +1103,7 @@ void Daemon::onVirtualScreensReconfigured(const QString& physicalScreenId)
     // m_screenManager / m_layoutManager / m_virtualDesktopManager are
     // unique_ptrs constructed in the Daemon ctor's initializer list and
     // never nulled — by the time this signal handler fires they are valid.
-    // m_windowTrackingAdaptor is constructed later in init() and may be null
+    // m_windowTracker is constructed later in init() and may be null
     // if the signal somehow fires before construction (e.g. early Settings
     // load); guard those uses individually.
     const PhosphorScreens::VirtualScreenConfig config = m_screenManager->virtualScreenConfig(physicalScreenId);
@@ -1124,8 +1122,8 @@ void Daemon::onVirtualScreensReconfigured(const QString& physicalScreenId)
     // captured keys nothing resolves, and neither its commit nor its cancel
     // can put the window anywhere. Scoped to the reconfigured output because
     // samePhysical covers the physical id and every virtual child of it.
-    if (m_windowDragAdaptor) {
-        m_windowDragAdaptor->cancelDragInsertPreviewsForScreen(physicalScreenId);
+    if (m_dragResolver) {
+        m_dragResolver->cancelDragInsertPreviewsForScreen(physicalScreenId);
     }
 
     // Recalculate zone geometries inline for the affected screens FIRST so
@@ -1148,8 +1146,8 @@ void Daemon::onVirtualScreensReconfigured(const QString& physicalScreenId)
     }
 
     // Clear stale resnap buffer — screen IDs have changed.
-    if (m_windowTrackingAdaptor) {
-        m_windowTrackingAdaptor->service()->clearResnapBuffer();
+    if (m_windowTracker) {
+        m_windowTracker->service()->clearResnapBuffer();
     }
 
     // Migrate window screen assignments symmetrically across the
@@ -1161,13 +1159,13 @@ void Daemon::onVirtualScreensReconfigured(const QString& physicalScreenId)
     //     pending-restore lookups don't dangle on orphan screen ids.
     // Migration is a no-op for windows already on a valid screen id in the
     // new config — those keep their stored screen.
-    if (m_windowTrackingAdaptor) {
+    if (m_windowTracker) {
         if (config.hasSubdivisions()) {
             const QStringList vsIds = m_screenManager->virtualScreenIdsFor(physicalScreenId);
-            m_windowTrackingAdaptor->service()->migrateScreenAssignmentsToVirtual(physicalScreenId, vsIds,
-                                                                                  m_screenManager.get());
+            m_windowTracker->service()->migrateScreenAssignmentsToVirtual(physicalScreenId, vsIds,
+                                                                          m_screenManager.get());
         } else {
-            m_windowTrackingAdaptor->service()->migrateScreenAssignmentsFromVirtual(physicalScreenId);
+            m_windowTracker->service()->migrateScreenAssignmentsFromVirtual(physicalScreenId);
         }
     }
 
@@ -1219,8 +1217,8 @@ void Daemon::onVirtualScreensReconfigured(const QString& physicalScreenId)
     // VS-aware via Utils::belongsToPhysicalScreen. The vs_reconfigure-tagged
     // variant suppresses the kwin-effect snap-assist continuation so users
     // don't get a thumbnail picker popping up after every VS swap/rotate.
-    if (m_snapAdaptor) {
-        m_snapAdaptor->resnapForVirtualScreenReconfigure(physicalScreenId);
+    if (m_snapService) {
+        m_snapService->resnapForVirtualScreenReconfigure(physicalScreenId);
     }
     // A survivor's new shape can also move a shape-keyed gap rule's verdict. The
     // resnap above just placed this output's windows under the current gaps, so
@@ -1264,8 +1262,8 @@ void Daemon::onVirtualScreenRegionsChanged(const QString& physicalScreenId)
         }
     }
 
-    if (m_windowTrackingAdaptor) {
-        m_windowTrackingAdaptor->service()->clearResnapBuffer();
+    if (m_windowTracker) {
+        m_windowTracker->service()->clearResnapBuffer();
     }
     // A boundary resize changes each virtual screen's shape (its share of the
     // output), and a shape-keyed rule can move its verdict with it. The id set
@@ -1283,8 +1281,8 @@ void Daemon::onVirtualScreenRegionsChanged(const QString& physicalScreenId)
         // Same cancel-before-context-change rule as the topology handler
         // above: the re-derive below can move the output's screens between
         // engines under a live drag-insert preview.
-        if (m_windowDragAdaptor) {
-            m_windowDragAdaptor->cancelDragInsertPreviewsForScreen(physicalScreenId);
+        if (m_dragResolver) {
+            m_dragResolver->cancelDragInsertPreviewsForScreen(physicalScreenId);
         }
         updateEngineScreens();
         flushPendingSnapZoneRestores();
@@ -1293,8 +1291,8 @@ void Daemon::onVirtualScreenRegionsChanged(const QString& physicalScreenId)
     if (reshaped) {
         scheduleContextOverlayRefresh();
     }
-    if (m_snapAdaptor) {
-        m_snapAdaptor->resnapForVirtualScreenReconfigure(physicalScreenId);
+    if (m_snapService) {
+        m_snapService->resnapForVirtualScreenReconfigure(physicalScreenId);
     }
     // Same gap pass as the topology handler: this output's windows were just
     // placed under the current gaps, so only another screen's moved verdict is

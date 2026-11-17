@@ -265,7 +265,7 @@ private Q_SLOTS:
      * and PauseWhenIdle's default is TRUE.
      *
      * This pins the bug that actually shipped. Every layer of the wiring looked
-     * complete, but the key was missing from SettingsAdaptor's hand-maintained getter
+     * complete, but the key was missing from SettingsService's hand-maintained getter
      * registry, and getSetting answered an unknown key with a valid EMPTY STRING —
      * which QVariant::toBool() reads as false. So a default-true setting came back
      * false on every startup: not merely disabled, INVERTED. The registry hole itself

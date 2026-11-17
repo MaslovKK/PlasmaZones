@@ -4,13 +4,13 @@
 /**
  * @file test_wta_layout_switch.cpp
  * @brief The one layout-switch helper every switch caller runs:
- *        WindowTrackingAdaptor::resnapScreensToTheirLayouts. It populates
+ *        WindowTracker::resnapScreensToTheirLayouts. It populates
  *        the buffer for the switched screens, resnaps silently, then prunes
  *        and relays what the switch could not carry, announcing the pending
  *        restores once per pass or burst of passes. Plus a layout deleted
  *        under its windows, a switch to no layout that keeps the zones, the
  *        two other re-applies with snapping switched off
- *        (SnapAdaptor::reapplySnapZones for a settings reflow and
+ *        (SnapService::reapplySnapZones for a settings reflow and
  *        getUpdatedWindowGeometries for a resolution change), and the
  *        resolution-change setting read live.
  */
@@ -49,7 +49,7 @@ private Q_SLOTS:
     // first wait out.
     void pendingRestoresChangedOncePerPass()
     {
-        QSignalSpy spy(m_wta, &WindowTrackingAdaptor::pendingRestoresChanged);
+        QSignalSpy spy(m_wta, &WindowTracker::pendingRestoresChanged);
         QCoreApplication::processEvents();
         spy.clear();
 
@@ -71,7 +71,7 @@ private Q_SLOTS:
     // runner. FAILS with a zero-interval timer (one signal per pass).
     void pendingRestoresChangedOncePerBurstAcrossPasses()
     {
-        QSignalSpy spy(m_wta, &WindowTrackingAdaptor::pendingRestoresChanged);
+        QSignalSpy spy(m_wta, &WindowTracker::pendingRestoresChanged);
         QCoreApplication::processEvents();
         spy.clear();
 
@@ -95,7 +95,7 @@ private Q_SLOTS:
         service()->assignWindowToZones(span, {m_zoneIds[0], m_zoneIds[1]}, other, m_desktop);
         service()->assignWindowToZone(QStringLiteral("app|switch-here"), m_zoneIds[0], m_screenId, m_desktop);
         m_layoutManager->assignLayout(m_screenId, m_desktop, QString(), m_twoZones);
-        QSignalSpy batch(m_wta, &WindowTrackingAdaptor::applyGeometriesBatch);
+        QSignalSpy batch(m_wta, &WindowTracker::applyGeometriesBatch);
 
         m_wta->resnapScreensToTheirLayouts({}, {m_screenId}, m_desktop);
 
@@ -111,7 +111,7 @@ private Q_SLOTS:
         const QString w = QStringLiteral("app|switch-excess");
         service()->assignWindowToZone(w, m_zoneIds[2], m_screenId, m_desktop);
         m_layoutManager->assignLayout(m_screenId, m_desktop, QString(), m_twoZones);
-        QSignalSpy states(m_wta, &WindowTrackingAdaptor::windowStateChanged);
+        QSignalSpy states(m_wta, &WindowTracker::windowStateChanged);
 
         m_wta->resnapScreensToTheirLayouts({}, {m_screenId}, m_desktop);
 
@@ -173,7 +173,7 @@ private Q_SLOTS:
         m_layoutManager->setActiveLayout(doomed);
         const QString w = QStringLiteral("app|delete-default");
         service()->assignWindowToZone(w, doomed->zones().at(1)->id().toString(), m_screenId, m_desktop);
-        QSignalSpy batch(m_wta, &WindowTrackingAdaptor::applyGeometriesBatch);
+        QSignalSpy batch(m_wta, &WindowTracker::applyGeometriesBatch);
 
         QVERIFY(m_layoutManager->removeLayout(doomed));
 
@@ -199,7 +199,7 @@ private Q_SLOTS:
         const QString w = QStringLiteral("app|delete-context-spot");
         service()->recordFreeGeometry(w, m_screenId, QRect(100, 100, 600, 400), true);
         service()->assignWindowToZone(w, doomed->zones().at(1)->id().toString(), m_screenId, m_desktop);
-        QSignalSpy batch(m_wta, &WindowTrackingAdaptor::applyGeometriesBatch);
+        QSignalSpy batch(m_wta, &WindowTracker::applyGeometriesBatch);
 
         QVERIFY(m_layoutManager->removeLayout(doomed));
 
@@ -216,8 +216,8 @@ private Q_SLOTS:
         m_layoutManager->assignLayout(m_screenId, m_desktop, QString(), doomed);
         const QString w = QStringLiteral("app|delete-context");
         service()->assignWindowToZone(w, doomed->zones().at(1)->id().toString(), m_screenId, m_desktop);
-        QSignalSpy states(m_wta, &WindowTrackingAdaptor::windowStateChanged);
-        QSignalSpy batch(m_wta, &WindowTrackingAdaptor::applyGeometriesBatch);
+        QSignalSpy states(m_wta, &WindowTracker::windowStateChanged);
+        QSignalSpy batch(m_wta, &WindowTracker::applyGeometriesBatch);
 
         QVERIFY(m_layoutManager->removeLayout(doomed));
 
@@ -246,7 +246,7 @@ private Q_SLOTS:
         none.snappingLayout = PhosphorZones::NoSnappingLayout;
         m_layoutManager->setAssignmentEntryDirect(m_screenId, 0, QString(), none);
         QVERIFY(!m_layoutManager->resolveLayoutForScreen(m_screenId));
-        QSignalSpy batch(m_wta, &WindowTrackingAdaptor::applyGeometriesBatch);
+        QSignalSpy batch(m_wta, &WindowTracker::applyGeometriesBatch);
 
         m_wta->resnapScreensToTheirLayouts({}, {m_screenId}, m_desktop);
 
@@ -275,7 +275,7 @@ private Q_SLOTS:
     {
         FloatBackFixture f;
         QObject adaptorParent; // dies before the fixture's engine and adaptor
-        auto* snapAdaptor = new SnapAdaptor(f.snap.get(), f.wta, &f.settings, &adaptorParent);
+        auto* snapAdaptor = new SnapService(f.snap.get(), f.wta, &f.settings, &adaptorParent);
         const auto detach = qScopeGuard([snapAdaptor] {
             snapAdaptor->clearEngine();
         });
@@ -283,7 +283,7 @@ private Q_SLOTS:
         f.snap->commitSnap(w, f.zone(0), kLeft);
 
         f.settings.setSnappingEnabled(false);
-        QSignalSpy batch(f.wta, &WindowTrackingAdaptor::applyGeometriesBatch);
+        QSignalSpy batch(f.wta, &WindowTracker::applyGeometriesBatch);
         snapAdaptor->reapplySnapZones();
         QCOMPARE(batch.count(), 0);
 

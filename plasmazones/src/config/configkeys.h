@@ -206,7 +206,7 @@ public:
     P_CONFIG_GROUP(editorBackgroundGroup, "Editor.Background")
 
     // Lives in session.json, not config.json, so no config.json save or
-    // purge touches it. Written by WindowTrackingAdaptor (see below).
+    // purge touches it. Written by WindowTracker (see below).
     P_CONFIG_GROUP(windowTrackingGroup, "WindowTracking")
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -215,7 +215,7 @@ public:
     // The WindowTracking group stores ephemeral per-session window state that is
     // NOT part of user preferences. It lives in session.json (separate from
     // config.json) to avoid write contention with user preference saves.
-    // Owned by WindowTrackingAdaptor and saved via its debounced save cycle.
+    // Owned by WindowTracker and saved via its debounced save cycle.
     //
     // Autotile preferences live in two Settings (config.json) locations:
     //   1. Tiling.Algorithm group — global defaults: algorithm, splitRatio,
@@ -230,7 +230,7 @@ public:
 
     P_CONFIG_KEY(activeLayoutIdKey, "ActiveLayoutId")
 
-    // Snap mode — last used zone info. Only the zone id is persisted (windowtrackingadaptor/
+    // Snap mode — last used zone info. Only the zone id is persisted (runtime/windowtracker/
     // saveload.cpp); the companion screen / class / desktop keys had no reader or writer left.
     P_CONFIG_KEY(lastUsedZoneIdKey, "LastUsedZoneId")
 
@@ -671,7 +671,7 @@ public:
         // config namespace.
         //
         // Bounded by the protocol constant the daemon validates against
-        // (layoutadaptor.cpp) rather than a hardcoded 9, so raising the slot
+        // (layoutservice.cpp) rather than a hardcoded 9, so raising the slot
         // count cannot leave this guard rejecting keys the rest of the tree
         // considers legal.
         if (n < 1 || n > PhosphorProtocol::Service::QuickLayoutSlotCount) {

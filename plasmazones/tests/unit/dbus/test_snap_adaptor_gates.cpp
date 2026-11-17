@@ -3,7 +3,7 @@
 
 /**
  * @file test_snap_adaptor_gates.cpp
- * @brief The bus snap gate (SnapAdaptor::admitBusSnap): a D-Bus snap of one
+ * @brief The bus snap gate (SnapService::admitBusSnap): a D-Bus snap of one
  *        window lands only where a keyboard snap could, on the window's own
  *        desktop, and Control.snapWindowToZone resolves its screen the same
  *        way (F20, F142, F179, F21, F22, F26, F85). The focused-window verbs
@@ -16,8 +16,9 @@
 
 #include "wta_float_back_fixture.h"
 #include "helpers/VirtualScreenTestHelpers.h"
-#include "dbus/controladaptor.h"
-#include "dbus/snapadaptor/snapadaptor.h"
+#include "runtime/services/controlservice.h"
+#include "runtime/services/snapservice/snapservice.h"
+#include "dbus/snapadaptor.h"
 #include "helpers/BusPeer.h"
 #include "helpers/ScreenDisablingResolver.h"
 
@@ -41,7 +42,7 @@ struct GateFixture : FloatBackFixture
     explicit GateFixture(PhosphorWorkspaces::VirtualDesktopManager* vdm = nullptr)
         : FloatBackFixture(vdm)
     {
-        adaptor = new SnapAdaptor(snap.get(), wta, &settings, &parent);
+        adaptor = new SnapService(snap.get(), wta, &settings, &parent);
         adaptor->setContextResolver(&resolver);
         layouts->assignLayout(kLeft, 1, QString(), layout);
         layouts->assignLayout(kRight, 1, QString(), layout);
@@ -72,12 +73,12 @@ struct GateFixture : FloatBackFixture
                                       : PhosphorZones::AssignmentEntry::Mode::Snapping;
         });
     }
-    ControlAdaptor* control()
+    ControlService* control()
     {
-        return new ControlAdaptor(wta, adaptor, layouts, nullptr, nullptr, nullptr, nullptr, nullptr, &parent);
+        return new ControlService(wta, adaptor, layouts, nullptr, &parent);
     }
 
-    SnapAdaptor* adaptor = nullptr; // parent-owned
+    SnapService* adaptor = nullptr; // parent-owned
     ScreenDisablingResolver resolver;
 };
 
@@ -92,7 +93,7 @@ private Q_SLOTS:
     {
         GateFixture f;
         const QString w = f.registerOn(QStringLiteral("free-1"), 1);
-        QSignalSpy applies(f.wta, &WindowTrackingAdaptor::applyGeometryRequested);
+        QSignalSpy applies(f.wta, &WindowTracker::applyGeometryRequested);
         f.adaptor->moveWindowToZoneOnScreen(w, f.zone(0), kLeft);
         QCOMPARE(applies.count(), 1);
         QCOMPARE(applies.first().at(6).toString(), kLeft);
@@ -102,7 +103,7 @@ private Q_SLOTS:
     void refusesAnUnregisteredWindow()
     {
         GateFixture f;
-        QSignalSpy applies(f.wta, &WindowTrackingAdaptor::applyGeometryRequested);
+        QSignalSpy applies(f.wta, &WindowTracker::applyGeometryRequested);
         f.adaptor->moveWindowToZoneOnScreen(QStringLiteral("app|ghost"), f.zone(0), kLeft);
         QCOMPARE(applies.count(), 0);
         QVERIFY(!f.snap->isWindowTracked(QStringLiteral("app|ghost")));
@@ -113,7 +114,7 @@ private Q_SLOTS:
         GateFixture f;
         const QString w = f.registerOn(QStringLiteral("tile-1"), 1);
         f.tile(kLeft);
-        QSignalSpy applies(f.wta, &WindowTrackingAdaptor::applyGeometryRequested);
+        QSignalSpy applies(f.wta, &WindowTracker::applyGeometryRequested);
         f.adaptor->moveWindowToZoneOnScreen(w, f.zone(0), kLeft);
         QCOMPARE(applies.count(), 0);
         QVERIFY(f.snap->zoneForWindow(w).isEmpty());
@@ -124,7 +125,7 @@ private Q_SLOTS:
         GateFixture f;
         const QString w = f.registerOn(QStringLiteral("off-1"), 1);
         f.settings.setSnappingEnabled(false);
-        QSignalSpy applies(f.wta, &WindowTrackingAdaptor::applyGeometryRequested);
+        QSignalSpy applies(f.wta, &WindowTracker::applyGeometryRequested);
         f.adaptor->moveWindowToZoneOnScreen(w, f.zone(0), kLeft);
         QCOMPARE(applies.count(), 0);
     }
@@ -134,7 +135,7 @@ private Q_SLOTS:
         GateFixture f;
         const QString w = f.registerOn(QStringLiteral("disabled-1"), 1);
         f.resolver.m_disabled.insert(kLeft);
-        QSignalSpy applies(f.wta, &WindowTrackingAdaptor::applyGeometryRequested);
+        QSignalSpy applies(f.wta, &WindowTracker::applyGeometryRequested);
         f.adaptor->moveWindowToZoneOnScreen(w, f.zone(0), kLeft);
         QCOMPARE(applies.count(), 0);
     }
@@ -149,7 +150,7 @@ private Q_SLOTS:
             q.width = 100;
             return std::optional<PhosphorRules::WindowQuery>(q);
         });
-        QSignalSpy applies(f.wta, &WindowTrackingAdaptor::applyGeometryRequested);
+        QSignalSpy applies(f.wta, &WindowTracker::applyGeometryRequested);
         f.adaptor->moveWindowToZoneOnScreen(w, f.zone(0), kLeft);
         QCOMPARE(applies.count(), 0);
         f.snap->setExclusionQueryProvider({});
@@ -159,7 +160,7 @@ private Q_SLOTS:
     {
         GateFixture f;
         const QString w = f.registerOn(QStringLiteral("unknown-1"), 1);
-        QSignalSpy applies(f.wta, &WindowTrackingAdaptor::applyGeometryRequested);
+        QSignalSpy applies(f.wta, &WindowTracker::applyGeometryRequested);
         f.adaptor->moveWindowToZoneOnScreen(w, f.zone(0), QStringLiteral("DP-9"));
         QCOMPARE(applies.count(), 0);
     }
@@ -173,7 +174,7 @@ private Q_SLOTS:
         f.layouts->addLayout(other);
         f.layouts->assignLayout(kRight, 1, QString(), other);
         const QString w = f.registerOn(QStringLiteral("ghost-1"), 1);
-        QSignalSpy applies(f.wta, &WindowTrackingAdaptor::applyGeometryRequested);
+        QSignalSpy applies(f.wta, &WindowTracker::applyGeometryRequested);
         f.adaptor->moveWindowToZoneOnScreen(w, f.zone(0), kRight);
         QCOMPARE(applies.count(), 0);
         QVERIFY(f.snap->zoneForWindow(w).isEmpty());
@@ -209,7 +210,7 @@ private Q_SLOTS:
         f.registry.upsert(QStringLiteral("span-1"), meta);
         const QString w = QStringLiteral("app|span-1");
         f.registry.canonicalizeWindowId(w);
-        QSignalSpy applies(f.wta, &WindowTrackingAdaptor::applyGeometryRequested);
+        QSignalSpy applies(f.wta, &WindowTracker::applyGeometryRequested);
         f.adaptor->moveWindowToZoneOnScreen(w, f.zone(0), kLeft);
         QCOMPARE(applies.count(), 0);
     }
@@ -233,7 +234,7 @@ private Q_SLOTS:
         f.registry.upsert(QStringLiteral("acts-2"), meta);
         const QString elsewhere = QStringLiteral("app|acts-2");
         f.registry.canonicalizeWindowId(elsewhere);
-        QSignalSpy applies(f.wta, &WindowTrackingAdaptor::applyGeometryRequested);
+        QSignalSpy applies(f.wta, &WindowTracker::applyGeometryRequested);
         f.adaptor->moveWindowToZoneOnScreen(elsewhere, f.zone(0), kLeft);
         QCOMPARE(applies.count(), 0);
         f.adaptor->moveWindowToZoneOnScreen(spanning, f.zone(0), kLeft);
@@ -247,7 +248,7 @@ private Q_SLOTS:
     {
         GateFixture f;
         const QString w = f.registerOn(QStringLiteral("right-1"), 1, QRect(2400, 200, 400, 300));
-        QSignalSpy applies(f.wta, &WindowTrackingAdaptor::applyGeometryRequested);
+        QSignalSpy applies(f.wta, &WindowTracker::applyGeometryRequested);
         f.adaptor->moveWindowToZone(w, f.zone(1));
         QCOMPARE(applies.count(), 1);
         QCOMPARE(applies.first().at(6).toString(), kRight);
@@ -262,7 +263,7 @@ private Q_SLOTS:
         const QString vs1 = QStringLiteral("DP-2/vs:1");
         f.layouts->assignLayout(vs1, 1, QString(), f.layout);
         const QString w = f.registerOn(QStringLiteral("split-1"), 1, QRect(3000, 200, 400, 300));
-        QSignalSpy applies(f.wta, &WindowTrackingAdaptor::applyGeometryRequested);
+        QSignalSpy applies(f.wta, &WindowTracker::applyGeometryRequested);
         f.control()->snapWindowToZone(w, 1, kRight);
         QCOMPARE(applies.count(), 1);
         QCOMPARE(applies.first().at(6).toString(), vs1);
@@ -284,7 +285,7 @@ private Q_SLOTS:
         };
         f.snap->commitSnap(w, f.zone(0), kLeft);
         QVERIFY(f.snap->holdsWindowInState(w, leftStore()));
-        QSignalSpy applies(f.wta, &WindowTrackingAdaptor::applyGeometryRequested);
+        QSignalSpy applies(f.wta, &WindowTracker::applyGeometryRequested);
         f.control()->snapWindowToZone(w, 1, kRight);
         QCOMPARE(applies.count(), 1);
         QCOMPARE(applies.first().at(6).toString(), kRight);
@@ -299,7 +300,7 @@ private Q_SLOTS:
     {
         GateFixture f;
         const QString w = f.registerOn(QStringLiteral("own-1"), 1, QRect(2400, 200, 400, 300));
-        QSignalSpy applies(f.wta, &WindowTrackingAdaptor::applyGeometryRequested);
+        QSignalSpy applies(f.wta, &WindowTracker::applyGeometryRequested);
         f.control()->snapWindowToZone(w, 1, QString());
         QCOMPARE(applies.count(), 1);
         QCOMPARE(applies.first().at(6).toString(), kRight);
@@ -313,7 +314,7 @@ private Q_SLOTS:
         f.layouts->addLayout(ten);
         f.layouts->assignLayout(kLeft, 1, QString(), ten);
         const QString w = f.registerOn(QStringLiteral("ten-1"), 1);
-        QSignalSpy applies(f.wta, &WindowTrackingAdaptor::applyGeometryRequested);
+        QSignalSpy applies(f.wta, &WindowTracker::applyGeometryRequested);
         f.control()->snapWindowToZone(w, 10, kLeft);
         QCOMPARE(applies.count(), 1);
         QCOMPARE(applies.first().at(5).toString(), ten->zoneByNumber(10)->id().toString());
@@ -327,7 +328,7 @@ private Q_SLOTS:
         const QString w = f.registerOn(QStringLiteral("map-1"), 1);
         f.snap->commitSnap(w, f.zone(0), kLeft);
         f.wta->windowActivated(w, kLeft);
-        QSignalSpy applies(f.wta, &WindowTrackingAdaptor::applyGeometryRequested);
+        QSignalSpy applies(f.wta, &WindowTracker::applyGeometryRequested);
         f.adaptor->snapToZoneByNumber(2, kRight);
         QCOMPARE(applies.count(), 1);
         QCOMPARE(applies.first().at(6).toString(), kRight);
@@ -342,7 +343,7 @@ private Q_SLOTS:
         f.layouts->assignLayout(kRight, 1, QString(), ten);
         const QString w = f.registerOn(QStringLiteral("map-10"), 1);
         f.wta->windowActivated(w, kLeft);
-        QSignalSpy applies(f.wta, &WindowTrackingAdaptor::applyGeometryRequested);
+        QSignalSpy applies(f.wta, &WindowTracker::applyGeometryRequested);
         f.adaptor->snapToZoneByNumber(10, kRight);
         QCOMPARE(applies.count(), 1);
         QCOMPARE(applies.first().at(5).toString(), ten->zoneByNumber(10)->id().toString());
@@ -353,7 +354,7 @@ private Q_SLOTS:
         GateFixture f;
         const QString w = f.registerOn(QStringLiteral("push-1"), 1);
         f.wta->windowActivated(w, kLeft);
-        QSignalSpy applies(f.wta, &WindowTrackingAdaptor::applyGeometryRequested);
+        QSignalSpy applies(f.wta, &WindowTracker::applyGeometryRequested);
         f.adaptor->pushToEmptyZone(kRight);
         QCOMPARE(applies.count(), 1);
         QCOMPARE(applies.first().at(6).toString(), kRight);
@@ -368,7 +369,7 @@ private Q_SLOTS:
         const QString w = f.registerOn(QStringLiteral("silent-1"), 1);
         f.wta->windowActivated(w, kLeft);
         f.tile(kRight);
-        QSignalSpy feedback(f.wta, &WindowTrackingAdaptor::navigationFeedback);
+        QSignalSpy feedback(f.wta, &WindowTracker::navigationFeedback);
         f.adaptor->pushToEmptyZone(QStringLiteral("DP-9"));
         f.adaptor->snapToZoneByNumber(9, kRight);
         QCOMPARE(feedback.count(), 0);
@@ -383,7 +384,7 @@ private Q_SLOTS:
         f.snap->commitSnap(w, f.zone(0), kRight);
         f.wta->windowActivated(w, kRight);
         f.tile(kRight);
-        QSignalSpy applies(f.wta, &WindowTrackingAdaptor::applyGeometryRequested);
+        QSignalSpy applies(f.wta, &WindowTracker::applyGeometryRequested);
         f.adaptor->snapToZoneByNumber(2, QString());
         f.adaptor->moveWindowToAdjacentZone(QStringLiteral("right"));
         QCOMPARE(applies.count(), 0);
@@ -397,7 +398,7 @@ private Q_SLOTS:
         f.snap->commitSnap(w, f.zone(0), kLeft);
         f.wta->windowActivated(w, kLeft);
         f.settings.setSnappingEnabled(false);
-        QSignalSpy applies(f.wta, &WindowTrackingAdaptor::applyGeometryRequested);
+        QSignalSpy applies(f.wta, &WindowTracker::applyGeometryRequested);
         f.adaptor->snapToZoneByNumber(2, QString());
         QCOMPARE(applies.count(), 0);
     }
@@ -409,7 +410,7 @@ private Q_SLOTS:
         const QString b = f.registerOn(QStringLiteral("swap-b"), 1, QRect(2400, 200, 400, 300));
         f.snap->commitSnap(a, f.zone(0), kLeft);
         f.snap->commitSnap(b, f.zone(1), kRight);
-        QSignalSpy applies(f.wta, &WindowTrackingAdaptor::applyGeometryRequested);
+        QSignalSpy applies(f.wta, &WindowTracker::applyGeometryRequested);
         f.adaptor->swapWindowsById(a, b);
         QCOMPARE(applies.count(), 2);
         QCOMPARE(f.snap->zoneForWindow(a), f.zone(1));
@@ -429,7 +430,7 @@ private Q_SLOTS:
         const QStringList span{f.zone(0), f.zone(1)};
         f.snap->commitMultiZoneSnap(a, span, kLeft);
         f.snap->commitSnap(b, f.zone(2), kLeft);
-        QSignalSpy applies(f.wta, &WindowTrackingAdaptor::applyGeometryRequested);
+        QSignalSpy applies(f.wta, &WindowTracker::applyGeometryRequested);
         f.adaptor->swapWindowsById(a, b);
         QCOMPARE(applies.count(), 2);
         QCOMPARE(f.wta->service()->zonesForWindow(b), span);
@@ -448,7 +449,7 @@ private Q_SLOTS:
         f.snap->commitSnap(a, f.zone(0), kLeft);
         f.snap->commitSnap(b, f.zone(1), kRight);
         f.tile(kRight);
-        QSignalSpy applies(f.wta, &WindowTrackingAdaptor::applyGeometryRequested);
+        QSignalSpy applies(f.wta, &WindowTracker::applyGeometryRequested);
         f.adaptor->swapWindowsById(a, b);
         QCOMPARE(applies.count(), 0);
         QCOMPARE(f.snap->zoneForWindow(a), f.zone(0));
@@ -462,7 +463,7 @@ private Q_SLOTS:
         const QString ghost = QStringLiteral("app|swap-ghost");
         f.snap->commitSnap(a, f.zone(0), kLeft);
         f.snap->commitSnap(ghost, f.zone(1), kLeft);
-        QSignalSpy applies(f.wta, &WindowTrackingAdaptor::applyGeometryRequested);
+        QSignalSpy applies(f.wta, &WindowTracker::applyGeometryRequested);
         f.adaptor->swapWindowsById(a, ghost);
         QCOMPARE(applies.count(), 0);
         QCOMPARE(f.snap->zoneForWindow(a), f.zone(0));
@@ -496,7 +497,7 @@ private Q_SLOTS:
         GateFixture f;
         const QString a = f.registerOn(QStringLiteral("self-a"), 1);
         f.snap->commitSnap(a, f.zone(0), kLeft);
-        QSignalSpy applies(f.wta, &WindowTrackingAdaptor::applyGeometryRequested);
+        QSignalSpy applies(f.wta, &WindowTracker::applyGeometryRequested);
         f.adaptor->swapWindowsById(a, a);
         QCOMPARE(applies.count(), 0);
     }
@@ -512,7 +513,7 @@ private Q_SLOTS:
         f.snap->commitSnap(b, f.zone(1), kLeft);
         const QString renamed = QStringLiteral("renamed|self-r");
         QCOMPARE(f.registry.canonicalizeForLookup(renamed), a);
-        QSignalSpy applies(f.wta, &WindowTrackingAdaptor::applyGeometryRequested);
+        QSignalSpy applies(f.wta, &WindowTracker::applyGeometryRequested);
         f.adaptor->swapWindowsById(a, renamed);
         QCOMPARE(applies.count(), 0);
         QCOMPARE(f.snap->stateForWindow(a)->zoneForWindow(a), f.zone(0));
@@ -593,7 +594,7 @@ private Q_SLOTS:
     void floatToggleOnAnEmptyIdReportsInvalidWindow()
     {
         GateFixture f;
-        QSignalSpy feedback(f.wta, &WindowTrackingAdaptor::navigationFeedback);
+        QSignalSpy feedback(f.wta, &WindowTracker::navigationFeedback);
         f.adaptor->toggleFloatForWindow(QString(), kLeft);
         QCOMPARE(feedback.count(), 1);
         QCOMPARE(feedback.first().at(2).toString(), QStringLiteral("invalid_window"));
@@ -606,7 +607,7 @@ private Q_SLOTS:
         GateFixture f;
         const QString w = f.registerOn(QStringLiteral("drag-1"), 1);
         f.wta->setInteractiveDragWindow(w);
-        QSignalSpy applies(f.wta, &WindowTrackingAdaptor::applyGeometryRequested);
+        QSignalSpy applies(f.wta, &WindowTracker::applyGeometryRequested);
         f.adaptor->moveWindowToZoneOnScreen(w, f.zone(0), kLeft);
         QCOMPARE(applies.count(), 0);
         QVERIFY(f.snap->zoneForWindow(w).isEmpty());
@@ -642,7 +643,7 @@ private Q_SLOTS:
         f.snap->commitSnap(w, f.zone(0), kLeft);
         f.wta->windowActivated(w, kLeft);
         f.wta->setInteractiveDragWindow(w);
-        QSignalSpy applies(f.wta, &WindowTrackingAdaptor::applyGeometryRequested);
+        QSignalSpy applies(f.wta, &WindowTracker::applyGeometryRequested);
         QSignalSpy feedback(f.snap.get(), &PhosphorEngine::PlacementEngineBase::navigationFeedback);
         QSignalSpy activations(f.snap.get(), &PhosphorEngine::PlacementEngineBase::activateWindowRequested);
         f.adaptor->snapToZoneByNumber(2, QString());
@@ -762,7 +763,7 @@ private Q_SLOTS:
         const QString w = f.registerOn(QStringLiteral("rs-1"), 1, QRect(2400, 200, 400, 300));
         f.snap->commitSnap(w, f.zone(0), kRight);
         f.tile(kRight);
-        QSignalSpy batches(f.wta, &WindowTrackingAdaptor::applyGeometriesBatch);
+        QSignalSpy batches(f.wta, &WindowTracker::applyGeometriesBatch);
         f.adaptor->resnapCurrentAssignments(kRight);
         QCOMPARE(batches.count(), 0);
     }
@@ -801,7 +802,7 @@ private Q_SLOTS:
         meta.virtualDesktops = {1, 2};
         meta.isMinimized = false;
         f.registry.upsert(QStringLiteral("batch-2"), meta);
-        QSignalSpy batches(f.wta, &WindowTrackingAdaptor::applyGeometriesBatch);
+        QSignalSpy batches(f.wta, &WindowTracker::applyGeometriesBatch);
 
         f.adaptor->handleBatchedResnap(batchFor(f, w, f.zone(0), kLeft, 2));
         QCOMPARE(batches.count(), 0);
@@ -834,7 +835,8 @@ private Q_SLOTS:
             // Exported through a host as Daemon exports its adaptors, so a bus
             // call's context reaches the adaptor. No bridge is registered.
             PlasmaZones::TestHelpers::BusHost host;
-            auto* exported = new SnapAdaptor(f.snap.get(), f.wta, &f.settings, &host);
+            auto* exported = new SnapService(f.snap.get(), f.wta, &f.settings, &host);
+            new SnapAdaptor(exported, &host);
             const auto detach = qScopeGuard([exported] {
                 exported->clearEngine();
             });
@@ -857,7 +859,7 @@ private Q_SLOTS:
         GateFixture f;
         const QString w = f.registerOn(QStringLiteral("order-1"), 1, QRect(2400, 200, 400, 300));
         f.tile(kRight);
-        QSignalSpy batches(f.wta, &WindowTrackingAdaptor::applyGeometriesBatch);
+        QSignalSpy batches(f.wta, &WindowTracker::applyGeometriesBatch);
         f.adaptor->resnapFromAutotileOrder({w}, kRight);
         QCOMPARE(batches.count(), 0);
         QVERIFY(f.snap->zoneForWindow(w).isEmpty());
@@ -886,7 +888,7 @@ private Q_SLOTS:
         QVERIFY(f.screenMgr->setVirtualScreenConfig(kRight, TestHelpers::makeSplitConfig(kRight)));
         const QString vs1 = QStringLiteral("DP-2/vs:1");
         f.wta->cursorScreenChanged(vs1);
-        ControlAdaptor* control = f.control();
+        ControlService* control = f.control();
         QStringList toggled;
         control->setModeToggleHandler([&toggled](const QString& screenId) {
             toggled.append(screenId);
@@ -898,7 +900,7 @@ private Q_SLOTS:
     void controlToggleRefusesAnUnknownScreen()
     {
         GateFixture f;
-        ControlAdaptor* control = f.control();
+        ControlService* control = f.control();
         QStringList toggled;
         control->setModeToggleHandler([&toggled](const QString& screenId) {
             toggled.append(screenId);

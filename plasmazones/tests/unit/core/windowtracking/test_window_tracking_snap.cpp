@@ -22,7 +22,7 @@
 #include "core/utils/utils.h"
 
 /**
- * @brief Mock/stub implementation of WindowTrackingAdaptor logic for isolated testing
+ * @brief Mock/stub implementation of WindowTracker logic for isolated testing
  *
  * This class replicates the core tracking logic without D-Bus or daemon dependencies.
  * It allows testing the business logic in isolation.

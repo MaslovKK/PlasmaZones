@@ -7,7 +7,7 @@
  *        window on. The effect holds every crossing back for the whole drag,
  *        so the drag adaptor's end is the only place the move is resolved:
  *        the pending (no trigger) and dead arms through
- *        WindowTrackingAdaptor::dragEndedOnScreen, an activated drop through
+ *        WindowTracker::dragEndedOnScreen, an activated drop through
  *        its cross-screen block. Two snapping outputs side by side. The same
  *        fixture covers what a crossing changes mid-drag: Escape on a pending
  *        drag, the drag-out size preview, the drop-indicator overrides, the
@@ -50,8 +50,8 @@
 #include <PhosphorZones/Zone.h>
 
 #include "config/configdefaults.h"
-#include "dbus/windowdragadaptor/windowdragadaptor.h"
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/dragresolver/dragresolver.h"
+#include "runtime/windowtracker/windowtracker.h"
 
 #include "helpers/AutotileTestHelpers.h"
 #include "helpers/IsolatedConfigGuard.h"
@@ -127,8 +127,7 @@ private:
                              {ConfigDefaults::triggerMouseButtonField(), 0}}});
             settings.setZoneSpanEnabled(false);
 
-            wta = new WindowTrackingAdaptor(layoutManager, &detector, screenMgr.get(), &settings, nullptr, nullptr,
-                                            &parent);
+            wta = new WindowTracker(layoutManager, &detector, screenMgr.get(), &settings, nullptr, nullptr, &parent);
             snap = std::make_unique<PhosphorSnapEngine::SnapEngine>(layoutManager, wta->service(), &detector, nullptr,
                                                                     nullptr);
             snap->setEngineSettings(&settings);
@@ -136,8 +135,7 @@ private:
             wta->service()->setSnapEngine(snap.get());
             wta->service()->setSnapStateResolver(PhosphorPlacement::snapStateResolverFor(snap.get()));
             wta->setEngines(snap.get(), nullptr, nullptr);
-            adaptor =
-                new WindowDragAdaptor(&overlay, &detector, layoutManager, screenMgr.get(), &settings, wta, &parent);
+            adaptor = new DragResolver(&overlay, &detector, layoutManager, screenMgr.get(), &settings, wta, &parent);
 
             layout = createTestLayout(3, layoutManager);
             layoutManager->addLayout(layout);
@@ -242,9 +240,9 @@ private:
         StubSettings settings;
         PhosphorZones::LayoutRegistry* layoutManager = nullptr;
         PhosphorZones::Layout* layout = nullptr;
-        WindowTrackingAdaptor* wta = nullptr; // parent-owned
+        WindowTracker* wta = nullptr; // parent-owned
         std::unique_ptr<PhosphorSnapEngine::SnapEngine> snap;
-        WindowDragAdaptor* adaptor = nullptr; // parent-owned
+        DragResolver* adaptor = nullptr; // parent-owned
         std::unique_ptr<PhosphorTileEngine::AutotileEngine> tiling; // tileTheOtherScreen
         std::unique_ptr<RecordingScrollEngine> scrolling; // scrollTheOtherScreen
     };
@@ -455,7 +453,7 @@ private Q_SLOTS:
         f.snapOn(w, QStringLiteral("DP-1"));
         const int ctrl = static_cast<int>(Qt::ControlModifier);
         f.adaptor->beginDrag(w, 50, 50, 400, 300, QStringLiteral("DP-1"), 0);
-        QSignalSpy previews(f.adaptor, &WindowDragAdaptor::restoreSizeDuringDragChanged);
+        QSignalSpy previews(f.adaptor, &DragResolver::restoreSizeDuringDragChanged);
 
         f.adaptor->updateDragCursor(w, f.inFirst().x(), f.inFirst().y(), ctrl, 0);
         f.adaptor->updateDragCursor(w, f.inFirst().x() + 10, f.inFirst().y(), ctrl, 0);
@@ -628,7 +626,7 @@ private Q_SLOTS:
         // The live frame is the one the drag begins on, so no restore is
         // read off it until a row moves it.
         f.wta->setFrameGeometry(w, 100, 100, beginSize.width(), beginSize.height());
-        QSignalSpy restores(f.adaptor, &WindowDragAdaptor::restoreSizeDuringDragChanged);
+        QSignalSpy restores(f.adaptor, &DragResolver::restoreSizeDuringDragChanged);
         f.adaptor->beginDrag(w, 100, 100, beginSize.width(), beginSize.height(), QStringLiteral("DP-1"), 0);
         f.adaptor->updateDragCursor(w, f.inFirst().x(), f.inFirst().y(), static_cast<int>(Qt::ControlModifier), 0);
         QVERIFY(f.adaptor->isDragInFlight());
@@ -707,7 +705,7 @@ private Q_SLOTS:
             f.snapOn(w, QStringLiteral("DP-1"));
         }
         f.wta->setFrameGeometry(w, 50, 50, 400, 300);
-        QSignalSpy restores(f.adaptor, &WindowDragAdaptor::restoreSizeDuringDragChanged);
+        QSignalSpy restores(f.adaptor, &DragResolver::restoreSizeDuringDragChanged);
         f.adaptor->beginDrag(w, 50, 50, 400, 300, QStringLiteral("DP-1"), 0);
         f.adaptor->updateDragCursor(w, f.inFirst().x(), f.inFirst().y(), static_cast<int>(Qt::ControlModifier), 0);
         const int alt = static_cast<int>(Qt::AltModifier);

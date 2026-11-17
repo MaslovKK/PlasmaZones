@@ -5,7 +5,7 @@
 
 /**
  * @file wta_convenience_fixture.h
- * @brief Shared fixture for the WindowTrackingAdaptor tests that need one
+ * @brief Shared fixture for the WindowTracker tests that need one
  *        adaptor, snap engine and layout but no screen manager, such as
  *        test_wta_convenience.cpp (window-state, float and float-restore
  *        surface, focus reports), test_wta_routing.cpp (open routing and
@@ -31,14 +31,14 @@
 #include <PhosphorZones/LayoutRegistry.h>
 #include <PhosphorScrollEngine/ScrollEngine.h>
 #include <PhosphorSnapEngine/SnapState.h>
-#include "dbus/windowtrackingadaptor/internal.h"
+#include "runtime/windowtracker/internal.h"
 #include <PhosphorScreens/Manager.h>
 #include "FakePhysicalScreenSource.h"
 #include "core/interfaces/interfaces.h"
 #include <PhosphorZones/Layout.h>
 #include <PhosphorZones/Zone.h>
-#include "dbus/snapadaptor/snapadaptor.h"
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/services/snapservice/snapservice.h"
+#include "runtime/windowtracker/windowtracker.h"
 #include <PhosphorSnapEngine/SnapEngine.h>
 #include <PhosphorEngine/IPlacementEngine.h>
 #include <PhosphorEngine/WindowPlacement.h>
@@ -70,7 +70,7 @@ using StubSettingsConvenience = StubSettings;
 // =========================================================================
 
 // The shared helper is the same inert placeholder this fixture used to spell
-// out: WindowTrackingAdaptor only null-checks the detector and SnapEngine only
+// out: WindowTracker only null-checks the detector and SnapEngine only
 // stores it, so nothing here ever calls a detection method. createTestLayout
 // comes from the same header.
 #include "helpers/StubZoneDetector.h"
@@ -93,8 +93,7 @@ protected:
 
         // WTA needs a parent QObject for QDBusAbstractAdaptor
         m_parent = new QObject(nullptr);
-        m_wta =
-            new WindowTrackingAdaptor(m_layoutManager, m_zoneDetector, nullptr, m_settings, nullptr, nullptr, m_parent);
+        m_wta = new WindowTracker(m_layoutManager, m_zoneDetector, nullptr, m_settings, nullptr, nullptr, m_parent);
 
         m_snapEngine = new SnapEngine(m_layoutManager, m_wta->service(), m_zoneDetector, nullptr, nullptr);
         m_snapEngine->setEngineSettings(m_settings);
@@ -102,7 +101,7 @@ protected:
         m_wta->service()->setSnapEngine(m_snapEngine);
         m_wta->setEngines(m_snapEngine, nullptr, nullptr);
 
-        m_snapAdaptor = new SnapAdaptor(m_snapEngine, m_wta, m_settings, m_parent);
+        m_snapService = new SnapService(m_snapEngine, m_wta, m_settings, m_parent);
 
         m_testLayout = createTestLayout(3, m_layoutManager);
         m_layoutManager->addLayout(m_testLayout);
@@ -118,12 +117,12 @@ protected:
 
     void cleanupFixture()
     {
-        // SnapAdaptor is owned by m_parent (QDBusAbstractAdaptor parent)
+        // SnapService is owned by m_parent (QDBusAbstractAdaptor parent)
         // Clear engine before deleting to disconnect signals
-        if (m_snapAdaptor) {
-            m_snapAdaptor->clearEngine();
+        if (m_snapService) {
+            m_snapService->clearEngine();
         }
-        m_snapAdaptor = nullptr;
+        m_snapService = nullptr;
         if (m_registry) {
             m_wta->setWindowRegistry(nullptr);
             m_registry.reset();
@@ -180,8 +179,8 @@ protected:
     StubSettingsConvenience* m_settings = nullptr;
     StubZoneDetectorConvenience* m_zoneDetector = nullptr;
     QObject* m_parent = nullptr;
-    WindowTrackingAdaptor* m_wta = nullptr;
-    SnapAdaptor* m_snapAdaptor = nullptr;
+    WindowTracker* m_wta = nullptr;
+    SnapService* m_snapService = nullptr;
     SnapEngine* m_snapEngine = nullptr;
     PhosphorZones::Layout* m_testLayout = nullptr;
     QStringList m_zoneIds;

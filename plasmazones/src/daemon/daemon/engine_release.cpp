@@ -11,8 +11,8 @@
 
 #include "daemon/daemon.h"
 
-#include "dbus/windowtrackingadaptor/internal.h"
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/windowtracker/internal.h"
+#include "runtime/windowtracker/windowtracker.h"
 
 #include <PhosphorEngine/IPlacementEngine.h>
 #include <PhosphorEngine/WindowRegistry.h>
@@ -52,8 +52,8 @@ void Daemon::handleEngineWindowsReleased(PhosphorEngine::IPlacementEngine* relea
     // same pass and this handler runs once per engine, so clearing here
     // would wipe the first engine's entries. Consumers still clear after
     // use, which covers staleness across recomputes.
-    if (m_windowTrackingAdaptor && m_windowTrackingAdaptor->service()) {
-        PhosphorPlacement::WindowTrackingService* wts = m_windowTrackingAdaptor->service();
+    if (m_windowTracker && m_windowTracker->service()) {
+        PhosphorPlacement::WindowTrackingService* wts = m_windowTracker->service();
         for (const QString& windowId : windowIds) {
             // A window parked off an output that went away is not handed back
             // to snapping: it floats where KWin put it, and its parked context
@@ -113,7 +113,7 @@ void Daemon::handleEngineWindowsReleased(PhosphorEngine::IPlacementEngine* relea
             // Clear autotile-originated floats (they don't persist into snap mode)
             bool wasAutotileFloated = releasingEngine->isModeSpecificFloated(windowId);
             if (wasAutotileFloated) {
-                m_windowTrackingAdaptor->syncWindowFloating(windowId, false);
+                m_windowTracker->syncWindowFloating(windowId, false);
             }
             releasingEngine->clearModeSpecificFloatMarker(windowId);
             // Restore the snap-mode float from the SINGLE source of truth — the
@@ -132,9 +132,9 @@ void Daemon::handleEngineWindowsReleased(PhosphorEngine::IPlacementEngine* relea
             // stores kept from before the screen tiled goes, not restored.
             const QString releasedOn = windowScreen.isEmpty() && rec ? rec->screenId : windowScreen;
             const bool optOut =
-                WindowTrackingInternal::isOptOutContext(*m_windowTrackingAdaptor, releasedOn, 0, currentActivity());
+                WindowTrackingInternal::isOptOutContext(*m_windowTracker, releasedOn, 0, currentActivity());
             if (optOut) {
-                WindowTrackingInternal::dropOptOutFloat(*m_windowTrackingAdaptor, windowId, releasedOn);
+                WindowTrackingInternal::dropOptOutFloat(*m_windowTracker, windowId, releasedOn);
             }
             // A strip window lands on screen there: nothing adopts it, and the
             // drain below holds every restore an opt-out screen would get. It
@@ -142,7 +142,7 @@ void Daemon::handleEngineWindowsReleased(PhosphorEngine::IPlacementEngine* relea
             // had, as on a return to snapping, else onto the screen at its size.
             if (optOut && releasedFromScroll) {
                 const bool hadFreeSpot = rec && snapSlot.state != PhosphorEngine::WindowPlacement::stateSnapped();
-                WindowTrackingInternal::placeReleasedOnOptOut(*m_windowTrackingAdaptor, windowId, releasedOn,
+                WindowTrackingInternal::placeReleasedOnOptOut(*m_windowTracker, windowId, releasedOn,
                                                               hadFreeSpot ? rec->freeGeometryFor(releasedOn) : QRect());
                 continue;
             }
@@ -167,7 +167,7 @@ void Daemon::handleEngineWindowsReleased(PhosphorEngine::IPlacementEngine* relea
                 && snapSlot.state == PhosphorEngine::WindowPlacement::stateSnapped() && !snapSlot.zoneIds.isEmpty();
             if (snapFloat) {
                 qCInfo(lcDaemon) << "windowsReleased: restoring snap-float for" << windowId;
-                m_windowTrackingAdaptor->syncWindowFloating(windowId, true);
+                m_windowTracker->syncWindowFloating(windowId, true);
                 const QString screen = wts->screenForWindow(windowId);
                 // Per-screen rect only. anyFreeGeometry() would return a rect
                 // remembered for a DIFFERENT monitor and teleport the window
@@ -196,8 +196,8 @@ void Daemon::handleEngineWindowsReleased(PhosphorEngine::IPlacementEngine* relea
                 // targetGeometry on one screen while targetScreenId names
                 // another, which is what the explicit check exists to stop.
                 if (const QString restoreScreen = screen.isEmpty() ? rec->screenId : screen; g.isValid()
-                    && m_windowTrackingAdaptor && m_windowTrackingAdaptor->service()
-                    && !m_windowTrackingAdaptor->service()->geometryBelongsToScreen(g, restoreScreen)) {
+                    && m_windowTracker && m_windowTracker->service()
+                    && !m_windowTracker->service()->geometryBelongsToScreen(g, restoreScreen)) {
                     qCInfo(lcDaemon) << "windowsReleased: dropping snap-float restore for" << windowId << "geo=" << g
                                      << "— does not lie on" << restoreScreen;
                     g = QRect();

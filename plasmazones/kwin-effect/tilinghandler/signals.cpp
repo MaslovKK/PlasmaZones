@@ -162,7 +162,7 @@ void TilingHandler::slotWindowFloatingChanged(const QString& windowId, bool isFl
     // fullscreen-exit skips) for the rest of the session — and this slot is
     // the only Tiling-channel writer for an autotile unfloat (the WindowTracking
     // relay carries it too, through syncAutotileFloatState and
-    // WindowTrackingAdaptor::syncWindowFloating). The
+    // WindowTracker::syncWindowFloating). The
     // pending-focus stamp uses the live id too: its consumer resolves via
     // findWindowByIdExact, which refuses the fuzzy fallback.
     // Resolved ONCE and reused by both branches below. Re-resolving with the

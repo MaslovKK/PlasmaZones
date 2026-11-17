@@ -28,23 +28,36 @@
 #include "core/platform/logging.h"
 #include "core/interfaces/shaderregistry.h"
 #include "dbus/dbushelpers.h"
-#include "dbus/layoutadaptor/layoutadaptor.h"
-#include "dbus/settingsadaptor/settingsadaptor.h"
+#include "runtime/services/layoutservice/layoutservice.h"
+#include "dbus/layoutadaptor.h"
+#include "runtime/services/settingsservice/settingsservice.h"
+#include "dbus/settingsadaptor.h"
 #include "dbus/overlayadaptor.h"
+#include "runtime/services/overlaycontrolservice.h"
 #include "dbus/zonedetectionadaptor.h"
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
-#include "dbus/windowdragadaptor/windowdragadaptor.h"
-#include "dbus/tilingadaptor/tilingadaptor.h"
+#include "runtime/services/zonequeryservice.h"
+#include "runtime/windowtracker/windowtracker.h"
+#include "dbus/windowtrackingadaptor.h"
+#include "runtime/dragresolver/dragresolver.h"
+#include "dbus/windowdragadaptor.h"
+#include "runtime/services/tilingservice/tilingservice.h"
 // Needed as COMPLETE types, not just forward declarations: the re-entry
 // preamble below deletes them, and deleting through an incomplete type calls
 // neither the destructor nor a class-specific operator delete.
-#include "dbus/autotileadaptor/autotileadaptor.h"
-#include "dbus/scrollingadaptor/scrollingadaptor.h"
-#include "dbus/snapadaptor/snapadaptor.h"
+#include "dbus/autotileadaptor.h"
+#include "runtime/services/autotileservice/autotileservice.h"
+#include "runtime/services/scrollingservice/scrollingservice.h"
+#include "dbus/scrollingadaptor.h"
+#include "dbus/snapadaptor.h"
+#include "dbus/tilingadaptor.h"
+#include "runtime/services/snapservice/snapservice.h"
 #include "dbus/shaderadaptor.h"
+#include "runtime/services/shaderservice.h"
 #include "dbus/compositorbridgeadaptor.h"
 #include "dbus/controladaptor.h"
+#include "runtime/services/controlservice.h"
 #include "dbus/ruleadaptor.h"
+#include "runtime/services/ruleservice.h"
 
 namespace PlasmaZones {
 
@@ -65,10 +78,16 @@ void Daemon::initCoreAdaptors()
     // paths.
     delete m_controlAdaptor;
     m_controlAdaptor = nullptr;
+    delete m_controlService;
+    m_controlService = nullptr;
     delete m_snapAdaptor;
     m_snapAdaptor = nullptr;
+    delete m_snapService;
+    m_snapService = nullptr;
     delete m_autotileAdaptor;
     m_autotileAdaptor = nullptr;
+    delete m_autotileService;
+    m_autotileService = nullptr;
     // TilingAdaptor and ScrollingAdaptor belong to this set too: both are
     // QDBusAbstractAdaptor children of the D-Bus-registered Daemon object and
     // both are unconditionally re-newed in initEnginesAndWiring, which
@@ -78,26 +97,49 @@ void Daemon::initCoreAdaptors()
     // whole Tiling/Scrolling wire surface after a daemon restart.
     delete m_tilingAdaptor;
     m_tilingAdaptor = nullptr;
+    delete m_tilingService;
+    m_tilingService = nullptr;
     delete m_scrollingAdaptor;
     m_scrollingAdaptor = nullptr;
+    delete m_scrollingService;
+    m_scrollingService = nullptr;
+    // The binding before the resolver it forwards to.
     delete m_windowDragAdaptor;
     m_windowDragAdaptor = nullptr;
+    delete m_dragResolver;
+    m_dragResolver = nullptr;
+    // The binding before the tracker it forwards to.
     delete m_windowTrackingAdaptor;
     m_windowTrackingAdaptor = nullptr;
+    delete m_windowTracker;
+    m_windowTracker = nullptr;
+    // The binding before the service it forwards to.
     delete m_zoneDetectionAdaptor;
     m_zoneDetectionAdaptor = nullptr;
+    delete m_zoneQueryService;
+    m_zoneQueryService = nullptr;
     delete m_overlayAdaptor;
     m_overlayAdaptor = nullptr;
+    delete m_overlayControlService;
+    m_overlayControlService = nullptr;
     delete m_compositorBridge;
     m_compositorBridge = nullptr;
     delete m_ruleAdaptor;
     m_ruleAdaptor = nullptr;
+    delete m_ruleService;
+    m_ruleService = nullptr;
     delete m_shaderAdaptor;
     m_shaderAdaptor = nullptr;
+    delete m_shaderService;
+    m_shaderService = nullptr;
     delete m_settingsAdaptor;
     m_settingsAdaptor = nullptr;
+    delete m_settingsService;
+    m_settingsService = nullptr;
     delete m_layoutAdaptor;
     m_layoutAdaptor = nullptr;
+    delete m_layoutService;
+    m_layoutService = nullptr;
     // DBusScreenAdaptor is in this set for the same reason as the Tiling and
     // Scrolling pair above: it is a QDBusAbstractAdaptor child of the
     // D-Bus-registered Daemon and is re-newed unconditionally below, so
@@ -109,41 +151,45 @@ void Daemon::initCoreAdaptors()
     // Initialize domain-specific D-Bus adaptors
     // Each adaptor has its own D-Bus interface
     // D-Bus adaptors use raw new; Qt parent-child manages their lifetime.
-    m_layoutAdaptor =
-        new LayoutAdaptor(m_layoutManager.get(), m_virtualDesktopManager.get(), m_screenManager.get(), this);
-    m_layoutAdaptor->setActivityManager(m_activityManager.get());
-    m_layoutAdaptor->setSettings(m_settings.get());
-    m_layoutAdaptor->setLayoutsAvailableResolver([this](const QString& screenId) {
+    m_layoutService =
+        new LayoutService(m_layoutManager.get(), m_virtualDesktopManager.get(), m_screenManager.get(), this);
+    m_layoutAdaptor = new LayoutAdaptor(m_layoutService, this);
+    m_layoutService->setActivityManager(m_activityManager.get());
+    m_layoutService->setSettings(m_settings.get());
+    m_layoutService->setLayoutsAvailableResolver([this](const QString& screenId) {
         return !m_shuttingDown && anyModeEnabled()
             && layoutSupportForScreen(screenId) != PhosphorEngine::IPlacementEngine::LayoutSupport::None;
     });
-    m_layoutAdaptor->setAlgorithmRegistry(m_algorithmRegistry.get());
-    m_layoutAdaptor->setLayoutSource(m_layoutSources.composite());
+    m_layoutService->setAlgorithmRegistry(m_algorithmRegistry.get());
+    m_layoutService->setLayoutSource(m_layoutSources.composite());
     // Thread the bundle-owned autotile source through the adaptor's
     // buildUnifiedLayoutList path so its preview cache survives across
     // D-Bus calls. The full composite above drives the
     // getLayoutPreview* methods; this separate pointer targets only the
-    // autotile enumeration slot — see LayoutAdaptor::setAutotileLayoutSource.
-    m_layoutAdaptor->setAutotileLayoutSource(m_autotileLayoutSource);
+    // autotile enumeration slot — see LayoutService::setAutotileLayoutSource.
+    m_layoutService->setAutotileLayoutSource(m_autotileLayoutSource);
     // The live tiled-window count getScreenStates publishes, the same answer
     // the registry's TiledWindowCount provider gives the context cascade. The
     // engines are built later in init(); the lambda reads them per call.
-    m_layoutAdaptor->setTiledWindowCountProvider([this](const QString& screenId) {
+    m_layoutService->setTiledWindowCountProvider([this](const QString& screenId) {
         return tiledWindowCountForScreen(screenId);
     });
     // Invalidate D-Bus getActiveLayout() cache when the default layout changes in settings
-    connect(m_settings.get(), &Settings::defaultLayoutIdChanged, m_layoutAdaptor, &LayoutAdaptor::invalidateCache);
-    m_settingsAdaptor = new SettingsAdaptor(m_settings.get(), &m_profileRegistry, this);
+    connect(m_settings.get(), &Settings::defaultLayoutIdChanged, m_layoutService, &LayoutService::invalidateCache);
+    m_settingsService = new SettingsService(m_settings.get(), &m_profileRegistry, this);
+    m_settingsAdaptor = new SettingsAdaptor(m_settingsService, this);
 
-    // Shader adaptor - shader discovery, compilation lifecycle, file monitoring.
-    // Held as a member so stop() can detach() it before the unique_ptr member
-    // that owns m_shaderRegistry runs its destructor.
-    m_shaderAdaptor = new ShaderAdaptor(m_shaderRegistry.get(), this);
+    // Shader service - shader discovery, compilation lifecycle, file monitoring,
+    // and its D-Bus binding. Held as a member so stop() can detach() it before
+    // the unique_ptr member that owns m_shaderRegistry runs its destructor.
+    m_shaderService = new ShaderService(m_shaderRegistry.get(), this);
+    m_shaderAdaptor = new ShaderAdaptor(m_shaderService, this);
 
-    // Rule adaptor - the unified org.phosphor_works.Placement.Rules surface.
-    // Held as a member so stop() can detach() it before the unique_ptr that
-    // owns m_ruleStore runs its destructor.
-    m_ruleAdaptor = new RuleAdaptor(m_ruleStore.get(), this);
+    // Rule service - the unified org.phosphor_works.Placement.Rules surface,
+    // and its D-Bus binding. Held as a member so stop() can detach() it before
+    // the unique_ptr that owns m_ruleStore runs its destructor.
+    m_ruleService = new RuleService(m_ruleStore.get(), this);
+    m_ruleAdaptor = new RuleAdaptor(m_ruleService, this);
 
     // Compositor bridge adaptor - compositor-agnostic window control protocol.
     // Held as a member so the support report and the registration watchdog
@@ -161,14 +207,17 @@ void Daemon::initCoreAdaptors()
     // and it is the existence of per-frame work — not how cheap that work is — that
     // keeps the card pinned in its top performance state.
     //
-    // Constructed AFTER m_settingsAdaptor (it emits through it) and AFTER
+    // Constructed AFTER m_settingsService (it emits through it) and AFTER
     // m_compositorBridge (it subscribes to bridgeRegistered to push the current idle
     // state to a freshly (re)started effect, since the signal is edge-triggered).
     setupIdleService();
 
-    // Overlay adaptor - overlay visibility and highlighting
-    m_overlayAdaptor = new OverlayAdaptor(m_overlayService.get(), m_zoneDetector.get(), m_layoutManager.get(),
-                                          m_screenManager.get(), m_settings.get(), this);
+    // Overlay control - overlay visibility and highlighting, and its D-Bus
+    // binding, which also carries the KWin effect's thumbnail ingest
+    m_overlayControlService =
+        new OverlayControlService(m_overlayService.get(), m_zoneDetector.get(), m_layoutManager.get(),
+                                  m_screenManager.get(), m_settings.get(), this);
+    m_overlayAdaptor = new OverlayAdaptor(m_overlayControlService, m_overlayService.get(), this);
     // A bridge registers only from the compositor's own process, the one the
     // thumbnail entries are held to, so no other peer can take the
     // registration first and keep KWin out (#1155). Both adaptors are
@@ -177,27 +226,28 @@ void Daemon::initCoreAdaptors()
         return overlay->isCompositorPeer(busName);
     });
 
-    // PhosphorZones::Zone detection adaptor - zone detection queries
-    m_zoneDetectionAdaptor = new ZoneDetectionAdaptor(m_zoneDetector.get(), m_layoutManager.get(),
-                                                      m_screenManager.get(), m_settings.get(), this);
+    // Zone detection queries, and their D-Bus binding
+    m_zoneQueryService = new ZoneQueryService(m_zoneDetector.get(), m_layoutManager.get(), m_screenManager.get(),
+                                              m_settings.get(), this);
+    m_zoneDetectionAdaptor = new ZoneDetectionAdaptor(m_zoneQueryService, this);
 
-    // Window tracking adaptor - window-zone assignments
-    m_windowTrackingAdaptor =
-        new WindowTrackingAdaptor(m_layoutManager.get(), m_zoneDetector.get(), m_screenManager.get(), m_settings.get(),
-                                  m_virtualDesktopManager.get(), m_activityManager.get(), this);
-    m_windowTrackingAdaptor->setZoneDetectionAdaptor(m_zoneDetectionAdaptor);
-    m_windowTrackingAdaptor->setWindowRegistry(m_windowRegistry.get());
+    // Window tracking - window-zone assignments, and its D-Bus binding
+    m_windowTracker = new WindowTracker(m_layoutManager.get(), m_zoneDetector.get(), m_screenManager.get(),
+                                        m_settings.get(), m_virtualDesktopManager.get(), m_activityManager.get(), this);
+    m_windowTrackingAdaptor = new WindowTrackingAdaptor(m_windowTracker, this);
+    m_windowTracker->setZoneAdjacencyResolver(m_zoneQueryService);
+    m_windowTracker->setWindowRegistry(m_windowRegistry.get());
     // Full rule set for per-window RestorePosition evaluation (overrides the
     // per-engine *RestoreFloatedWindowsOnLogin settings for matched windows).
-    m_windowTrackingAdaptor->setRuleStore(m_ruleStore.get());
+    m_windowTracker->setRuleStore(m_ruleStore.get());
     // The effect's settle report can name an output gone before the daemon's
     // own screen-removed handler runs; both retire it the same way.
-    m_windowTrackingAdaptor->setOutputRetirer([this](const QString& physicalScreenId) {
+    m_windowTracker->setOutputRetirer([this](const QString& physicalScreenId) {
         retireOutputPlacements(physicalScreenId);
     });
     // A window that left a screen leaves the saved engine orders of the
     // screens it left, or a mode round trip there tiles it back (F695).
-    m_windowTrackingAdaptor->setWindowLeftScreenHook([this](const QString& windowId, const QString& keepScreenId) {
+    m_windowTracker->setWindowLeftScreenHook([this](const QString& windowId, const QString& keepScreenId) {
         pruneEngineOrdersForWindow(PhosphorIdentity::WindowId::extractInstanceId(windowId), keepScreenId);
     });
     // The compositor bridge's screen-form floats act on the window where it
@@ -207,10 +257,9 @@ void Daemon::initCoreAdaptors()
     });
     // An evacuee on a hidden desktop floats by the mode that desktop runs,
     // decided as the engine screen sets decide it in view (F1122).
-    m_windowTrackingAdaptor->setContextModeResolver(
-        [this](const QString& screenId, int desktop, const QString& activity) {
-            return runningModeForContext(screenId, desktop, activity);
-        });
+    m_windowTracker->setContextModeResolver([this](const QString& screenId, int desktop, const QString& activity) {
+        return runningModeForContext(screenId, desktop, activity);
+    });
     // Each monitor's size as last accepted from the compositor, from the
     // session state the adaptor just loaded, stands in for the report until
     // this session's is accepted (onCompositorPixelSizeChanged). Here, before start()
@@ -218,7 +267,7 @@ void Daemon::initCoreAdaptors()
     // has it and a report that confirms it moves nothing. The manager tracks
     // no screen yet, so seeding emits nothing.
     {
-        const QHash<QString, QSize> lastSizes = m_windowTrackingAdaptor->screenPixelSizes();
+        const QHash<QString, QSize> lastSizes = m_windowTracker->screenPixelSizes();
         for (auto it = lastSizes.constBegin(); it != lastSizes.constEnd(); ++it) {
             m_screenManager->seedPixelSize(it.key(), it.value());
         }
@@ -239,8 +288,8 @@ void Daemon::initCoreAdaptors()
     // When the delayed panel requery completes it emits availableGeometryChanged, which triggers
     // the same debounce → processPendingGeometryUpdates → reapply path; no separate delay needed.
     m_reapplyGeometriesTimer.setSingleShot(true);
-    connect(&m_reapplyGeometriesTimer, &QTimer::timeout, m_windowTrackingAdaptor,
-            &WindowTrackingAdaptor::requestReapplyWindowGeometries);
+    connect(&m_reapplyGeometriesTimer, &QTimer::timeout, m_windowTracker,
+            &WindowTracker::requestReapplyWindowGeometries);
 
     // DBusScreenAdaptor::setVirtualScreenConfig writes to Settings (the source
     // of truth) via the IConfigStore — the daemon's single SettingsConfigStore
@@ -254,19 +303,19 @@ void Daemon::initCoreAdaptors()
         return DbusHelpers::admitCompositorReport(adaptor, member);
     });
 
-    // Window drag adaptor - handles drag events from the KWin effect
-    // All drag logic (modifiers, zones, snapping) handled here
-    m_windowDragAdaptor = new WindowDragAdaptor(m_overlayService.get(), m_zoneDetector.get(), m_layoutManager.get(),
-                                                m_screenManager.get(), m_settings.get(), m_windowTrackingAdaptor, this);
+    // Window drag - handles drag events from the KWin effect, and its D-Bus binding.
+    // All drag logic (modifiers, zones, snapping) handled in the resolver.
+    m_dragResolver = new DragResolver(m_overlayService.get(), m_zoneDetector.get(), m_layoutManager.get(),
+                                      m_screenManager.get(), m_settings.get(), m_windowTracker, this);
+    m_windowDragAdaptor = new WindowDragAdaptor(m_dragResolver, this);
 
-    // PhosphorZones::Zone selector methods are called directly from WindowDragAdaptor; QDBusAbstractAdaptor
-    // signals are for D-Bus, not Qt connections.
+    // PhosphorZones::Zone selector methods are called directly from DragResolver.
 
     // Give the window drag adaptor access to the shortcut manager for
     // registering/unregistering the Escape cancel shortcut during drags.
     // Routed through the PhosphorShortcutsIntegration::IAdhocRegistrar interface so the underlying
     // Registry stays private to ShortcutManager.
-    m_windowDragAdaptor->setShortcutRegistrar(m_shortcutManager.get());
+    m_dragResolver->setShortcutRegistrar(m_shortcutManager.get());
 
     // When the compositor bridge re-registers (e.g. KWin reloaded the effect,
     // effect process restarted, or daemon itself restarted mid-drag), any drag
@@ -274,11 +323,11 @@ void Daemon::initCoreAdaptors()
     // no knowledge of the prior drag. Clear it eagerly so the next dragStarted
     // from the fresh effect lands on a clean slate instead of silently
     // colliding with a mismatched windowId in the next handler.
-    connect(m_compositorBridge, &CompositorBridgeAdaptor::bridgeRegistered, m_windowDragAdaptor,
+    connect(m_compositorBridge, &CompositorBridgeAdaptor::bridgeRegistered, m_dragResolver,
             [this](const QString& compositorName, const QString&, const QStringList&) {
                 qCInfo(lcDaemon) << "Compositor bridge registered (" << compositorName
                                  << ") — clearing any stale drag state held by daemon";
-                m_windowDragAdaptor->clearForCompositorReconnect();
+                m_dragResolver->clearForCompositorReconnect();
             });
     // The compositor's pixel-size reports are deliberately NOT cleared on a
     // (re-)registration, unlike the drag state above. A fresh effect re-sends
@@ -296,7 +345,7 @@ void Daemon::initCoreAdaptors()
     // alive but has no window control — drags and shortcuts silently do
     // nothing. Stop the watchdog as soon as the bridge registers; otherwise
     // warnCompositorBridgeMissing() fires once on timeout. Connecting to the
-    // adaptor (not m_windowDragAdaptor) so a re-registration also cancels it.
+    // bridge adaptor so a re-registration also cancels it.
     m_bridgeWatchdogTimer.setSingleShot(true);
     // Value-member timer, so it outlives stop(): sever before connecting or a
     // stop() → init() cycle stacks the timeout handler and a missing bridge
@@ -316,8 +365,8 @@ void Daemon::initCoreAdaptors()
     // When scripted algorithms change (hot-reload), notify layout list consumers
     connect(m_scriptedAlgorithmLoader.get(), &PhosphorTiles::ScriptedAlgorithmLoader::algorithmsChanged, this,
             [this]() {
-                if (m_layoutAdaptor)
-                    m_layoutAdaptor->notifyLayoutListChanged();
+                if (m_layoutService)
+                    m_layoutService->notifyLayoutListChanged();
             });
     m_scriptedAlgorithmLoader->scanAndRegister();
 }

@@ -3,7 +3,7 @@
 
 /**
  * @file test_wta_screen_changed.cpp
- * @brief WindowTrackingAdaptor::windowScreenChanged coverage: the
+ * @brief WindowTracker::windowScreenChanged coverage: the
  *        stored-screen comparison that decides between keeping the snap and
  *        unsnapping, the empty-screen bail, the "screen_changed"
  *        windowStateChanged emission, and, with per-screen stores, what an
@@ -104,7 +104,7 @@ private Q_SLOTS:
 
         m_snapEngine->commitSnap(windowId, m_zoneIds[0], QStringLiteral("HDMI-1"));
 
-        QSignalSpy spy(m_wta, &WindowTrackingAdaptor::windowStateChanged);
+        QSignalSpy spy(m_wta, &WindowTracker::windowStateChanged);
         m_wta->windowScreenChanged(windowId, elsewhere);
 
         bool found = false;
@@ -202,8 +202,8 @@ private Q_SLOTS:
         QCOMPARE(screenMgr.effectiveScreenAt(QPoint(3300, 400)), dpRight);
 
         QObject parent;
-        auto* wta = new WindowTrackingAdaptor(m_layoutManager, m_zoneDetector, &screenMgr, m_settings, nullptr, nullptr,
-                                              &parent);
+        auto* wta =
+            new WindowTracker(m_layoutManager, m_zoneDetector, &screenMgr, m_settings, nullptr, nullptr, &parent);
         auto* snap = new SnapEngine(m_layoutManager, wta->service(), m_zoneDetector, nullptr, nullptr);
         snap->setEngineSettings(m_settings);
         wta->service()->setSnapState(snap->snapState());
@@ -220,7 +220,7 @@ private Q_SLOTS:
         QCOMPARE(wta->service()->screenForWindow(windowId), hdmiLeft);
         wta->setFrameGeometry(windowId, 3100, 200, 400, 300); // in DP-1's right half
 
-        QSignalSpy stateSpy(wta, &WindowTrackingAdaptor::windowStateChanged);
+        QSignalSpy stateSpy(wta, &WindowTracker::windowStateChanged);
         wta->windowScreenChanged(windowId, dp);
 
         QVERIFY2(wta->service()->zoneForWindow(windowId).isEmpty(), "a window that changed monitors must unsnap");
@@ -343,7 +343,7 @@ private Q_SLOTS:
         QVERIFY(m_snapEngine->isFloating(w));
         QCOMPARE(m_wta->service()->preFloatScreen(w), m_screenId);
 
-        QSignalSpy stateSpy(m_wta, &WindowTrackingAdaptor::windowStateChanged);
+        QSignalSpy stateSpy(m_wta, &WindowTracker::windowStateChanged);
         m_wta->windowScreenChanged(w, other);
 
         QVERIFY(m_snapEngine->isFloating(w));
@@ -383,8 +383,8 @@ private Q_SLOTS:
         m_snapEngine->setWindowFloat(w, true, m_screenId);
         QVERIFY(m_wta->service()->isWindowFloating(w));
 
-        QSignalSpy floatSpy(m_wta, &WindowTrackingAdaptor::windowFloatingChanged);
-        QSignalSpy stateSpy(m_wta, &WindowTrackingAdaptor::windowStateChanged);
+        QSignalSpy floatSpy(m_wta, &WindowTracker::windowFloatingChanged);
+        QSignalSpy stateSpy(m_wta, &WindowTracker::windowStateChanged);
         m_wta->windowScreenChanged(w, other);
 
         QVERIFY(!m_snapEngine->isFloating(w));
@@ -437,7 +437,7 @@ private Q_SLOTS:
         m_wta->service()->assignWindowToZone(floating, m_zoneIds[0], m_screenId, 1);
         m_snapEngine->setWindowFloat(floating, true, m_screenId);
 
-        QSignalSpy stateSpy(m_wta, &WindowTrackingAdaptor::windowStateChanged);
+        QSignalSpy stateSpy(m_wta, &WindowTracker::windowStateChanged);
         m_wta->windowScreenChanged(QStringLiteral("app|free"), QStringLiteral("DP-2"));
         m_wta->windowScreenChanged(floating, m_screenId);
 
@@ -644,7 +644,7 @@ private Q_SLOTS:
 
         int x = 0, y = 0, width = 0, height = 0;
         bool shouldSnap = false;
-        m_snapAdaptor->snapToLastZone(w, m_screenId, false, x, y, width, height, shouldSnap);
+        m_snapService->snapToLastZone(w, m_screenId, false, x, y, width, height, shouldSnap);
 
         QVERIFY(shouldSnap);
         QCOMPARE(m_snapEngine->zoneForWindow(w), m_zoneIds[1]);

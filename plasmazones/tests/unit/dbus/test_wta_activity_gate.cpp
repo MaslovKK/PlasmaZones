@@ -30,7 +30,7 @@
 #include <PhosphorZones/LayoutRegistry.h>
 #include <PhosphorZones/Zone.h>
 #include "config/configdefaults.h"
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/windowtracker/windowtracker.h"
 #include "helpers/IsolatedConfigGuard.h"
 #include "helpers/LayoutRegistryTestHelpers.h"
 #include "helpers/StubSettings.h"
@@ -110,8 +110,8 @@ private Q_SLOTS:
         m_zoneDetector = new StubZoneDetector(nullptr);
         m_desktopManager = new PhosphorWorkspaces::VirtualDesktopManager(nullptr);
         m_parent = new QObject(nullptr);
-        m_wta = new WindowTrackingAdaptor(m_layoutManager, m_zoneDetector, nullptr, m_settings, m_desktopManager,
-                                          nullptr, m_parent);
+        m_wta = new WindowTracker(m_layoutManager, m_zoneDetector, nullptr, m_settings, m_desktopManager, nullptr,
+                                  m_parent);
         m_snapEngine = new SnapEngine(m_layoutManager, m_wta->service(), m_zoneDetector, nullptr, nullptr);
         m_snapEngine->setEngineSettings(m_settings);
         m_wta->service()->setSnapState(m_snapEngine->snapState());
@@ -252,7 +252,7 @@ private:
     StubZoneDetector* m_zoneDetector = nullptr;
     PhosphorWorkspaces::VirtualDesktopManager* m_desktopManager = nullptr;
     QObject* m_parent = nullptr;
-    WindowTrackingAdaptor* m_wta = nullptr;
+    WindowTracker* m_wta = nullptr;
     SnapEngine* m_snapEngine = nullptr;
     ActivityDisablingResolver m_resolver;
     PhosphorZones::Layout* m_testLayout = nullptr;

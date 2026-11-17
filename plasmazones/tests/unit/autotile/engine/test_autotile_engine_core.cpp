@@ -486,7 +486,7 @@ private Q_SLOTS:
     }
 
     // =========================================================================
-    // isWindowTiled: helper used by WindowDragAdaptor to decide whether to
+    // isWindowTiled: helper used by DragResolver to decide whether to
     // enter drag-insert preview on a reorder drag. A window is "tiled" iff it
     // is tracked (m_states maps it to a state) AND not floating in
     // that state.
@@ -869,7 +869,7 @@ private Q_SLOTS:
         QVERIFY(normalizedBeforeTeardown);
 
         // Screen teardown captures directly through AutotileEngine, bypassing
-        // WindowTrackingAdaptor. The minimized guard must still preserve the
+        // WindowTracker. The minimized guard must still preserve the
         // pre-minimize tiled slot rather than persisting the temporary float.
         // placementChanged describes the live occupancy release even when the
         // durable record is already content-identical.

@@ -26,8 +26,8 @@
 #include "daemon/controllers/workspacecontroller.h"
 #include "daemon/daemon/helpers.h"
 #include "daemon/overlayservice.h"
-#include "dbus/windowtrackingadaptor/lifecyclerelay.h"
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/windowtracker/lifecyclerelay.h"
+#include "runtime/windowtracker/windowtracker.h"
 
 #include "phosphor_i18n.h"
 
@@ -234,8 +234,8 @@ void Daemon::initializeWorkspaces()
     // off, which is theirs to decide: kwinrc is never written back). Hung off
     // a context object parented to the adaptor's relay, so the connection is
     // made once per adaptor and goes away with it on a stop.
-    if (m_windowTrackingAdaptor) {
-        WindowLifecycleRelay* const relay = m_windowTrackingAdaptor->lifecycleRelay();
+    if (m_windowTracker) {
+        WindowLifecycleRelay* const relay = m_windowTracker->lifecycleRelay();
         const QString gateName = QStringLiteral("plasmazones-workspaces-mode-gate");
         if (relay && !relay->findChild<QObject*>(gateName, Qt::FindDirectChildrenOnly)) {
             auto* gate = new QObject(relay);
@@ -279,8 +279,7 @@ void Daemon::initializeWorkspaces()
         wroteKWinConfig = true;
         qCInfo(lcDaemon)
             << "wrote PerOutputVirtualDesktops=true to kwinrc and asked KWin to reconfigure (user consent)";
-    } else if (m_windowTrackingAdaptor
-               && m_windowTrackingAdaptor->perOutputDesktopsMode() == std::optional<bool>(false)) {
+    } else if (m_windowTracker && m_windowTracker->perOutputDesktopsMode() == std::optional<bool>(false)) {
         // kwinrc says on, the running compositor says off: KWin has not
         // applied the file. The mode gate above starts the feature once it
         // does. Not checked right after our own write, whose stored report
@@ -310,7 +309,7 @@ void Daemon::initializeWorkspaces()
     const auto showWorkspaceHint = [this](const QString& text, const QString& screenId, bool isRefusal) {
         const QString effective = screenId.isEmpty() || PhosphorIdentity::VirtualScreenId::isVirtual(screenId)
             ? screenId
-            : resolveVirtualScreenId(m_screenManager.get(), screenId, m_windowTrackingAdaptor);
+            : resolveVirtualScreenId(m_screenManager.get(), screenId, m_windowTracker);
         if (!navigationOsdAllowed(effective)) {
             return;
         }
@@ -333,8 +332,8 @@ void Daemon::initializeWorkspaces()
     // a report VirtualDesktopManager swallows as unchanged, and the ledger
     // entry waiting on that answer would otherwise hold the screen until it
     // expired.
-    if (m_windowTrackingAdaptor && m_windowTrackingAdaptor->lifecycleRelay()) {
-        connect(m_windowTrackingAdaptor->lifecycleRelay(), &WindowLifecycleRelay::screenDesktopReported, wiring,
+    if (m_windowTracker && m_windowTracker->lifecycleRelay()) {
+        connect(m_windowTracker->lifecycleRelay(), &WindowLifecycleRelay::screenDesktopReported, wiring,
                 [this](const QString& screenId, int desktop) {
                     if (m_workspaceController) {
                         m_workspaceController->noteScreenDesktopReport(screenId, desktop);
@@ -349,9 +348,8 @@ void Daemon::initializeWorkspaces()
     connect(controller, &WorkspaceController::screenDesktopSwitchRequested, wiring,
             [this](const QString& screenId, const QString& desktopId,
                    PhosphorProtocol::ScreenDesktopSwitchPurpose purpose) {
-                if (m_windowTrackingAdaptor) {
-                    Q_EMIT m_windowTrackingAdaptor->setScreenDesktopRequested(screenId, desktopId,
-                                                                              static_cast<int>(purpose));
+                if (m_windowTracker) {
+                    Q_EMIT m_windowTracker->setScreenDesktopRequested(screenId, desktopId, static_cast<int>(purpose));
                 }
             });
     // Window relocation: the same handoff machinery the cross-mode
@@ -359,9 +357,9 @@ void Daemon::initializeWorkspaces()
     connect(controller, &WorkspaceController::windowWorkspaceMoveRequested, wiring,
             [this](const QString& windowId, const QString& targetScreenId, int targetDesktop,
                    const QString& targetDesktopId, const QString& direction, bool moveOutput, bool subjectOfVerb) {
-                if (m_windowTrackingAdaptor) {
-                    m_windowTrackingAdaptor->moveWindowToWorkspaceVerb(
-                        windowId, targetScreenId, targetDesktop, targetDesktopId, direction, moveOutput, subjectOfVerb);
+                if (m_windowTracker) {
+                    m_windowTracker->moveWindowToWorkspaceVerb(windowId, targetScreenId, targetDesktop, targetDesktopId,
+                                                               direction, moveOutput, subjectOfVerb);
                 }
             });
     // Owner-wins snap-back hint (toggleable). The user's switch was undone,
@@ -394,7 +392,7 @@ void Daemon::initializeWorkspaces()
     // moment a desktop needs a home. Physical, in the effect-reported id space
     // the map keys by. Cleared in teardownWorkspaces.
     reconciler->setFocusedScreenProvider([this]() {
-        const QString screenId = resolveShortcutScreenId(m_screenManager.get(), m_windowTrackingAdaptor);
+        const QString screenId = resolveShortcutScreenId(m_screenManager.get(), m_windowTracker);
         return PhosphorScreens::ScreenIdentity::idForName(
             PhosphorIdentity::VirtualScreenId::extractPhysicalId(screenId));
     });
@@ -406,11 +404,11 @@ void Daemon::initializeWorkspaces()
     // at.
     const auto windowScreen = [this]() {
         return PhosphorIdentity::VirtualScreenId::extractPhysicalId(
-            resolveShortcutScreenId(m_screenManager.get(), m_windowTrackingAdaptor));
+            resolveShortcutScreenId(m_screenManager.get(), m_windowTracker));
     };
     const auto cursorScreen = [this]() {
         return PhosphorIdentity::VirtualScreenId::extractPhysicalId(
-            resolveCursorScreenId(m_screenManager.get(), m_windowTrackingAdaptor));
+            resolveCursorScreenId(m_screenManager.get(), m_windowTracker));
     };
     connect(m_shortcutManager.get(), &ShortcutManager::workspaceFocusRequested, wiring,
             [this, cursorScreen](int delta) {
@@ -420,11 +418,11 @@ void Daemon::initializeWorkspaces()
             });
     connect(m_shortcutManager.get(), &ShortcutManager::workspaceMoveWindowRequested, wiring,
             [this, windowScreen](int delta) {
-                if (!m_workspaceController || !m_windowTrackingAdaptor) {
+                if (!m_workspaceController || !m_windowTracker) {
                     return;
                 }
-                m_workspaceController->moveWindowToWorkspace(windowScreen(),
-                                                             m_windowTrackingAdaptor->lastActiveWindowId(), delta);
+                m_workspaceController->moveWindowToWorkspace(windowScreen(), m_windowTracker->lastActiveWindowId(),
+                                                             delta);
             });
     connect(m_shortcutManager.get(), &ShortcutManager::workspaceMoveColumnRequested, wiring,
             [this, showWorkspaceHint](int delta) {
@@ -434,7 +432,7 @@ void Daemon::initializeWorkspaces()
                 // The column lives on a STRIP, which on a subdivided monitor
                 // is a "<phys>/vs:N" virtual screen. The strip id is asked for
                 // exactly; the controller's verb needs the physical one.
-                const QString stripScreen = resolveShortcutScreenId(m_screenManager.get(), m_windowTrackingAdaptor);
+                const QString stripScreen = resolveShortcutScreenId(m_screenManager.get(), m_windowTracker);
                 using Refusal = PhosphorScrollEngine::ScrollEngine::FocusedColumnRefusal;
                 Refusal reason = Refusal::NotScrolling;
                 auto* scroll = qobject_cast<PhosphorScrollEngine::ScrollEngine*>(m_scrollEngine.get());
@@ -481,7 +479,7 @@ void Daemon::initializeWorkspaces()
         // window TO is the named workspace assigned in the settings app, by
         // the entry's id, with the name it had then as the fallback for an
         // entry since re-created. An unassigned slot does nothing.
-        if (!m_workspaceController || !m_windowTrackingAdaptor) {
+        if (!m_workspaceController || !m_windowTracker) {
             return;
         }
         const QString targetId = m_settings->workspaceSlotTargetId(slot - 1);
@@ -489,8 +487,7 @@ void Daemon::initializeWorkspaces()
         if (targetId.isEmpty() && targetName.isEmpty()) {
             return;
         }
-        m_workspaceController->moveWindowToNamedWorkspace(targetId, targetName,
-                                                          m_windowTrackingAdaptor->lastActiveWindowId());
+        m_workspaceController->moveWindowToNamedWorkspace(targetId, targetName, m_windowTracker->lastActiveWindowId());
     });
     connect(m_shortcutManager.get(), &ShortcutManager::workspaceFocusSlotRequested, wiring,
             [this, cursorScreen](int slot) {
@@ -545,9 +542,9 @@ void Daemon::initializeWorkspaces()
                   entry.value(ConfigDefaults::namedEntryMoveShortcutField()).toString(),
                   PhosphorI18n::tr("Move Window to Workspace \"%1\"", "named workspace shortcut").arg(name),
                   [this, entryId, name]() {
-                      if (m_workspaceController && m_windowTrackingAdaptor) {
-                          m_workspaceController->moveWindowToNamedWorkspace(
-                              entryId, name, m_windowTrackingAdaptor->lastActiveWindowId());
+                      if (m_workspaceController && m_windowTracker) {
+                          m_workspaceController->moveWindowToNamedWorkspace(entryId, name,
+                                                                            m_windowTracker->lastActiveWindowId());
                       }
                   });
         }
@@ -727,10 +724,10 @@ void Daemon::initializeWorkspaces()
     // was issued to; 0 means no declaration carries the target and the
     // positional route applies; < 0 means the target IS declared but cannot
     // be placed right now, and the positional route must NOT stand in.
-    if (m_windowTrackingAdaptor) {
-        m_windowTrackingAdaptor->setWorkspaceRouteResolver([this](const QString& entryId, const QString& name,
-                                                                  const QString& windowId, bool moveOutput,
-                                                                  QString* ownerScreenOut) {
+    if (m_windowTracker) {
+        m_windowTracker->setWorkspaceRouteResolver([this](const QString& entryId, const QString& name,
+                                                          const QString& windowId, bool moveOutput,
+                                                          QString* ownerScreenOut) {
             if (!m_workspaceController) {
                 return static_cast<int>(WorkspaceController::WorkspaceRouteVerdict::Unrealized);
             }
@@ -765,8 +762,8 @@ void Daemon::initializeWorkspaces()
                 }
             }
         }
-        if (m_windowTrackingAdaptor) {
-            if (auto* service = m_windowTrackingAdaptor->service()) {
+        if (m_windowTracker) {
+            if (auto* service = m_windowTracker->service()) {
                 if (const auto record = service->placementStore().peekExact(service->canonicalizeForLookup(windowId))) {
                     return record->screenId;
                 }
@@ -782,10 +779,10 @@ void Daemon::initializeWorkspaces()
     // daemon on every call so a torn-down service is never dereferenced; no
     // service means "cannot tell" and the verbs issue the move.
     controller->setWindowStickyPredicate([this](const QString& windowId) {
-        if (!m_windowTrackingAdaptor) {
+        if (!m_windowTracker) {
             return false;
         }
-        auto* service = m_windowTrackingAdaptor->service();
+        auto* service = m_windowTracker->service();
         return service && service->isWindowSticky(windowId);
     });
 
@@ -797,20 +794,20 @@ void Daemon::initializeWorkspaces()
     controller->setColumnStashHandler(
         [this](const QString& stripScreenId, const QStringList& windowIds, int targetDesktop) {
             auto* scroll = qobject_cast<PhosphorScrollEngine::ScrollEngine*>(m_scrollEngine.get());
-            if (!scroll || !m_windowTrackingAdaptor
+            if (!scroll || !m_windowTracker
                 || routedModeForContext(stripScreenId, targetDesktop, currentActivity())
                     != PhosphorZones::AssignmentEntry::Mode::Scrolling) {
                 return false;
             }
-            return m_windowTrackingAdaptor->stashScrollColumnForWorkspaceMove(stripScreenId, windowIds, targetDesktop);
+            return m_windowTracker->stashScrollColumnForWorkspaceMove(stripScreenId, windowIds, targetDesktop);
         });
 
     // The strip-preserving half of move-workspace-to-monitor. The adaptor
     // groups the riders by the strip they leave and the strip they land on,
     // the way its move verb will, and records only for a scrolling landing.
     controller->setStripStashHandler([this](const QStringList& windowIds, const QString& targetScreenId, int desktop) {
-        if (m_windowTrackingAdaptor) {
-            m_windowTrackingAdaptor->stashScrollStripsForWorkspaceMove(windowIds, targetScreenId, desktop);
+        if (m_windowTracker) {
+            m_windowTracker->stashScrollStripsForWorkspaceMove(windowIds, targetScreenId, desktop);
         }
     });
 
@@ -854,8 +851,8 @@ void Daemon::teardownWorkspaces()
     // next start() would hand unregisterAdhocShortcuts a list of ids a fresh
     // registry has never heard of.
     m_workspaceNamedShortcutIds.clear();
-    if (m_windowTrackingAdaptor) {
-        m_windowTrackingAdaptor->setWorkspaceRouteResolver(nullptr);
+    if (m_windowTracker) {
+        m_windowTracker->setWorkspaceRouteResolver(nullptr);
     }
     m_workspaceController.reset();
     parkWorkspaceShortcuts(m_shortcutManager.get());

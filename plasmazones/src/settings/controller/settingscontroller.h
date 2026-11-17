@@ -1088,7 +1088,7 @@ private Q_SLOTS:
     void onScreenLayoutChanged(const QString& screenId, const QString& layoutId, int virtualDesktop);
 
     /**
-     * @brief Handle SettingsAdaptor::runningWindowsAvailable D-Bus signal.
+     * @brief Handle SettingsService::runningWindowsAvailable D-Bus signal.
      *
      * Parses the JSON payload into a QVariantList of window maps, stores
      * it in m_cachedRunningWindows, and emits the QML-facing

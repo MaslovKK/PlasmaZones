@@ -30,7 +30,7 @@
 #include <PhosphorZones/LayoutRegistry.h>
 #include <PhosphorZones/Zone.h>
 #include "FakePhysicalScreenSource.h"
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/windowtracker/windowtracker.h"
 
 #include "helpers/IsolatedConfigGuard.h"
 #include "helpers/LayoutRegistryTestHelpers.h"
@@ -61,7 +61,7 @@ struct FloatBackFixture
         layout = createTestLayout(3, layouts);
         layouts->addLayout(layout);
         layouts->setActiveLayout(layout);
-        wta = new WindowTrackingAdaptor(layouts, &detector, screenMgr.get(), &settings, vdm, nullptr, &parent);
+        wta = new WindowTracker(layouts, &detector, screenMgr.get(), &settings, vdm, nullptr, &parent);
         wta->setWindowRegistry(&registry);
         snap = std::make_unique<PhosphorSnapEngine::SnapEngine>(layouts, wta->service(), &detector, vdm, nullptr);
         snap->setEngineSettings(&settings);
@@ -135,6 +135,6 @@ struct FloatBackFixture
     StubSettings settings;
     PhosphorZones::LayoutRegistry* layouts = nullptr;
     PhosphorZones::Layout* layout = nullptr;
-    WindowTrackingAdaptor* wta = nullptr; // parent-owned
+    WindowTracker* wta = nullptr; // parent-owned
     std::unique_ptr<PhosphorSnapEngine::SnapEngine> snap;
 };

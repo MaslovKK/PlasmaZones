@@ -3,7 +3,7 @@
 
 /**
  * @file test_wta_convenience.cpp
- * @brief Unit tests for WindowTrackingAdaptor: moveWindowToZone,
+ * @brief Unit tests for WindowTracker: moveWindowToZone,
  *        swapWindowsById, the window-state queries and stream, the float and
  *        float-restore surface, the focused-window and close reports, and the
  *        in-process relays. The open routing and cross-mode handoff tests live
@@ -11,7 +11,7 @@
  */
 
 #include "wta_convenience_fixture.h"
-#include "dbus/windowtrackingadaptor/lifecyclerelay.h"
+#include "runtime/windowtracker/lifecyclerelay.h"
 
 #include <PhosphorEngine/GeometryUtils.h>
 #include <PhosphorProtocol/AutotileTypes.h>
@@ -48,9 +48,9 @@ private Q_SLOTS:
         m_layoutManager->assignLayout(m_screenId, m_layoutManager->currentVirtualDesktop(), QString(), m_testLayout);
         m_wta->cursorScreenChanged(m_screenId);
 
-        QSignalSpy spy(m_wta, &WindowTrackingAdaptor::applyGeometryRequested);
+        QSignalSpy spy(m_wta, &WindowTracker::applyGeometryRequested);
 
-        m_snapAdaptor->moveWindowToZone(windowId, m_zoneIds[0]);
+        m_snapService->moveWindowToZone(windowId, m_zoneIds[0]);
 
         QCOMPARE(spy.count(), 1);
         QCOMPARE(spy.at(0).at(0).toString(), windowId);
@@ -64,18 +64,18 @@ private Q_SLOTS:
     {
         installRegistry(); // live, so the refusal is the zone's
         QString windowId = registerWindow(QStringLiteral("firefox|12345"));
-        QSignalSpy spy(m_wta, &WindowTrackingAdaptor::applyGeometryRequested);
+        QSignalSpy spy(m_wta, &WindowTracker::applyGeometryRequested);
 
-        m_snapAdaptor->moveWindowToZone(windowId, QStringLiteral("nonexistent-zone-id"));
+        m_snapService->moveWindowToZone(windowId, QStringLiteral("nonexistent-zone-id"));
 
         QCOMPARE(spy.count(), 0);
     }
 
     void testMoveWindowToZone_emptyWindowId_noSignal()
     {
-        QSignalSpy spy(m_wta, &WindowTrackingAdaptor::applyGeometryRequested);
+        QSignalSpy spy(m_wta, &WindowTracker::applyGeometryRequested);
 
-        m_snapAdaptor->moveWindowToZone(QString(), m_zoneIds[0]);
+        m_snapService->moveWindowToZone(QString(), m_zoneIds[0]);
 
         QCOMPARE(spy.count(), 0);
     }
@@ -207,7 +207,7 @@ private Q_SLOTS:
         entry.targetGeometry = m_wta->service()->zoneGeometry(m_zoneIds[0], m_screenId);
         entry.targetScreenId = m_screenId;
         entry.restatement = true;
-        QSignalSpy spy(m_wta, &WindowTrackingAdaptor::applyGeometriesBatch);
+        QSignalSpy spy(m_wta, &WindowTracker::applyGeometriesBatch);
 
         m_snapEngine->emitBatchedResnap({entry});
         QCOMPARE(spy.count(), 1);
@@ -242,7 +242,7 @@ private Q_SLOTS:
         m_snapEngine->toggleWindowFloat(windowId, m_screenId);
         QVERIFY(m_snapEngine->snapState()->isFloating(windowId));
 
-        QSignalSpy spy(m_wta, &WindowTrackingAdaptor::applyGeometryRequested);
+        QSignalSpy spy(m_wta, &WindowTracker::applyGeometryRequested);
 
         // Unfloat back to the zone — a snap commit, not a float-restore.
         m_snapEngine->toggleWindowFloat(windowId, m_screenId);
@@ -283,7 +283,7 @@ private Q_SLOTS:
         m_snapEngine->commitSnap(floated, m_zoneIds[2], m_screenId);
         m_snapEngine->setWindowFloat(floated, true); // leaves the snapped set
 
-        QSignalSpy spy(m_wta, &WindowTrackingAdaptor::applyGeometryRequested);
+        QSignalSpy spy(m_wta, &WindowTracker::applyGeometryRequested);
 
         m_wta->reapplyWindowAppearance();
 
@@ -326,7 +326,7 @@ private Q_SLOTS:
         state->setFloating(held, true); // the bit only: the zone stays
         QCOMPARE(state->zonesForWindow(held), QStringList{m_zoneIds[2]});
 
-        QSignalSpy spy(m_wta, &WindowTrackingAdaptor::applyGeometryRequested);
+        QSignalSpy spy(m_wta, &WindowTracker::applyGeometryRequested);
         m_wta->reapplyWindowAppearance();
         QCOMPARE(spy.count(), 1);
         QCOMPARE(spy.first().at(0).toString(), snapped);
@@ -391,7 +391,7 @@ private Q_SLOTS:
     // arrives under first-frame suppression).
     void testSizeRestore_relayedAsSizeOnlyApply()
     {
-        QSignalSpy spy(m_wta, &WindowTrackingAdaptor::applyGeometryRequested);
+        QSignalSpy spy(m_wta, &WindowTracker::applyGeometryRequested);
         Q_EMIT m_snapEngine->sizeRestoreRequested(QStringLiteral("app|w"), QSize(640, 480), m_screenId);
         QCOMPARE(spy.count(), 1);
         const QList<QVariant> args = spy.takeFirst();
@@ -408,7 +408,7 @@ private Q_SLOTS:
     void testFloatRestore_closeWhileFloating_reopensFloatingAtGeometry()
     {
         // End-to-end: a snapped window is floated (and moved), then closed while
-        // floating. WindowTrackingAdaptor::windowClosed captures a floated
+        // floating. WindowTracker::windowClosed captures a floated
         // WindowPlacement into the unified store, keyed by appId. A reopened
         // instance of the SAME app consumes it via resolveWindowRestore: NOT
         // snapped (shouldSnap=false), placed at the floated geometry via
@@ -428,10 +428,10 @@ private Q_SLOTS:
 
         // Reopen as a new instance of the same app.
         const QString w2 = QStringLiteral("settings|float-new");
-        QSignalSpy spy(m_wta, &WindowTrackingAdaptor::applyGeometryRequested);
+        QSignalSpy spy(m_wta, &WindowTracker::applyGeometryRequested);
         int x = 0, y = 0, wd = 0, h = 0;
         bool shouldSnap = true;
-        m_snapAdaptor->resolveWindowRestore(w2, m_screenId, false, static_cast<int>(PhosphorEngine::WindowKind::Normal),
+        m_snapService->resolveWindowRestore(w2, m_screenId, false, static_cast<int>(PhosphorEngine::WindowKind::Normal),
                                             static_cast<int>(PhosphorEngine::RestoreReason::Open), /*minWidth=*/0,
                                             /*minHeight=*/0, x, y, wd, h, shouldSnap);
 
@@ -474,7 +474,7 @@ private Q_SLOTS:
     {
         const QString w = QStringLiteral("app|relay");
         m_snapEngine->commitSnap(w, m_zoneIds[0], m_screenId);
-        QSignalSpy stateSpy(m_wta, &WindowTrackingAdaptor::windowStateChanged);
+        QSignalSpy stateSpy(m_wta, &WindowTracker::windowStateChanged);
 
         m_wta->relayWindowReleasedFromContext(w, m_screenId);
         QCOMPARE(stateSpy.count(), 0);
@@ -515,10 +515,10 @@ private Q_SLOTS:
         rec.freeGeometryByScreen.insert(m_screenId, floatedGeo);
         m_wta->service()->placementStore().record(rec);
 
-        QSignalSpy spy(m_wta, &WindowTrackingAdaptor::applyGeometryRequested);
+        QSignalSpy spy(m_wta, &WindowTracker::applyGeometryRequested);
         int x = 0, y = 0, wd = 0, h = 0;
         bool shouldSnap = true;
-        m_snapAdaptor->resolveWindowRestore(w, m_screenId, false, static_cast<int>(PhosphorEngine::WindowKind::Normal),
+        m_snapService->resolveWindowRestore(w, m_screenId, false, static_cast<int>(PhosphorEngine::WindowKind::Normal),
                                             static_cast<int>(PhosphorEngine::RestoreReason::Open), /*minWidth=*/0,
                                             /*minHeight=*/0, x, y, wd, h, shouldSnap);
 
@@ -619,8 +619,8 @@ private Q_SLOTS:
         QCOMPARE(screenMgr.effectiveScreenAt(QPoint(500, 400)), screenId); // resolution sanity
 
         QObject parent;
-        auto* wta = new WindowTrackingAdaptor(m_layoutManager, m_zoneDetector, &screenMgr, m_settings, nullptr, nullptr,
-                                              &parent);
+        auto* wta =
+            new WindowTracker(m_layoutManager, m_zoneDetector, &screenMgr, m_settings, nullptr, nullptr, &parent);
         auto* snap = new SnapEngine(m_layoutManager, wta->service(), m_zoneDetector, nullptr, nullptr);
         snap->setEngineSettings(m_settings);
         wta->service()->setSnapState(snap->snapState());
@@ -674,8 +674,8 @@ private Q_SLOTS:
         screenMgr.start();
 
         QObject parent;
-        auto* wta = new WindowTrackingAdaptor(m_layoutManager, m_zoneDetector, &screenMgr, m_settings, nullptr, nullptr,
-                                              &parent);
+        auto* wta =
+            new WindowTracker(m_layoutManager, m_zoneDetector, &screenMgr, m_settings, nullptr, nullptr, &parent);
         auto* snap = new SnapEngine(m_layoutManager, wta->service(), m_zoneDetector, nullptr, nullptr);
         snap->setEngineSettings(m_settings);
         wta->service()->setSnapState(snap->snapState());
@@ -740,9 +740,9 @@ private Q_SLOTS:
         m_snapEngine->commitSnap(window1, m_zoneIds[0], m_screenId);
         m_snapEngine->commitSnap(window2, m_zoneIds[1], m_screenId);
 
-        QSignalSpy spy(m_wta, &WindowTrackingAdaptor::applyGeometryRequested);
+        QSignalSpy spy(m_wta, &WindowTracker::applyGeometryRequested);
 
-        m_snapAdaptor->swapWindowsById(window1, window2);
+        m_snapService->swapWindowsById(window1, window2);
 
         QCOMPARE(spy.count(), 2);
 
@@ -767,9 +767,9 @@ private Q_SLOTS:
         // Only snap window1
         m_snapEngine->commitSnap(window1, m_zoneIds[0], m_screenId);
 
-        QSignalSpy spy(m_wta, &WindowTrackingAdaptor::applyGeometryRequested);
+        QSignalSpy spy(m_wta, &WindowTracker::applyGeometryRequested);
 
-        m_snapAdaptor->swapWindowsById(window1, window2);
+        m_snapService->swapWindowsById(window1, window2);
 
         QCOMPARE(spy.count(), 0);
     }
@@ -843,7 +843,7 @@ private Q_SLOTS:
     {
         QString windowId = QStringLiteral("firefox|12345");
 
-        QSignalSpy spy(m_wta, &WindowTrackingAdaptor::windowStateChanged);
+        QSignalSpy spy(m_wta, &WindowTracker::windowStateChanged);
 
         m_snapEngine->commitSnap(windowId, m_zoneIds[0], m_screenId);
 
@@ -868,7 +868,7 @@ private Q_SLOTS:
 
         m_snapEngine->commitSnap(windowId, m_zoneIds[0], m_screenId);
 
-        QSignalSpy spy(m_wta, &WindowTrackingAdaptor::windowStateChanged);
+        QSignalSpy spy(m_wta, &WindowTracker::windowStateChanged);
 
         m_snapEngine->uncommitSnap(windowId);
 
@@ -886,10 +886,10 @@ private Q_SLOTS:
         QVERIFY(foundUnsnapped);
     }
 
-    // A context release (TilingAdaptor::applyMembershipResult dropping a window
+    // A context release (TilingService::applyMembershipResult dropping a window
     // from a desktop or activity it has left, per window or per screen) does NOT
     // run through uncommitSnap, so the engine emits no windowSnapStateChanged;
-    // WindowTrackingAdaptor::relayWindowReleasedFromContext says why that signal
+    // WindowTracker::relayWindowReleasedFromContext says why that signal
     // would be wrong there.
     // The effect's per-window zone mirror still has to be told, or the
     // IsSnapped / Zone rule fields keep matching against a zone the window has
@@ -900,7 +900,7 @@ private Q_SLOTS:
     {
         const QString windowId = QStringLiteral("firefox|12345");
 
-        QSignalSpy spy(m_wta, &WindowTrackingAdaptor::windowStateChanged);
+        QSignalSpy spy(m_wta, &WindowTracker::windowStateChanged);
         m_wta->relayWindowReleasedFromContext(windowId, m_screenId);
 
         QCOMPARE(spy.count(), 1);
@@ -921,7 +921,7 @@ private Q_SLOTS:
     // than broadcast a release for a window that cannot be named.
     void testWindowStateChanged_contextReleaseIgnoresEmptyId()
     {
-        QSignalSpy spy(m_wta, &WindowTrackingAdaptor::windowStateChanged);
+        QSignalSpy spy(m_wta, &WindowTracker::windowStateChanged);
         m_wta->relayWindowReleasedFromContext(QString(), m_screenId);
         QCOMPARE(spy.count(), 0);
     }
@@ -932,7 +932,7 @@ private Q_SLOTS:
 
         m_snapEngine->commitSnap(windowId, m_zoneIds[0], m_screenId);
 
-        QSignalSpy spy(m_wta, &WindowTrackingAdaptor::windowStateChanged);
+        QSignalSpy spy(m_wta, &WindowTracker::windowStateChanged);
 
         m_wta->syncWindowFloating(windowId, true);
 
@@ -976,7 +976,7 @@ private Q_SLOTS:
             m_wta->service()->setEngineFloatResolver({});
         });
 
-        QSignalSpy spy(m_wta, &WindowTrackingAdaptor::windowFloatingChanged);
+        QSignalSpy spy(m_wta, &WindowTracker::windowFloatingChanged);
 
         // The real float edge must broadcast even though a re-query says true.
         m_wta->syncWindowFloating(windowId, true);

@@ -62,7 +62,7 @@ public:
     int scrollColumnWidthStepPercent() const;
     int scrollWindowHeightStepPercent() const;
     /// Unlike its two siblings this one has no fire lambda behind it: the
-    /// view STEP is the wheel's, and the ScrollingAdaptor reads it through
+    /// view STEP is the wheel's, and the ScrollingService reads it through
     /// the provider the daemon binds to this getter. It lives here with the
     /// other two so every step percent has one home and one null defence.
     int scrollViewScrollStepPercent() const;

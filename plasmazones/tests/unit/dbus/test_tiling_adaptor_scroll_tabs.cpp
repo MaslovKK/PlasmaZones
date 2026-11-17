@@ -4,13 +4,13 @@
 /**
  * @file test_tiling_adaptor_scroll_tabs.cpp
  *
- * Pins the tab-indicator transport TilingAdaptor exposes to the KWin effect:
+ * Pins the tab-indicator transport TilingService exposes to the KWin effect:
  * the relay that turns the scroll engine's per-screen model into
  * scrollTabStripsChanged plus the scrollTabStrips replay cache behind it, the
  * "[]" retraction that drops a screen from that cache, the per-screen PAINT
  * override map and its predicate-driven clear, the all-windows
  * scrollTabColorsChanged broadcast, the targeted per-window re-drive, and the
- * scrollTabColors pass-through to the WindowTrackingAdaptor's rule resolution,
+ * scrollTabColors pass-through to the WindowTracker's rule resolution,
  * whose memo follows every change of the window's registry record.
  *
  * NOTE: the adaptor is parented to a plain QObject rather than a
@@ -35,8 +35,8 @@
 #include <PhosphorRules/RuleStore.h>
 
 #include "config/configdefaults.h"
-#include "dbus/tilingadaptor/tilingadaptor.h"
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/services/tilingservice/tilingservice.h"
+#include "runtime/windowtracker/windowtracker.h"
 #include "helpers/IsolatedConfigGuard.h"
 #include "helpers/LayoutRegistryTestHelpers.h"
 #include "helpers/StubSettings.h"
@@ -68,8 +68,8 @@ private Q_SLOTS:
     void testRelayEmitsAndCachesPerScreen()
     {
         QObject adaptorParent;
-        TilingAdaptor adaptor(nullptr, &adaptorParent);
-        QSignalSpy spy(&adaptor, &TilingAdaptor::scrollTabStripsChanged);
+        TilingService adaptor(nullptr, &adaptorParent);
+        QSignalSpy spy(&adaptor, &TilingService::scrollTabStripsChanged);
         QVERIFY(spy.isValid());
 
         // No relay yet: the replay query answers "nothing to paint".
@@ -111,7 +111,7 @@ private Q_SLOTS:
     void testClearPaintOverridesWhereMatchesOnlyThePredicate()
     {
         QObject adaptorParent;
-        TilingAdaptor adaptor(nullptr, &adaptorParent);
+        TilingService adaptor(nullptr, &adaptorParent);
         namespace STK = PhosphorProtocol::Service::ScrollTabKey;
 
         QVariantMap ov;
@@ -121,7 +121,7 @@ private Q_SLOTS:
         adaptor.setScrollTabPaintOverrides(QStringLiteral("HDMI-1"), ov);
         QCOMPARE(adaptor.scrollTabPaintOverrides().size(), 3);
 
-        QSignalSpy spy(&adaptor, &TilingAdaptor::scrollTabPaintOverridesChanged);
+        QSignalSpy spy(&adaptor, &TilingService::scrollTabPaintOverridesChanged);
         QVERIFY(spy.isValid());
 
         // The hot-removal shape: everything rooted on one departed output,
@@ -150,8 +150,8 @@ private Q_SLOTS:
     void testEmptyArrayRetractsTheScreen()
     {
         QObject adaptorParent;
-        TilingAdaptor adaptor(nullptr, &adaptorParent);
-        QSignalSpy spy(&adaptor, &TilingAdaptor::scrollTabStripsChanged);
+        TilingService adaptor(nullptr, &adaptorParent);
+        QSignalSpy spy(&adaptor, &TilingService::scrollTabStripsChanged);
         QVERIFY(spy.isValid());
 
         adaptor.relayScrollTabStrips(QStringLiteral("DP-1"), stripsJsonFor(QStringLiteral("konsole|inst1")));
@@ -181,7 +181,7 @@ private Q_SLOTS:
     void testClearEngineDropsTheReplayCache()
     {
         QObject adaptorParent;
-        TilingAdaptor adaptor(nullptr, &adaptorParent);
+        TilingService adaptor(nullptr, &adaptorParent);
 
         adaptor.relayScrollTabStrips(QStringLiteral("DP-1"), stripsJsonFor(QStringLiteral("konsole|inst1")));
         QCOMPARE(adaptor.scrollTabStrips().size(), 1);
@@ -195,8 +195,8 @@ private Q_SLOTS:
     void testPaintOverridesAreChangeGatedPerScreenAndReplay()
     {
         QObject adaptorParent;
-        TilingAdaptor adaptor(nullptr, &adaptorParent);
-        QSignalSpy spy(&adaptor, &TilingAdaptor::scrollTabPaintOverridesChanged);
+        TilingService adaptor(nullptr, &adaptorParent);
+        QSignalSpy spy(&adaptor, &TilingService::scrollTabPaintOverridesChanged);
         QVERIFY(spy.isValid());
         QVERIFY(adaptor.scrollTabPaintOverrides().isEmpty());
 
@@ -250,8 +250,8 @@ private Q_SLOTS:
     void testColorsBroadcastIsEmptyOnBothArguments()
     {
         QObject adaptorParent;
-        TilingAdaptor adaptor(nullptr, &adaptorParent);
-        QSignalSpy spy(&adaptor, &TilingAdaptor::scrollTabColorsChanged);
+        TilingService adaptor(nullptr, &adaptorParent);
+        QSignalSpy spy(&adaptor, &TilingService::scrollTabColorsChanged);
         QVERIFY(spy.isValid());
 
         adaptor.relayScrollTabColorsChanged();
@@ -276,8 +276,7 @@ private Q_SLOTS:
         StubSettings settings(nullptr);
         StubZoneDetector zoneDetector(nullptr);
 
-        auto* wta =
-            new WindowTrackingAdaptor(layoutManager, &zoneDetector, nullptr, &settings, nullptr, nullptr, &parent);
+        auto* wta = new WindowTracker(layoutManager, &zoneDetector, nullptr, &settings, nullptr, nullptr, &parent);
         auto* registry = new PhosphorEngine::WindowRegistry(&parent);
         wta->setWindowRegistry(registry);
         wta->setWindowMetadata(QStringLiteral("inst1"), QStringLiteral("tabapp"), QString(), QString(), QString(), 0, 0,
@@ -301,7 +300,7 @@ private Q_SLOTS:
         });
 
         QObject adaptorParent;
-        TilingAdaptor adaptor(nullptr, &adaptorParent);
+        TilingService adaptor(nullptr, &adaptorParent);
 
         // No WTA wired: the pass-through has nothing to resolve against.
         const QString windowId = QStringLiteral("tabapp|inst1");
@@ -327,7 +326,7 @@ private Q_SLOTS:
         // The TARGETED re-drive. Gated on the strip cache naming the window:
         // the effect only paints pills for tabs, so a window no strip names
         // must not grow its per-window colour cache.
-        QSignalSpy colorSpy(&adaptor, &TilingAdaptor::scrollTabColorsChanged);
+        QSignalSpy colorSpy(&adaptor, &TilingService::scrollTabColorsChanged);
         QVERIFY(colorSpy.isValid());
         adaptor.relayScrollTabColorsForWindow(windowId);
         QCOMPARE(colorSpy.count(), 0);
@@ -393,8 +392,7 @@ private Q_SLOTS:
         QObject parent;
         StubSettings settings(nullptr);
         StubZoneDetector zoneDetector(nullptr);
-        auto* wta =
-            new WindowTrackingAdaptor(layoutManager, &zoneDetector, nullptr, &settings, nullptr, nullptr, &parent);
+        auto* wta = new WindowTracker(layoutManager, &zoneDetector, nullptr, &settings, nullptr, nullptr, &parent);
         auto* registry = new PhosphorEngine::WindowRegistry(&parent);
         wta->setWindowRegistry(registry);
         PhosphorEngine::WindowMetadata meta;

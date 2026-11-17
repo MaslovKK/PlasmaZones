@@ -3,7 +3,7 @@
 
 /**
  * @file test_scrolling_adaptor.cpp
- * @brief Behaviour of ScrollingAdaptor, the org.phosphor_works.Placement.Scrolling surface.
+ * @brief Behaviour of ScrollingService, the org.phosphor_works.Placement.Scrolling surface.
  *
  * The contract-sync test covers the XML's SHAPE only — that the declared
  * methods and signals exist with the right signatures. What it cannot check
@@ -106,7 +106,7 @@
 #include <PhosphorEngine/PlacementEngineBase.h>
 #include <PhosphorScrollEngine/ScrollEngine.h>
 
-#include "dbus/scrollingadaptor/scrollingadaptor.h"
+#include "runtime/services/scrollingservice/scrollingservice.h"
 #include "scrollingadaptortestfixture.h"
 
 using namespace PlasmaZones;
@@ -503,7 +503,7 @@ private Q_SLOTS:
         m_adaptor->setAutotileScreenResolver([](const QString& screenId) {
             return screenId == QLatin1String("DP-2");
         });
-        QSignalSpy spy(m_adaptor, &ScrollingAdaptor::scrollingScreensChanged);
+        QSignalSpy spy(m_adaptor, &ScrollingService::scrollingScreensChanged);
         m_engine->setActiveScreens({QStringLiteral("DP-1"), QStringLiteral("DP-2")});
         m_engine->setActiveScreens({QStringLiteral("DP-1")});
         QCOMPARE(spy.count(), 2);
@@ -516,7 +516,7 @@ private Q_SLOTS:
         m_adaptor->setAutotileScreenResolver([](const QString&) {
             return false;
         });
-        QSignalSpy spy(m_adaptor, &ScrollingAdaptor::scrollingScreensChanged);
+        QSignalSpy spy(m_adaptor, &ScrollingService::scrollingScreensChanged);
         m_engine->setActiveScreens({QStringLiteral("DP-1"), QStringLiteral("DP-2")});
         m_engine->setActiveScreens({QStringLiteral("DP-1")});
         QCOMPARE(spy.count(), 2);
@@ -527,7 +527,7 @@ private Q_SLOTS:
     // is not.
     void testScreensChanged_carriesTheContextSwitch()
     {
-        QSignalSpy spy(m_adaptor, &ScrollingAdaptor::scrollingScreensChanged);
+        QSignalSpy spy(m_adaptor, &ScrollingService::scrollingScreensChanged);
         m_engine->setActiveScreens({QStringLiteral("DP-1"), QStringLiteral("DP-2")});
         // Counted before every last(): last() on an empty spy is undefined,
         // and a stale entry from an earlier push would answer for a push that
@@ -563,7 +563,7 @@ private Q_SLOTS:
         // without the arming calls below, deleting the gate outright leaves
         // the suite green.
         QSignalSpy engineSpy(m_engine, &ScrollEngine::scrollingScreensChanged);
-        QSignalSpy spy(m_adaptor, &ScrollingAdaptor::scrollingScreensChanged);
+        QSignalSpy spy(m_adaptor, &ScrollingService::scrollingScreensChanged);
 
         m_engine->setActiveScreens({QStringLiteral("DP-1"), QStringLiteral("DP-2")});
         QCOMPARE(spy.count(), 1);
@@ -653,20 +653,20 @@ private Q_SLOTS:
     // pushing screen sets onto a bus interface that has stopped answering.
     void testClearedEngine_stopsRelayingSignals()
     {
-        QSignalSpy spy(m_adaptor, &ScrollingAdaptor::scrollingScreensChanged);
+        QSignalSpy spy(m_adaptor, &ScrollingService::scrollingScreensChanged);
         // The strip wake-up rides the same sweep, but be clear about what this
         // spy can and cannot show: its relay lambda tests `!m_engine` before
         // touching the engine, so a surviving connection would be inert and
         // this assertion holds with the disconnect deleted. The screen-set spy
         // above is the discriminating one — that lambda has no such guard, and
         // clearEngine also clears the last-broadcast set it compares against.
-        QSignalSpy stripSpy(m_adaptor, &ScrollingAdaptor::stripChanged);
+        QSignalSpy stripSpy(m_adaptor, &ScrollingService::stripChanged);
         // The strip-IDENTITY relay is discriminating in the same way the
         // screen-set one is: its lambda is a bare forward of three strings
         // with no engine test, so a missing disconnect really does keep
         // putting epochs on the bus and this assertion catches it. It shipped
         // without one.
-        QSignalSpy ctxSpy(m_adaptor, &ScrollingAdaptor::stripContextChanged);
+        QSignalSpy ctxSpy(m_adaptor, &ScrollingService::stripContextChanged);
         m_adaptor->clearEngine();
 
         // Arm a real context switch as well as a set push: the epoch is
@@ -692,7 +692,7 @@ private Q_SLOTS:
     void testStripContextChanged_relaysContextSwitches()
     {
         m_engine->setActiveScreens({QStringLiteral("DP-1")});
-        QSignalSpy spy(m_adaptor, &ScrollingAdaptor::stripContextChanged);
+        QSignalSpy spy(m_adaptor, &ScrollingService::stripContextChanged);
 
         // The FIRST setCurrentDesktop on a fresh engine only primes the
         // tracker (armSwitch is gated on the context having been set before),
@@ -729,7 +729,7 @@ private Q_SLOTS:
         // With only one, an implementation that ignored its argument and
         // named the sole owned screen would pass every assertion below.
         m_engine->setActiveScreens({QStringLiteral("DP-1"), QStringLiteral("DP-2")});
-        QSignalSpy spy(m_adaptor, &ScrollingAdaptor::stripChanged);
+        QSignalSpy spy(m_adaptor, &ScrollingService::stripChanged);
 
         // Opening a window is a placement change on an owned screen.
         //
@@ -788,7 +788,7 @@ private Q_SLOTS:
     void testStripChanged_staysSilentForAReleasedScreen()
     {
         m_engine->setActiveScreens({QStringLiteral("DP-2")});
-        QSignalSpy spy(m_adaptor, &ScrollingAdaptor::stripChanged);
+        QSignalSpy spy(m_adaptor, &ScrollingService::stripChanged);
 
         // Driven at the engine's own signal rather than through a verb: every
         // verb refuses a screen outside the scrolling set before it reaches an
@@ -820,8 +820,8 @@ private Q_SLOTS:
     // re-publish of the same membership reaches neither.
     void testFocusScrollBlockedWindows_isIndependentOfTheBehaviourMap()
     {
-        QSignalSpy blocked(m_adaptor, &ScrollingAdaptor::scrollFocusScrollBlockedWindowsChanged);
-        QSignalSpy behaviour(m_adaptor, &ScrollingAdaptor::scrollEffectBehaviourChanged);
+        QSignalSpy blocked(m_adaptor, &ScrollingService::scrollFocusScrollBlockedWindowsChanged);
+        QSignalSpy behaviour(m_adaptor, &ScrollingService::scrollEffectBehaviourChanged);
 
         m_adaptor->setScrollEffectBehaviour({QStringLiteral("DP-1")}, {}, {});
         QCOMPARE(behaviour.count(), 1);
@@ -885,7 +885,7 @@ private Q_SLOTS:
 
         QVERIFY(m_adaptor->scrollingScreens().isEmpty());
         QCOMPARE(m_adaptor->scrollFocusScrollBlockedWindows(), QStringList({QStringLiteral("app|a")}));
-        QCOMPARE(m_adaptor->scrollEffectBehaviour().value(ScrollingAdaptor::focusFollowsMouseKey()).toStringList(),
+        QCOMPARE(m_adaptor->scrollEffectBehaviour().value(ScrollingService::focusFollowsMouseKey()).toStringList(),
                  QStringList({QStringLiteral("DP-1")}));
     }
 
@@ -914,7 +914,7 @@ private Q_SLOTS:
                             QStringLiteral("PropertiesChanged"), this, SLOT(onPropertiesChanged(QDBusMessage))));
 
         m_propertiesChangedCount = 0;
-        QSignalSpy own(m_adaptor, &ScrollingAdaptor::scrollingScreensChanged);
+        QSignalSpy own(m_adaptor, &ScrollingService::scrollingScreensChanged);
 
         m_engine->setActiveScreens({QStringLiteral("DP-1"), QStringLiteral("DP-2")});
         // Emitted synchronously through the engine connection, so it is

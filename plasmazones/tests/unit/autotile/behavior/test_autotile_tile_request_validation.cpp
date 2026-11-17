@@ -6,7 +6,7 @@
  * @brief Producer-side guard for AutotileEngine::windowsTiled JSON.
  *
  * Phase 1B added PhosphorProtocol::TileRequestEntry::validationError(), and
- * TilingAdaptor::slotWindowsTileRequested on the effect side drops any
+ * TilingService::slotWindowsTileRequested on the effect side drops any
  * batch entry that fails validation. The JSON producer in
  * AutotileEngine::applyTiling must therefore populate every field the
  * validator requires — screenId, non-zero windowId, non-zero size on
@@ -19,7 +19,7 @@
  * existing test_dbus_validation pinned the validator's behaviour but
  * never exercised a real producer, so the bug slipped through.
  *
- * This test mirrors TilingAdaptor::relayTileRequestsJson's parse logic
+ * This test mirrors TilingService::relayTileRequestsJson's parse logic
  * (same field names, same optional flags, same drop gates) so a drift in
  * either producer or consumer that broke round-tripping would fail here
  * too.
@@ -46,9 +46,9 @@ using namespace PhosphorProtocol;
 
 namespace {
 
-/// Mirrors TilingAdaptor::relayTileRequestsJson's JSON →
+/// Mirrors TilingService::relayTileRequestsJson's JSON →
 /// PhosphorProtocol::TileRequestList parse. Kept in sync with
-/// src/dbus/tilingadaptor/tilingadaptor.cpp — the same field set this
+/// src/runtime/services/tilingservice/tilingadaptor.cpp — the same field set this
 /// producer can emit (including the v6-v10 additions), the same
 /// duplicate-windowId and invalid-geometry drop
 /// gates — so the producer test exercises the same deserialization the
@@ -121,7 +121,7 @@ private Q_SLOTS:
     // Set up an engine with a screen and two windows, force calculated
     // zones (bypassing real screen geometry which unit tests don't have),
     // run retile, capture the windowsTiled signal, parse each entry via
-    // the same path the TilingAdaptor uses, and assert every entry
+    // the same path the TilingService uses, and assert every entry
     // passes validation.
     // ─────────────────────────────────────────────────────────────────────
     void applyTiling_populatesScreenIdOnEveryTiledEntry()

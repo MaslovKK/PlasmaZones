@@ -5,7 +5,7 @@
 
 /**
  * @brief No-op IOverlayService for unit tests that need a constructible
- * WindowDragAdaptor (whose ctor qFatals on a null overlay). Every method is
+ * DragResolver (whose ctor qFatals on a null overlay). Every method is
  * inert; the few queries answer the neutral value ("nothing visible, nothing
  * selected") so drag-adaptor teardown paths walk their default branches. The
  * one exception records: the drop-indicator window overrides keep the last

@@ -17,7 +17,7 @@
 #include <PhosphorEngine/IPlacementEngine.h>
 #include <PhosphorEngine/IPlacementState.h>
 #include <PhosphorEngine/PlacementEngineBase.h>
-#include "dbus/windowtrackingadaptor/windowtrackingadaptor.h"
+#include "runtime/windowtracker/windowtracker.h"
 #include "daemon/overlayservice/internal.h"
 #include "helpers.h"
 #include "stripzones.h"
@@ -946,9 +946,8 @@ void Daemon::syncModeFromAssignments()
     // Sync UnifiedLayoutController's current layout ID to match this desktop.
     // Without this, layout cycling uses the old desktop's current index.
     if (m_unifiedLayoutController) {
-        QString focusedScreenId = m_windowTrackingAdaptor
-            ? resolveShortcutScreenId(m_screenManager.get(), m_windowTrackingAdaptor)
-            : QString();
+        QString focusedScreenId =
+            m_windowTracker ? resolveShortcutScreenId(m_screenManager.get(), m_windowTracker) : QString();
         if (focusedScreenId.isEmpty()) {
             const QStringList effectiveIds = m_screenManager->effectiveScreenIds();
             if (!effectiveIds.isEmpty()) {

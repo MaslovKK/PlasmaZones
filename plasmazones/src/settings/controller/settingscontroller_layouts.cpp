@@ -229,7 +229,7 @@ void SettingsController::loadLayoutsAsync()
 // Returns the projection produced by PlasmaZones::toVariantMap. That is the
 // SAME projection, key for key, that the D-Bus side emits via toJson — the two
 // differ only in container type (QVariantMap vs QJsonObject). What differs is
-// the daemon's LayoutAdaptor::getLayoutList, which adds an enrichment layer on
+// the daemon's LayoutService::getLayoutList, which adds an enrichment layer on
 // top (hasSystemOrigin / hiddenFromSelector / defaultOrder / allow-lists) from
 // Layout state that LayoutPreview does not carry. So the list this returns is a
 // strict SUBSET of the D-Bus list: any consumer reading an enrichment-only key

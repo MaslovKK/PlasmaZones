@@ -344,7 +344,7 @@ private Q_SLOTS:
         f.setMode(kLeft, 2, PhosphorZones::AssignmentEntry::Scrolling);
         const QString w = f.live(QStringLiteral("scr-1"), QRect(700, 100, 400, 300));
         f.snapOn(w, {f.zone(1)}, kLeft, 1);
-        QSignalSpy moved(f.wta, &WindowTrackingAdaptor::windowDesktopMoveRequested);
+        QSignalSpy moved(f.wta, &WindowTracker::windowDesktopMoveRequested);
         Q_EMIT f.snap->crossModeMoveRequested(w, kLeft, 2, QStringLiteral("right"));
         QVERIFY(scroll.received.isEmpty());
         QCOMPARE(moved.count(), 1);

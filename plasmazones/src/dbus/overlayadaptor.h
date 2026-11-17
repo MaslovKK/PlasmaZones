@@ -5,9 +5,9 @@
 
 #include "plasmazones_export.h"
 #include <PhosphorProtocol/ZoneMarshalling.h>
-#include <QObject>
 #include <QDBusAbstractAdaptor>
 #include <QDBusUnixFileDescriptor>
+#include <QPointer>
 #include <QSet>
 #include <QString>
 
@@ -16,35 +16,21 @@
 class QDBusConnection;
 class QDBusServiceWatcher;
 
-namespace PhosphorScreens {
-class ScreenManager;
-}
-
-namespace PhosphorZones {
-class IZoneLayoutRegistry;
-class IZoneDetector;
-}
-
 namespace PlasmaZones {
 
 class IOverlayService;
-class ISettings;
+class OverlayControlService;
 
 /**
- * @brief D-Bus adaptor for overlay control operations
+ * @brief The D-Bus binding of OverlayControlService: org.phosphor_works.Placement.Overlay
  *
- * Provides D-Bus interface: org.phosphor_works.Placement.Overlay
- *  PhosphorZones::Zone overlay visibility and highlighting only
+ * The overlay, highlight and Snap Assist members forward to
+ * OverlayControlService, where they are documented; showSnapAssist admits
+ * only the registered bridge (#1155). The two thumbnail entries are this
+ * binding's own, because they exist for the KWin effect alone: they hand
+ * the effect's window captures to IOverlayService.
  *
- * Note: PhosphorZones::Zone detection and window tracking are handled by separate adaptors
- * (ZoneDetectionAdaptor and WindowTrackingAdaptor).
- *
- * Uses interface types for loose coupling
- */
-/**
- * @brief D-Bus adaptor for overlay control operations.
- *
- * The two thumbnail entries authenticate their caller: they accept an
+ * The thumbnail entries authenticate their caller: they accept an
  * attacker-influenceable image payload from the unauthenticated session bus,
  * and only @c kwin_wayland is meant to invoke them. The caller is read from
  * the context of the object this adaptor is exported through
@@ -56,10 +42,10 @@ class PLASMAZONES_EXPORT OverlayAdaptor : public QDBusAbstractAdaptor
     Q_CLASSINFO("D-Bus Interface", "org.phosphor_works.Placement.Overlay")
 
 public:
-    explicit OverlayAdaptor(IOverlayService* overlay, PhosphorZones::IZoneDetector* detector,
-                            PhosphorZones::IZoneLayoutRegistry* layoutRegistry,
-                            PhosphorScreens::ScreenManager* screenManager, ISettings* settings,
-                            QObject* parent = nullptr);
+    /// @param service Not owned. A call that arrives after it is gone is answered empty.
+    /// @param overlay Where the thumbnails go. Not owned; outlives the adaptor.
+    /// @param parent The object the adaptor is exported through
+    OverlayAdaptor(OverlayControlService* service, IOverlayService* overlay, QObject* parent);
     ~OverlayAdaptor() override = default;
 
     /// The process a thumbnail sender is held to (@ref trustIfCompositor).
@@ -92,22 +78,15 @@ public:
     bool isCompositorPeer(const QString& uniqueName);
 
 public Q_SLOTS:
-    // Visibility control
     void showOverlay();
     void hideOverlay();
     bool isOverlayVisible();
-
-    // PhosphorZones::Zone highlighting (requires layout manager for backward compatibility)
     void highlightZone(const QString& zoneId);
     void highlightZones(const QStringList& zoneIds);
     void clearHighlight();
-
-    // Performance constants
     int getPollIntervalMs();
     int getMinimumZoneSizePx();
     int getMinimumZoneDisplaySizePx();
-
-    // Snap Assist overlay (window picker after snapping)
     bool showSnapAssist(const QString& screenId, const PhosphorProtocol::EmptyZoneList& emptyZones,
                         const PhosphorProtocol::SnapAssistCandidateList& candidates);
     void hideSnapAssist();
@@ -254,13 +233,8 @@ private:
      */
     Compositor compositor();
 
-    IOverlayService* m_overlayService; // Interface type (DIP)
-    PhosphorZones::IZoneDetector* m_zoneDetector; // Interface type (DIP) - only for highlighting
-    // Narrow to IZoneLayoutRegistry — overlay adaptor only reads the active
-    // layout, never per-context assignments / quick slots / persistence.
-    PhosphorZones::IZoneLayoutRegistry* m_layoutRegistry;
-    PhosphorScreens::ScreenManager* m_screenManager;
-    ISettings* m_settings; // Interface type (DIP) - for configurable constants
+    QPointer<OverlayControlService> m_service;
+    IOverlayService* m_overlayService; // the thumbnails' destination
 
     /// Set of session-bus unique names previously verified as belonging to
     /// kwin_wayland. Populated eagerly via @ref prewarmKwinTrust at

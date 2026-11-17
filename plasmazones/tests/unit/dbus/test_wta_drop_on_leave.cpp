@@ -3,7 +3,7 @@
 
 /**
  * @file test_wta_drop_on_leave.cpp
- * @brief WindowTrackingAdaptor::releaseLeftScreens, the one primitive every
+ * @brief WindowTracker::releaseLeftScreens, the one primitive every
  *        cross-screen move runs: what each engine still holds of a window on
  *        a monitor it left is dropped, the arriving engine is left alone, and
  *        a record naming an output that went away stays parked. Plus the
@@ -37,7 +37,7 @@ public:
         screenMgr = std::make_unique<PhosphorScreens::ScreenManager>(
             PhosphorScreens::ScreenManagerConfig{.physicalScreenSource = &fake, .useGeometrySensors = false});
         screenMgr->start();
-        wta = new WindowTrackingAdaptor(layouts, detector, screenMgr.get(), settings, nullptr, nullptr, &parent);
+        wta = new WindowTracker(layouts, detector, screenMgr.get(), settings, nullptr, nullptr, &parent);
         snap = std::make_unique<SnapEngine>(layouts, wta->service(), detector, nullptr, nullptr);
         snap->setEngineSettings(settings);
         wta->service()->setSnapState(snap->snapState());
@@ -84,7 +84,7 @@ public:
     PhosphorScreens::FakePhysicalScreenSource fake;
     std::unique_ptr<PhosphorScreens::ScreenManager> screenMgr;
     QObject parent;
-    WindowTrackingAdaptor* wta = nullptr;
+    WindowTracker* wta = nullptr;
     std::unique_ptr<SnapEngine> snap;
     PhosphorEngine::WindowRegistry* registry = nullptr;
     std::unique_ptr<PhosphorRules::RuleStore> store;
@@ -308,7 +308,7 @@ private Q_SLOTS:
         env.snap->setCurrentDesktopForScreen(QStringLiteral("DP-1"), 1);
         env.snap->setCurrentDesktopForScreen(QStringLiteral("DP-2"), 1);
         env.wta->service()->assignWindowToZone(env.window, m_zoneIds[0], QStringLiteral("DP-1"), 1);
-        QSignalSpy applySpy(env.wta, &WindowTrackingAdaptor::applyGeometryRequested);
+        QSignalSpy applySpy(env.wta, &WindowTracker::applyGeometryRequested);
 
         QVERIFY(env.wta->dragEndedOnScreen(env.window, QStringLiteral("DP-2"), /*floatIfSnapped=*/true));
 
@@ -383,7 +383,7 @@ private Q_SLOTS:
         QVERIFY(m_wta->relayWindowFloatingChanged(w, true, m_screenId));
         QVERIFY(!m_wta->service()->isWindowFloating(w));
 
-        QSignalSpy floatSpy(m_wta, &WindowTrackingAdaptor::windowFloatingChanged);
+        QSignalSpy floatSpy(m_wta, &WindowTracker::windowFloatingChanged);
         m_wta->releaseLeftScreens(w, QStringLiteral("DP-2"), nullptr);
         QCOMPARE(floatSpy.count(), 1);
         QCOMPARE(floatSpy.first().at(1).toBool(), false);
@@ -430,8 +430,8 @@ private Q_SLOTS:
         QVERIFY(screenMgr.physicalScreenFor(dp1).isValid());
         QVERIFY(!screenMgr.physicalScreenFor(gone).isValid());
         QObject parent;
-        auto* wta = new WindowTrackingAdaptor(m_layoutManager, m_zoneDetector, &screenMgr, m_settings, nullptr, nullptr,
-                                              &parent);
+        auto* wta =
+            new WindowTracker(m_layoutManager, m_zoneDetector, &screenMgr, m_settings, nullptr, nullptr, &parent);
         QCOMPARE(wta->service()->screenManager(), &screenMgr);
         const auto recordOn = [wta](const QString& windowId, const QString& screenId) {
             wta->service()->placementStore().record(PlasmaZones::TestHelpers::makePlacement(
@@ -470,7 +470,7 @@ private Q_SLOTS:
         const QString dest = QStringLiteral("DP-2");
         snapOnTwoDesktops(w, m_screenId);
 
-        QSignalSpy markerSpy(m_wta, &WindowTrackingAdaptor::windowOutputMoveExpected);
+        QSignalSpy markerSpy(m_wta, &WindowTracker::windowOutputMoveExpected);
         Q_EMIT autotile.windowOutputMoveExpected(w, dest);
 
         QCOMPARE(markerSpy.count(), 1);
@@ -500,12 +500,12 @@ private Q_SLOTS:
         const QString w = QStringLiteral("app|crossmode-leave");
         snapOnTwoDesktops(w, m_screenId);
 
-        QSignalSpy markerSpy(m_wta, &WindowTrackingAdaptor::windowOutputMoveExpected);
+        QSignalSpy markerSpy(m_wta, &WindowTracker::windowOutputMoveExpected);
         // The window leaves its own fullscreen BEFORE the tiling engine
         // receives it: its tile batch would bail on a fullscreen surface (F526).
         int receivedAtHandBack = -1;
         const QMetaObject::Connection handBack =
-            connect(m_wta, &WindowTrackingAdaptor::fullscreenHandBackRequested, this, [&](const QString& id) {
+            connect(m_wta, &WindowTracker::fullscreenHandBackRequested, this, [&](const QString& id) {
                 if (id == w) {
                     receivedAtHandBack = scroll.received.size();
                 }
@@ -540,8 +540,8 @@ private Q_SLOTS:
         const QString w = QStringLiteral("app|crossmode-refused");
         snapOnTwoDesktops(w, m_screenId);
 
-        QSignalSpy handBackSpy(m_wta, &WindowTrackingAdaptor::fullscreenHandBackRequested);
-        QSignalSpy markerSpy(m_wta, &WindowTrackingAdaptor::windowOutputMoveExpected);
+        QSignalSpy handBackSpy(m_wta, &WindowTracker::fullscreenHandBackRequested);
+        QSignalSpy markerSpy(m_wta, &WindowTracker::windowOutputMoveExpected);
         Q_EMIT m_snapEngine->crossModeMoveRequested(w, dest, 0, QStringLiteral("right"));
 
         // The move reached the receive, so the missing hand-back is the
@@ -580,7 +580,7 @@ private Q_SLOTS:
         autotile.activeScreens.insert(QStringLiteral("DP-2"));
         RoutedOpenEnv env(m_layoutManager, m_zoneDetector, m_settings, &autotile, 0);
         floatOnSpawnScreen(env);
-        QSignalSpy markerSpy(env.wta, &WindowTrackingAdaptor::windowOutputMoveExpected);
+        QSignalSpy markerSpy(env.wta, &WindowTracker::windowOutputMoveExpected);
 
         QVERIFY(env.wta->applyOpenScreenRouting(env.window, QStringLiteral("DP-1")));
 
@@ -628,7 +628,7 @@ private Q_SLOTS:
     {
         RoutedOpenEnv env(m_layoutManager, m_zoneDetector, m_settings, nullptr, 0);
         snapOnDp1WithTileSlot(env);
-        QSignalSpy stateSpy(env.wta, &WindowTrackingAdaptor::windowStateChanged);
+        QSignalSpy stateSpy(env.wta, &WindowTracker::windowStateChanged);
 
         env.wta->windowCrossedScreens(env.window, QStringLiteral("DP-1"), QStringLiteral("DP-2"));
 
