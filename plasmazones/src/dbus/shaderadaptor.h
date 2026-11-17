@@ -4,26 +4,26 @@
 #pragma once
 
 #include "plasmazones_export.h"
-#include <QObject>
+
 #include <QDBusAbstractAdaptor>
+#include <QJsonObject>
+#include <QPointer>
 #include <QString>
-#include <QVariant>
+#include <QStringList>
+#include <QVariantList>
+#include <QVariantMap>
 
 namespace PlasmaZones {
 
-class ShaderRegistry;
+class ShaderService;
 
 /**
- * @brief D-Bus adaptor for shader management
+ * @brief The D-Bus binding of ShaderService: org.phosphor_works.Placement.Shader
  *
- * Provides D-Bus interface: org.phosphor_works.Placement.Shader
- *
- * Exposes shader metadata, compilation lifecycle, and user shader directory
- * monitoring. All methods delegate to ShaderRegistry.
- *
- * Shader assignment remains at the PhosphorZones::Layout level (via PhosphorZones::LayoutRegistry interface).
- * This interface provides shader discovery, parameter introspection, and
- * compilation feedback for the Shader Editor and other consumers.
+ * Every method, property and signal here is one the interface XML names, with
+ * the signature it pins; each one's behaviour is documented on the
+ * ShaderService member of the same name. The binding forwards and relays
+ * the service's signals.
  */
 class PLASMAZONES_EXPORT ShaderAdaptor : public QDBusAbstractAdaptor
 {
@@ -31,109 +31,29 @@ class PLASMAZONES_EXPORT ShaderAdaptor : public QDBusAbstractAdaptor
     Q_CLASSINFO("D-Bus Interface", "org.phosphor_works.Placement.Shader")
 
 public:
-    explicit ShaderAdaptor(ShaderRegistry* registry, QObject* parent = nullptr);
-    ~ShaderAdaptor() override = default;
-
-    /// Null the borrowed ShaderRegistry pointer and sever every signal
-    /// wiring to it. Called from Daemon::stop() before the owning
-    /// unique_ptr member destroys the registry, so a late-arriving D-Bus
-    /// call lands on the null-safe fallback paths below instead of
-    /// dereferencing a dangling pointer.
-    void detach();
+    /// @param service Not owned. A call that arrives after it is gone is answered empty.
+    /// @param parent The object the adaptor is exported through
+    ShaderAdaptor(ShaderService* service, QObject* parent);
+    ~ShaderAdaptor() override;
 
 public Q_SLOTS:
-    // ═══════════════════════════════════════════════════════════════════════════
-    // Shader discovery and metadata
-    // ═══════════════════════════════════════════════════════════════════════════
-
-    /**
-     * @brief Get list of available shader effects
-     * @return List of shader metadata (id, name, description, author, category, etc.)
-     */
     QVariantList availableShaders();
-
-    /**
-     * @brief Get detailed information about a specific shader
-     * @param shaderId UUID of the shader
-     * @return Shader metadata map, or empty map if not found
-     */
     QVariantMap shaderInfo(const QString& shaderId);
-
-    /**
-     * @brief Get default parameter values for a shader
-     * @param shaderId UUID of the shader
-     * @return Map of parameter IDs to default values
-     */
     QVariantMap defaultShaderParams(const QString& shaderId);
-
-    /**
-     * @brief Translate shader params from param IDs to uniform names
-     * @param shaderId UUID of the shader
-     * @param params Map of param IDs to values (e.g. {"intensity": 0.5})
-     * @return Map of uniform names to values (e.g. {"customParams1_x": 0.5})
-     */
     QVariantMap translateShaderParams(const QString& shaderId, const QVariantMap& params);
-
-    // ═══════════════════════════════════════════════════════════════════════════
-    // Shader capability queries
-    // ═══════════════════════════════════════════════════════════════════════════
-
-    /**
-     * @brief Check if shader effects are enabled (compiled with shader support)
-     */
     bool shadersEnabled();
-
-    /**
-     * @brief Check if user-installed shaders are supported
-     */
     bool userShadersEnabled();
-
-    /**
-     * @brief Get the user shader installation directory path
-     * @return Path to ~/.local/share/plasmazones/overlays
-     */
     QString userShaderDirectory();
-
-    /**
-     * @brief Open the user shader directory in the file manager
-     */
     void openUserShaderDirectory();
-
-    /**
-     * @brief Refresh the shader registry (reload all shaders from disk)
-     */
     void refreshShaders();
 
 Q_SIGNALS:
-    // ═══════════════════════════════════════════════════════════════════════════
-    // Compilation lifecycle
-    // ═══════════════════════════════════════════════════════════════════════════
-
-    /**
-     * @brief Shader compilation/bake started
-     * @param shaderId Shader being compiled
-     */
     void shaderCompilationStarted(const QString& shaderId);
-
-    /**
-     * @brief Shader compilation/bake completed
-     * @param shaderId Shader that was compiled
-     * @param success True if compilation succeeded
-     * @param error Error message if !success
-     */
     void shaderCompilationFinished(const QString& shaderId, bool success, const QString& error);
-
-    // ═══════════════════════════════════════════════════════════════════════════
-    // Shader registry changes
-    // ═══════════════════════════════════════════════════════════════════════════
-
-    /**
-     * @brief Shader list changed (shaders added, removed, or reloaded)
-     */
     void shadersChanged();
 
 private:
-    ShaderRegistry* m_registry;
+    QPointer<ShaderService> m_service;
 };
 
 } // namespace PlasmaZones

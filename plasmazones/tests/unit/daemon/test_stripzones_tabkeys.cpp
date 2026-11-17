@@ -3,7 +3,7 @@
 
 // PlasmaZones::StripZones::zoneMapsForTiles — the in-process half of the strip-preview
 // payload, which the daemon's own OSD strip card renders without crossing the
-// bus. Its wire twin (ScrollingAdaptor::visibleStripJson) has its own suite;
+// bus. Its wire twin (ScrollingService::visibleStripJson) has its own suite;
 // this one exists because the two have to stay identically shaped and only
 // one of them was pinned. A divergence here draws a tabbed column as a plain
 // window on the OSD while the settings thumbnail draws it correctly, or the

@@ -13,7 +13,7 @@
 #include "daemon/daemon.h"
 
 #include "daemon/overlayservice.h"
-#include "dbus/zonedetectionadaptor.h"
+#include "runtime/services/zonequeryservice.h"
 
 #include <PhosphorProtocol/ServiceConstants.h>
 
@@ -91,7 +91,7 @@ bool Daemon::registerDBusService()
     //
     // No disconnect-first below: initCoreAdaptors' delete preamble
     // (init_adaptors.cpp) tears down the WHOLE previous adaptor set,
-    // m_overlayAdaptor and m_zoneDetectionAdaptor included, and re-news both
+    // m_overlayAdaptor and m_zoneQueryService included, and re-news both
     // before this function runs — so a stop() -> init() cycle hands us fresh
     // objects with no connections to sweep.
 
@@ -107,7 +107,7 @@ bool Daemon::registerDBusService()
     // DURING a zone-span drag would clobber that drag's multi-highlight;
     // accepted, since the two uses cannot both win and the drag path repaints
     // on its next poll.
-    connect(m_zoneDetectionAdaptor, &ZoneDetectionAdaptor::zoneDetected, this,
+    connect(m_zoneQueryService, &ZoneQueryService::zoneDetected, this,
             [this](const QString& zoneId, const PhosphorProtocol::ZoneGeometryRect& geometry) {
                 Q_UNUSED(geometry)
                 m_overlayService->highlightZone(zoneId);

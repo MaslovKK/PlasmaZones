@@ -203,7 +203,7 @@ void WindowTracker::pruneStaleWindows(const QStringList& aliveWindowIds)
         }
     }
     // Fan the prune out, in the same instance-id key space the local sweeps
-    // use, to TilingAdaptor::pruneStaleFloatBroadcasts, which sweeps its
+    // use, to TilingService::pruneStaleFloatBroadcasts, which sweeps its
     // float-broadcast and tab-colour relay dedups, m_unclaimedOpens and
     // m_pendingOpens. It only erases from its own maps, so nothing here
     // depends on emit-vs-sweep ordering.

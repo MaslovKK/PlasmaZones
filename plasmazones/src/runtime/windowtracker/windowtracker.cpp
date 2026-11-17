@@ -350,7 +350,7 @@ void WindowTracker::setZoneAdjacencyResolver(PhosphorSnapEngine::IZoneAdjacencyR
 //
 // Snap-commit D-Bus slots (windowSnapped, windowSnappedMultiZone,
 // windowUnsnapped, windowsSnappedBatch, recordSnapIntent) moved to
-// SnapAdaptor (org.phosphor_works.Placement.Snap D-Bus interface).
+// SnapService (org.phosphor_works.Placement.Snap D-Bus interface).
 // ═══════════════════════════════════════════════════════════════════════════════
 
 bool WindowTracker::validateWindowId(const QString& windowId, const QString& operation) const

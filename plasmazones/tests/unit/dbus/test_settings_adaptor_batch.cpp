@@ -34,7 +34,8 @@
 #include <PhosphorAnimation/ProfilePaths.h>
 #include <PhosphorAnimation/ProfileTree.h>
 
-#include "dbus/settingsadaptor/settingsadaptor.h"
+#include "dbus/settingsadaptor.h"
+#include "runtime/services/settingsservice/settingsservice.h"
 #include "helpers/BusPeer.h"
 #include "helpers/StubSettings.h"
 #include "helpers/IsolatedConfigGuard.h"
@@ -98,7 +99,8 @@ private Q_SLOTS:
         // Exported through a host carrying the call context, as Daemon does,
         // so the rows that call over the bus see their error replies.
         m_parent = new BusHost;
-        m_adaptor = new SettingsAdaptor(m_settings, /*profileRegistry=*/nullptr, m_parent);
+        m_adaptor =
+            new SettingsAdaptor(new SettingsService(m_settings, /*profileRegistry=*/nullptr, m_parent), m_parent);
     }
 
     void cleanup()
@@ -608,7 +610,7 @@ private Q_SLOTS:
         registry.registerProfile(QStringLiteral("window.open"), profileWithDuration(900.0));
 
         QObject parent;
-        auto* adaptor = new SettingsAdaptor(m_settings, &registry, &parent);
+        auto* adaptor = new SettingsAdaptor(new SettingsService(m_settings, &registry, &parent), &parent);
 
         QVERIFY(adaptor->getSettingKeys().contains(QStringLiteral("motionProfileTree")));
 
@@ -639,7 +641,7 @@ private Q_SLOTS:
         registry.registerProfile(PhosphorAnimation::ProfilePaths::Global, profileWithDuration(400.0));
 
         QObject parent;
-        auto* adaptor = new SettingsAdaptor(m_settings, &registry, &parent);
+        auto* adaptor = new SettingsAdaptor(new SettingsService(m_settings, &registry, &parent), &parent);
 
         QSignalSpy spy(adaptor, &SettingsAdaptor::motionProfileTreeChanged);
         QVERIFY(spy.isValid());

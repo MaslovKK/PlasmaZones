@@ -7,11 +7,11 @@
  * @file wta_snap_nav_fixture.h
  * @brief The float-back fixture with what the snap keyboard verbs need: a
  *        virtual desktop manager, the zone adjacency of a real
- *        ZoneDetectionAdaptor and a scripted neighbour-surface resolver.
+ *        ZoneQueryService and a scripted neighbour-surface resolver.
  */
 
 #include "wta_float_back_fixture.h"
-#include "dbus/zonedetectionadaptor.h"
+#include "runtime/services/zonequeryservice.h"
 
 #include <PhosphorEngine/EngineTypes.h>
 #include <PhosphorEngine/ICrossSurfaceResolver.h>
@@ -59,7 +59,7 @@ struct SnapNavFixture : VdmHolder, FloatBackFixture
     SnapNavFixture()
         : FloatBackFixture(&vdm)
     {
-        zda = new ZoneDetectionAdaptor(&detector, layouts, screenMgr.get(), &settings, &parent);
+        zda = new ZoneQueryService(&detector, layouts, screenMgr.get(), &settings, &parent);
         wta->setZoneAdjacencyResolver(zda);
         snap->setZoneAdjacencyResolver(zda);
         snap->setCrossSurfaceResolver(&cross);
@@ -115,6 +115,6 @@ struct SnapNavFixture : VdmHolder, FloatBackFixture
         wta->windowActivated(windowId, screen);
     }
 
-    ZoneDetectionAdaptor* zda = nullptr; // parent-owned
+    ZoneQueryService* zda = nullptr; // parent-owned
     NavCrossSurface cross;
 };

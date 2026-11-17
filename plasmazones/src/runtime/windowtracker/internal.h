@@ -445,7 +445,7 @@ inline QString tabGroup()
 
 /// Keys of the per-window colour-override maps: tabColorRuleParams (consumed by
 /// the KWin effect, which draws the scroll tab pills, through
-/// TilingAdaptor::scrollTabColors) and dropIndicatorRuleParams (consumed by
+/// TilingService::scrollTabColors) and dropIndicatorRuleParams (consumed by
 /// the overlay service's drop-indicator slot). Same rationale as
 /// ScrollOpenKeys above — the seam was five hand-repeated literals across four
 /// files, where a typo silently drops an override instead of failing to build.
@@ -490,7 +490,7 @@ inline QString indicatorBorderColor()
 /// property names the overlay's drop-indicator slot exposes.
 namespace WindowPaintKeys {
 /// The tab-indicator paint keys the KWin effect reads off the per-screen
-/// context override map (TilingAdaptor::setScrollTabPaintOverrides). The
+/// context override map (TilingService::setScrollTabPaintOverrides). The
 /// effect draws the pills, so the spellings live in
 /// PhosphorProtocol::Service::ScrollTabKey, which both sides of the D-Bus
 /// boundary read; these accessors only forward to it.

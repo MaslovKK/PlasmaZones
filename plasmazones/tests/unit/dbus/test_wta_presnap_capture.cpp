@@ -41,7 +41,7 @@ struct PresnapFixture : FloatBackFixture
 {
     PresnapFixture()
     {
-        adaptor = new SnapAdaptor(snap.get(), wta, &settings, &parent);
+        adaptor = new SnapService(snap.get(), wta, &settings, &parent);
         layouts->assignLayout(kLeft, layouts->currentVirtualDesktop(), QString(), layout);
         adjacency.first = zone(0);
         adjacency.last = zone(2);
@@ -76,7 +76,7 @@ struct PresnapFixture : FloatBackFixture
     }
 
     EdgeZoneAdjacency adjacency;
-    SnapAdaptor* adaptor = nullptr; // parent-owned
+    SnapService* adaptor = nullptr; // parent-owned
 };
 
 /// Snap-all needs a QScreen for the batch, which the synthetic outputs above do
@@ -96,8 +96,8 @@ struct SnapAllRig : WtaConvenienceFixture
         cleanupFixture();
     }
     using WtaConvenienceFixture::m_screenId;
-    using WtaConvenienceFixture::m_snapAdaptor;
     using WtaConvenienceFixture::m_snapEngine;
+    using WtaConvenienceFixture::m_snapService;
     using WtaConvenienceFixture::m_wta;
     using WtaConvenienceFixture::m_zoneIds;
 };
@@ -218,7 +218,7 @@ private Q_SLOTS:
         rig.m_wta->setFrameGeometry(w, kFree.x(), kFree.y(), kFree.width(), kFree.height());
 
         const PhosphorProtocol::SnapAllResultList results =
-            rig.m_snapAdaptor->calculateSnapAllWindows({w}, rig.m_screenId);
+            rig.m_snapService->calculateSnapAllWindows({w}, rig.m_screenId);
 
         QCOMPARE(results.size(), 1);
         const auto rec = rig.m_wta->service()->placementStore().peekExact(w);

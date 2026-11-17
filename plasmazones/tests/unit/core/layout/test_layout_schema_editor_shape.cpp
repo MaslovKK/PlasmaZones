@@ -388,7 +388,7 @@ void TestLayoutSchemaEditorShape::acceptedFixedGeometryDocSurvivesSaveRoundTrip(
 
 void TestLayoutSchemaEditorShape::fixedZoneSmallerThanScreenKeepsScreenReference()
 {
-    // The D-Bus updateLayout shape. LayoutAdaptor::updateLayout replaces the
+    // The D-Bus updateLayout shape. LayoutService::updateLayout replaces the
     // zone set wholesale (clearZones, then add the incoming zones) and then
     // serializes the result — both for the layoutChanged broadcast and for the
     // layoutModified -> saveLayout write that follows. Swapping the zone set

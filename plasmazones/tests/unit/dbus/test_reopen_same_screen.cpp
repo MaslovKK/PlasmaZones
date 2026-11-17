@@ -29,7 +29,7 @@
 #include <PhosphorZones/LayoutRegistry.h>
 #include <PhosphorZones/Zone.h>
 #include "FakePhysicalScreenSource.h"
-#include "dbus/tilingadaptor/tilingadaptor.h"
+#include "runtime/services/tilingservice/tilingservice.h"
 #include "runtime/windowtracker/windowtracker.h"
 #include "helpers/AutotileTestHelpers.h"
 #include "helpers/IsolatedConfigGuard.h"
@@ -77,7 +77,7 @@ struct SnapAndAutotile
                                                                         PlasmaZones::TestHelpers::testRegistry());
         autotile->setAutotileScreens({QStringLiteral("DP-2")});
         wta->setEngines(snap.get(), autotile.get(), nullptr);
-        tiling = new TilingAdaptor(nullptr, &parent);
+        tiling = new TilingService(nullptr, &parent);
         tiling->setWindowTrackingAdaptor(wta);
         tiling->setLifecycleEngines(QVector<PhosphorEngine::IPlacementEngine*>{autotile.get()});
     }
@@ -100,7 +100,7 @@ struct SnapAndAutotile
     PhosphorZones::Layout* layout = nullptr;
     std::unique_ptr<PhosphorSnapEngine::SnapEngine> snap;
     std::unique_ptr<PhosphorTileEngine::AutotileEngine> autotile;
-    TilingAdaptor* tiling = nullptr; // parent-owned
+    TilingService* tiling = nullptr; // parent-owned
 };
 } // namespace
 
@@ -167,7 +167,7 @@ private Q_SLOTS:
         wta->setEngines(nullptr, &autotile, nullptr);
         // Null screen manager on the adaptor: the panel gate never engages, so
         // the open dispatches synchronously.
-        auto* tiling = new TilingAdaptor(nullptr, &parent);
+        auto* tiling = new TilingService(nullptr, &parent);
         tiling->setWindowTrackingAdaptor(wta);
         tiling->setLifecycleEngines(QVector<PhosphorEngine::IPlacementEngine*>{&autotile});
 
@@ -227,7 +227,7 @@ private Q_SLOTS:
             });
         scroll->setActiveScreens({QStringLiteral("DP-2")});
         wta->setEngines(nullptr, &autotile, scroll);
-        auto* tiling = new TilingAdaptor(nullptr, &parent);
+        auto* tiling = new TilingService(nullptr, &parent);
         tiling->setWindowTrackingAdaptor(wta);
         tiling->setLifecycleEngines(QVector<PhosphorEngine::IPlacementEngine*>{&autotile, scroll});
 

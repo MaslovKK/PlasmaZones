@@ -3,7 +3,7 @@
 
 /**
  * @file test_layout_adaptor_scrolling_template.cpp
- * @brief LayoutAdaptor behavioral tests for the scrolling-template surface.
+ * @brief LayoutService behavioral tests for the scrolling-template surface.
  *
  * Drives the real adaptor methods against a real LayoutRegistry (no bus):
  * the setScrollingTemplateLayout / getScrollingTemplateLayout pair with its
@@ -37,7 +37,7 @@
 #include <QTest>
 
 #include "core/types/constants.h"
-#include "dbus/layoutadaptor/layoutadaptor.h"
+#include "runtime/services/layoutservice/layoutservice.h"
 #include <PhosphorLayoutApi/LayoutId.h>
 #include <PhosphorZones/AssignmentEntry.h>
 #include <PhosphorZones/Layout.h>
@@ -69,7 +69,7 @@ private Q_SLOTS:
         templ.name = QStringLiteral("Template");
         templ.presetColumnWidths = {0.5};
         m_templateId = m_store->saveTemplate(templ).toString();
-        m_adaptor = new LayoutAdaptor(m_layoutManager, m_parent);
+        m_adaptor = new LayoutService(m_layoutManager, m_parent);
     }
 
     void cleanup()
@@ -144,8 +144,8 @@ private Q_SLOTS:
         // passed with that call deleted, and left the staging it actually
         // drives (the changed-screen set behind the resnap / OSD fan-out)
         // unpinned.
-        QSignalSpy changedSpy(m_adaptor, &LayoutAdaptor::screenLayoutChanged);
-        QSignalSpy appliedSpy(m_adaptor, &LayoutAdaptor::assignmentChangesApplied);
+        QSignalSpy changedSpy(m_adaptor, &LayoutService::screenLayoutChanged);
+        QSignalSpy appliedSpy(m_adaptor, &LayoutService::assignmentChangesApplied);
 
         m_adaptor->setAssignmentEntry(QStringLiteral("DP-1"), 0, QString(),
                                       static_cast<int>(PhosphorZones::AssignmentEntry::Snapping),
@@ -374,7 +374,7 @@ private Q_SLOTS:
         m_adaptor->setQuickLayoutSlot(PhosphorZones::AssignmentEntry::Scrolling, 1, m_templateId);
         QCOMPARE(m_adaptor->getQuickLayoutSlot(PhosphorZones::AssignmentEntry::Scrolling, 1), m_templateId);
 
-        QSignalSpy spy(m_adaptor, &LayoutAdaptor::quickLayoutSlotsChanged);
+        QSignalSpy spy(m_adaptor, &LayoutService::quickLayoutSlotsChanged);
         QVERIFY(m_adaptor->deleteScrollingTemplate(m_templateId));
         QCOMPARE(spy.count(), 1);
         QCOMPARE(m_adaptor->getQuickLayoutSlot(PhosphorZones::AssignmentEntry::Scrolling, 1), QString());
@@ -433,7 +433,7 @@ private Q_SLOTS:
         m_adaptor->setScrollingTemplateLayout(QStringLiteral("DP-9"), 0, QString(), shadowedId);
         QCOMPARE(m_adaptor->getScrollingTemplateLayout(QStringLiteral("DP-9"), 0, QString()), shadowedId);
 
-        QSignalSpy spy(m_adaptor, &LayoutAdaptor::quickLayoutSlotsChanged);
+        QSignalSpy spy(m_adaptor, &LayoutService::quickLayoutSlotsChanged);
         QVERIFY(m_adaptor->deleteScrollingTemplate(shadowedId));
 
         // The id still resolves, now to the bundled original again.
@@ -468,7 +468,7 @@ private:
     std::unique_ptr<PhosphorZones::ScrollingTemplateStore> m_store;
     QObject* m_parent = nullptr;
     PhosphorZones::LayoutRegistry* m_layoutManager = nullptr;
-    LayoutAdaptor* m_adaptor = nullptr;
+    LayoutService* m_adaptor = nullptr;
     QString m_templateId;
 };
 

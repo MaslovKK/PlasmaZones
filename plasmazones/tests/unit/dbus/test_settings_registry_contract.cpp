@@ -57,7 +57,8 @@
 #include "helpers/SettingsFetchScraper.h"
 #include "config/settings.h"
 #include "core/interfaces/shaderregistry.h"
-#include "dbus/settingsadaptor/settingsadaptor.h"
+#include "dbus/settingsadaptor.h"
+#include "runtime/services/settingsservice/settingsservice.h"
 
 #include <PhosphorAnimation/PhosphorProfileRegistry.h>
 
@@ -87,7 +88,7 @@ private Q_SLOTS:
         m_shaderRegistry = new ShaderRegistry(nullptr);
         m_profileRegistry = new PhosphorAnimation::PhosphorProfileRegistry(nullptr);
         m_parent = new QObject(nullptr);
-        m_adaptor = new SettingsAdaptor(m_settings, m_profileRegistry, m_parent);
+        m_adaptor = new SettingsAdaptor(new SettingsService(m_settings, m_profileRegistry, m_parent), m_parent);
     }
 
     void cleanup()
@@ -141,7 +142,7 @@ private Q_SLOTS:
                  qPrintable(QStringLiteral("The KWin effect fetches these settings, but SettingsAdaptor does not "
                                            "register them, so getSetting answers with an error and the effect "
                                            "silently keeps its built-in default: %1. Add a REGISTER_*_SETTING line "
-                                           "for each in settingsadaptor.cpp.")
+                                           "for each in settingsservice.cpp.")
                                 .arg(missing.join(QStringLiteral(", ")))));
     }
 
@@ -176,7 +177,7 @@ private Q_SLOTS:
                  qPrintable(QStringLiteral("The editor fetches these settings, but SettingsAdaptor does not register "
                                            "them, so getSetting answers with an error and the editor silently keeps "
                                            "its built-in default: %1. Add a REGISTER_*_SETTING line for each in "
-                                           "settingsadaptor.cpp.")
+                                           "settingsservice.cpp.")
                                 .arg(missing.join(QStringLiteral(", ")))));
     }
 

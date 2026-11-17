@@ -107,7 +107,7 @@ constexpr int QuickSlotModeScrolling = static_cast<int>(PhosphorZones::Assignmen
 /// slot accessors' bounds checks (settingscontroller_session.cpp) and the
 /// Quick Shortcuts reset loop (settingscontroller_pagereset.cpp), so the bound
 /// and the loop that walks it cannot drift apart. Aliases the protocol-level
-/// constant the daemon validates against (layoutadaptor.cpp), so the two trees
+/// constant the daemon validates against (layoutservice.cpp), so the two trees
 /// cannot disagree about how many slots exist either.
 constexpr int QUICK_LAYOUT_SLOT_COUNT = PhosphorProtocol::Service::QuickLayoutSlotCount;
 

@@ -3,7 +3,7 @@
 
 /**
  * @file test_scrolling_adaptor_map.cpp
- * @brief The placement-map surfaces of ScrollingAdaptor.
+ * @brief The placement-map surfaces of ScrollingService.
  *
  * The Phosphor shell's placement map draws the WHOLE strip and lets the
  * user click a column or drag the view. This file pins the three verbs it
@@ -38,7 +38,7 @@
 #include <PhosphorScrollEngine/ScrollEngine.h>
 #include <PhosphorScrollEngine/ScrollState.h>
 
-#include "dbus/scrollingadaptor/scrollingadaptor.h"
+#include "runtime/services/scrollingservice/scrollingservice.h"
 #include "scrollingadaptortestfixture.h"
 
 using namespace PlasmaZones;
