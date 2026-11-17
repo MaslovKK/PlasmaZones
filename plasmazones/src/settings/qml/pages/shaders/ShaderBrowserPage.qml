@@ -15,7 +15,7 @@ import org.kde.kirigami as Kirigami
  * card grid, and a detail dialog. Drives the Animations → Shaders page
  * (for `data/animations/` packs), the Overlays → Library → Shaders page (for
  * `data/overlays/` overlay packs), and the Decoration → Shaders page (for
- * `data/surface/` packs).
+ * phosphor-surface-packs' packs).
  *
  * The host supplies a `bridge` QObject implementing the contract:
  *

@@ -3,7 +3,8 @@
 #
 # What PlasmaZones builds from that is not in this repository, each pinned to
 # one archive by version, URL and SHA-256: the phosphor-libs commit it builds
-# against, the suite's branding release, and, for the shell tier only
+# against, the suite's branding release, the surface decoration packs commit,
+# and, for the shell tier only
 # (BUILD_PHOSPHOR_SHELL), the phosphor-shell-libs commit. This file is the only place these
 # pins live. The phosphor-libs tree pins its own third-party sources (Luau,
 # valijson) in its cmake/PhosphorDependencies.cmake, at the commit pinned here.
@@ -54,16 +55,16 @@ include_guard(GLOBAL)
 # tier needs. No packaging recipe builds the shell, so those are neither in the
 # recipes nor fetched by the script mode, and an offline build of the shell
 # fetches them into its PHOSPHOR_DEPS_ARCHIVES directory by hand.
-set(PLASMAZONES_DEPS phosphor-libs branding)
+set(PLASMAZONES_DEPS phosphor-libs branding phosphor-surface-packs)
 set(PLASMAZONES_SHELL_DEPS phosphor-shell-libs)
 
 # The phosphor-libs commit PlasmaZones builds against (LGPL-2.1-or-later,
 # phosphor-works/phosphor-libs): its placement engines, rendering, layer-shell
 # and config libraries. A commit, not a release, so VERSION is the commit hash.
-set(PLASMAZONES_DEP_phosphor-libs_VERSION "c5d6ee8a24f803607b403f90b8625b94b8a25110")
-set(PLASMAZONES_DEP_phosphor-libs_URL "https://github.com/phosphor-works/phosphor-libs/archive/c5d6ee8a24f803607b403f90b8625b94b8a25110.tar.gz")
-set(PLASMAZONES_DEP_phosphor-libs_FILE "phosphor-libs-c5d6ee8a24f803607b403f90b8625b94b8a25110.tar.gz")
-set(PLASMAZONES_DEP_phosphor-libs_SHA256 "f072437c31f9b96e5ed43c32e55bc0e6e8c7ac7323262dbeaf871008c670e8e6")
+set(PLASMAZONES_DEP_phosphor-libs_VERSION "793344a136af82d067e4a8b0e5abe0d57404f74a")
+set(PLASMAZONES_DEP_phosphor-libs_URL "https://github.com/phosphor-works/phosphor-libs/archive/793344a136af82d067e4a8b0e5abe0d57404f74a.tar.gz")
+set(PLASMAZONES_DEP_phosphor-libs_FILE "phosphor-libs-793344a136af82d067e4a8b0e5abe0d57404f74a.tar.gz")
+set(PLASMAZONES_DEP_phosphor-libs_SHA256 "a35b8fbdec56b8ed17368d5d4df149c9cd473f7a974aa815e7db78a0c19281fd")
 
 # The phosphor-shell-libs commit the shell tier builds against
 # (LGPL-2.1-or-later, phosphor-works/phosphor-shell-libs): the theme, popout and
@@ -82,6 +83,16 @@ set(PLASMAZONES_DEP_branding_VERSION "0.1.0")
 set(PLASMAZONES_DEP_branding_URL "https://github.com/phosphor-works/branding/releases/download/v0.1.0/phosphor-branding-0.1.0.tar.gz")
 set(PLASMAZONES_DEP_branding_FILE "phosphor-branding-0.1.0.tar.gz")
 set(PLASMAZONES_DEP_branding_SHA256 "53c7247e7e2c304a4d2e75a7bdd1a87164c63c1defa4159f3cef8da23d8244b3")
+
+# The surface decoration packs commit (LGPL-2.1-or-later with a few GPL-3.0 and
+# BSD-3-Clause files, phosphor-works/phosphor-surface-packs): the border, glow,
+# shadow, blur and glass packs PlasmaZones and Lambent draw, installed from it
+# with its cmake/PhosphorSurfacePacks.cmake. A commit, so VERSION is the commit
+# hash.
+set(PLASMAZONES_DEP_phosphor-surface-packs_VERSION "e89d9f7bb6320eab8b6a0b3325858d2ca5356ce3")
+set(PLASMAZONES_DEP_phosphor-surface-packs_URL "https://github.com/phosphor-works/phosphor-surface-packs/archive/e89d9f7bb6320eab8b6a0b3325858d2ca5356ce3.tar.gz")
+set(PLASMAZONES_DEP_phosphor-surface-packs_FILE "phosphor-surface-packs-e89d9f7bb6320eab8b6a0b3325858d2ca5356ce3.tar.gz")
+set(PLASMAZONES_DEP_phosphor-surface-packs_SHA256 "fbbf0b9849d83396029bc4e310c3dcac49c08758e73d560538888e685f0a5e30")
 
 # glslang's prebuilt tools, a test-time program and not a source dependency, so
 # not in PLASMAZONES_DEPS: no packaging build runs the tests. Khronos publishes

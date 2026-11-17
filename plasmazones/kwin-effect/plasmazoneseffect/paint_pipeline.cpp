@@ -1388,7 +1388,7 @@ void PlasmaZonesEffect::prePaintWindow(KWin::RenderView* view, KWin::EffectWindo
     // fully behind a maximized decorated window keeps driving full composites.
     //
     // Why the default is still translucent: for most chains it is a property of
-    // the shader, not a conservative guess. Reading data/surface/shared/surface_lib.glsl:
+    // the shader, not a conservative guess. Reading phosphor-surface-packs' shared/surface_lib.glsl:
     //
     //   borderComposite  ba = edge * insideMask * col.a — the band's output alpha IS
     //                    the border colour's alpha, and a translucent border colour is

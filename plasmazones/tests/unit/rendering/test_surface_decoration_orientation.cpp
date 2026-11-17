@@ -281,11 +281,10 @@ private Q_SLOTS:
             probe.doneCurrent();
         }
 
-        // The bundled packs, loaded from the source tree exactly as the
+        // The pinned packs, loaded from their source tree exactly as the
         // daemon loads them from the install tree.
         SurfaceShaderRegistry registry;
-        registry.addSearchPath(QStringLiteral(PLASMAZONES_SOURCE_ROOT "/data/surface"),
-                               PhosphorFsLoader::LiveReload::Off);
+        registry.addSearchPath(QStringLiteral(PHOSPHOR_SURFACE_PACKS_DIR), PhosphorFsLoader::LiveReload::Off);
         QTRY_VERIFY_WITH_TIMEOUT(registry.hasEffect(QStringLiteral("border"))
                                      && registry.hasEffect(QStringLiteral("shadow"))
                                      && registry.hasEffect(QStringLiteral("glow")),

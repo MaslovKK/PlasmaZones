@@ -1131,8 +1131,10 @@ public:
     // so a rename only touches one site. The ConfigDefaults::user*Subdir()
     // accessors are the same paths with the leading '/' a writableLocation()
     // concatenation needs, derived from these. The algorithms directory is
-    // spelled by Constants::ScriptedAlgorithmSubdir (core/types/constants.h)
-    // and the surface packs by PhosphorSurfaceShaders::surfacePackDataSubdir.
+    // spelled by Constants::ScriptedAlgorithmSubdir (core/types/constants.h).
+    // The surface packs are shared with the other apps that draw them and live
+    // where phosphor-surface-packs installs them; the build passes that subdir
+    // in as PHOSPHOR_SURFACE_PACKS_DATA_SUBDIR.
     // ═══════════════════════════════════════════════════════════════════════════
     P_CONFIG_KEY(layoutsSubdir, "plasmazones/layouts")
     P_CONFIG_KEY(animationsSubdir, "plasmazones/animations")
@@ -1140,6 +1142,9 @@ public:
     P_CONFIG_KEY(profilesSubdir, "plasmazones/profiles")
     P_CONFIG_KEY(pointerSubdir, "plasmazones/pointer")
     P_CONFIG_KEY(curvesSubdir, "plasmazones/curves")
+    P_CONFIG_KEY(shaderPresetsSubdir, "plasmazones/shader-presets")
+    P_CONFIG_KEY(scrollingTemplatesSubdir, "plasmazones/scrolling-templates")
+    P_CONFIG_KEY(surfacePacksSubdir, PHOSPHOR_SURFACE_PACKS_DATA_SUBDIR)
 
 private:
     // Non-instantiable

@@ -1012,8 +1012,8 @@ install(TARGETS plasmazones-shader-validate DESTINATION ${KDE_INSTALL_BINDIR})
 # CI gate: every bundled pack must parse + bake clean. Headless glslang, so this
 # runs in CI with no GPU/Wayland — exactly like luau-analyze for algorithms. Zone
 # packs (data/overlays), animation packs (--animation, data/animations),
-# surface packs (--surface, data/surface) and pointer packs (--pointer,
-# data/pointer) are distinct authoring models with different entry conventions,
+# surface packs (--surface, the pinned phosphor-surface-packs tree at
+# PHOSPHOR_SURFACE_PACKS_DIR) and pointer packs (--pointer, data/pointer) are distinct authoring models with different entry conventions,
 # so each gets its own invocation. (The validator also detects the model per
 # pack now, so the flags are belt-and-braces here;
 # they pin each test to one model regardless of what a tree grows later.)
@@ -1040,7 +1040,7 @@ if(BUILD_TESTING)
     add_test(NAME shader_validate_animations
              COMMAND plasmazones-shader-validate --animation ${CMAKE_SOURCE_DIR}/plasmazones/data/animations)
     add_test(NAME shader_validate_surface
-             COMMAND plasmazones-shader-validate --surface ${CMAKE_SOURCE_DIR}/plasmazones/data/surface)
+             COMMAND plasmazones-shader-validate --surface ${PHOSPHOR_SURFACE_PACKS_DIR})
     add_test(NAME shader_validate_pointer
              COMMAND plasmazones-shader-validate --pointer ${CMAKE_SOURCE_DIR}/plasmazones/data/pointer)
 
@@ -1054,10 +1054,10 @@ if(BUILD_TESTING)
     # The validator's pack ENUMERATION never touches QStandardPaths — it walks
     # the explicit --overlay/--animation/--surface/--pointer directory arguments.
     # Include roots come from packSharedRoots: a bundled pack sits in the
-    # self-contained `data/<family>/<id>` layout and resolves against its
+    # self-contained `<family root>/<id>` layout and resolves against its
     # sibling shared/ only, so the XDG chain is never consulted for these runs
     # either; the widening to QStandardPaths::locateAll is reserved for the
-    # installed `plasmazones/<family>/<id>` layout. What this sandbox pins is
+    # installed layout under an XDG data dir. What this sandbox pins is
     # the residue: SurfaceShaderRegistry's `builtin:` buffer fallback resolves
     # through QStandardPaths when a pack names a builtin buffer whose sibling
     # `../shared/` copy is missing — never the case for the bundled packs

@@ -57,7 +57,8 @@ private:
 
     PhosphorZones::ScrollingTemplateStore* attachTemplateStore(PhosphorZones::LayoutRegistry* mgr)
     {
-        m_stores.emplace_back(std::make_unique<PhosphorZones::ScrollingTemplateStore>());
+        m_stores.emplace_back(std::make_unique<PhosphorZones::ScrollingTemplateStore>(
+            PlasmaZones::ConfigDefaults::scrollingTemplatesSubdir()));
         mgr->setScrollingTemplateStore(m_stores.back().get());
         return m_stores.back().get();
     }

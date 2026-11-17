@@ -27,12 +27,11 @@ Summary:        Window snapping, tiling and scrolling for KDE Plasma
 # %{_datadir}/metainfo, which carry it in their own SPDX headers: the usual licence
 # for distro metadata, so downstreams can redistribute and translate it freely.
 #
-# BSD-3-Clause is deliberately absent. The one BSD-3-derived body in the tree
-# (data/surface/shared/surface_color.glsl's Hyprland vibrancy block) declares
-# LGPL-2.1-or-later as its own identifier and reasons in its header why that is
-# compatible, and the DEP-5 file agrees, so the tag follows the identifier. 0BSD is
-# absent because packaging/arch/LICENSE is not installed.
-License:        GPL-3.0-or-later AND LGPL-2.1-or-later AND MIT AND BSD-2-Clause AND CC0-1.0
+# BSD-3-Clause covers the Hyprland vibrancy block in the surface packs'
+# shared/surface_color.glsl (Source5), which is installed as source and declares
+# LGPL-2.1-or-later AND BSD-3-Clause. 0BSD is absent because
+# packaging/arch/LICENSE is not installed.
+License:        GPL-3.0-or-later AND LGPL-2.1-or-later AND MIT AND BSD-2-Clause AND BSD-3-Clause AND CC0-1.0
 URL:            https://github.com/phosphor-works/PlasmaZones
 Source0:        %{url}/archive/refs/tags/v%{version}/%{name}-%{version}.tar.gz
 
@@ -63,8 +62,12 @@ Source3:        https://github.com/phosphor-works/branding/releases/download/v0.
 # cmake/PlasmaZonesDependencies.cmake. Its libraries are built from it and
 # installed with the package. Luau and valijson above are the archives that
 # commit pins in its own cmake/PhosphorDependencies.cmake.
-# phosphor-libs-c5d6ee8a24f803607b403f90b8625b94b8a25110.tar.gz sha256 f072437c31f9b96e5ed43c32e55bc0e6e8c7ac7323262dbeaf871008c670e8e6
-Source4:        https://github.com/phosphor-works/phosphor-libs/archive/c5d6ee8a24f803607b403f90b8625b94b8a25110.tar.gz#/phosphor-libs-c5d6ee8a24f803607b403f90b8625b94b8a25110.tar.gz
+# phosphor-libs-793344a136af82d067e4a8b0e5abe0d57404f74a.tar.gz sha256 a35b8fbdec56b8ed17368d5d4df149c9cd473f7a974aa815e7db78a0c19281fd
+Source4:        https://github.com/phosphor-works/phosphor-libs/archive/793344a136af82d067e4a8b0e5abe0d57404f74a.tar.gz#/phosphor-libs-793344a136af82d067e4a8b0e5abe0d57404f74a.tar.gz
+# The surface decoration packs commit, pinned in the same file. Shader source
+# and metadata the build installs as data, so no bundled() provide.
+# phosphor-surface-packs-e89d9f7bb6320eab8b6a0b3325858d2ca5356ce3.tar.gz sha256 fbbf0b9849d83396029bc4e310c3dcac49c08758e73d560538888e685f0a5e30
+Source5:        https://github.com/phosphor-works/phosphor-surface-packs/archive/e89d9f7bb6320eab8b6a0b3325858d2ca5356ce3.tar.gz#/phosphor-surface-packs-e89d9f7bb6320eab8b6a0b3325858d2ca5356ce3.tar.gz
 Provides:       bundled(luau) = 0.745
 Provides:       bundled(valijson) = 1.1.3
 
@@ -267,7 +270,7 @@ Features:
 # changing the KWin floor: this is the path that compiles against Fedora's and
 # openSUSE's KWin, so it proves the build rather than the behaviour.
 #
-# %%autosetup above unpacks Source0 only. Source1 to Source4 stay archives in
+# %%autosetup above unpacks Source0 only. Source1 to Source5 stay archives in
 # the source directory, where PHOSPHOR_DEPS_ARCHIVES points CMake.
 %cmake \
     -DCMAKE_BUILD_TYPE=RelWithDebInfo \
@@ -334,9 +337,10 @@ echo ""
 # MIT licence of the bundled Luau runtime (Source1) and BSD-2-Clause licence of
 # the bundled valijson headers (Source2), copied out of the unpacked archives
 # and installed by the phosphor-scripting / phosphor-fsloader CMake whenever it
-# builds them, rather than a system copy.
-%license %{_datadir}/licenses/plasmazones/LICENSE.Luau
-%license %{_datadir}/licenses/plasmazones/LICENSE.valijson
+# builds them, rather than a system copy. The library tree installs them in
+# its own licence directory, not the app's.
+%license %{_datadir}/licenses/phosphor-libs/LICENSE.Luau
+%license %{_datadir}/licenses/phosphor-libs/LICENSE.valijson
 %doc README.md
 
 # Executables — globbed by the plasmazones prefix (plasmazonesd plus
@@ -403,8 +407,9 @@ echo ""
 %{_datadir}/systemsettings/categories/settings-windowmanagement-plasmazones.desktop
 
 # Runtime data — application data plus the Phosphor data trees the build
-# installs: phosphorwayland/ (protocol XMLs) and phosphor-works/ (the
-# placement-host descriptors).
+# installs: phosphorwayland/ (protocol XMLs), phosphor-works/ (the
+# placement-host descriptors and the surface decoration packs) and
+# phosphor-libs/ (pluau.d.luau, the tiling script type definitions).
 %{_datadir}/plasmazones/
 %{_datadir}/phosphor*/
 

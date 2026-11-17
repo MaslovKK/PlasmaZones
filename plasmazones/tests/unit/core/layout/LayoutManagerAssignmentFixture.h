@@ -23,6 +23,7 @@
 #include <PhosphorZones/Zone.h>
 
 #include "helpers/IsolatedConfigGuard.h"
+#include "config/configdefaults.h"
 #include "helpers/LayoutRegistryTestHelpers.h"
 
 namespace PlasmaZones {
@@ -60,7 +61,8 @@ protected:
     /// register templates through createTestTemplate.
     PhosphorZones::ScrollingTemplateStore* attachTemplateStore(PhosphorZones::LayoutRegistry* mgr)
     {
-        m_stores.emplace_back(std::make_unique<PhosphorZones::ScrollingTemplateStore>());
+        m_stores.emplace_back(std::make_unique<PhosphorZones::ScrollingTemplateStore>(
+            PlasmaZones::ConfigDefaults::scrollingTemplatesSubdir()));
         mgr->setScrollingTemplateStore(m_stores.back().get());
         return m_stores.back().get();
     }

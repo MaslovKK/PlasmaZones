@@ -5,6 +5,19 @@
 # developer tools, bundled data assets and the unit tests. Builds on the
 # phosphor tier; nothing here links a shell-tier library.
 
+# The surface decoration packs come from their own repository, at the commit
+# cmake/PlasmaZonesDependencies.cmake pins. Fetched before any target is
+# declared: PHOSPHOR_SURFACE_PACKS_DIR is the packs tree the tests and the
+# validator gate read, and every target here gets the install subdir as
+# PHOSPHOR_SURFACE_PACKS_DATA_SUBDIR, which each process hands to
+# PhosphorSurfaceShaders::setSurfacePackDataSubdir() at startup and uses to
+# build its own pack search list.
+plasmazones_fetch_dependency(phosphor-surface-packs)
+include(${phosphor-surface-packs_SOURCE_DIR}/cmake/PhosphorSurfacePacks.cmake)
+add_compile_definitions(PHOSPHOR_SURFACE_PACKS_DATA_SUBDIR="${PHOSPHOR_SURFACE_PACKS_DATA_SUBDIR}")
+# The root CMakeLists configures the uninstall script, which needs the subdir.
+set(PHOSPHOR_SURFACE_PACKS_DATA_SUBDIR "${PHOSPHOR_SURFACE_PACKS_DATA_SUBDIR}" PARENT_SCOPE)
+
 # Source directories
 add_subdirectory(src)
 
@@ -180,17 +193,13 @@ install(DIRECTORY data/animations/
     PATTERN "p_generated.glsl" EXCLUDE
 )
 
-# Install bundled surface shader packs (window and shell surface decoration;
-# the third shader-pack category alongside shaders + animations). The kwin-effect
-# discovers ${XDG_DATA_DIRS}/plasmazones/surface via the SurfaceShaderRegistry;
-# user overrides at ~/.local/share/plasmazones/surface win.
-# Ship the whole pack tree (metadata, shaders, the shared/ GLSL includes,
-# and any texture a pack references) and exclude only hidden dev/OS files.
-install(DIRECTORY data/surface/
-    DESTINATION ${KDE_INSTALL_DATADIR}/plasmazones/surface
-    PATTERN ".*" EXCLUDE
-    PATTERN "p_generated.glsl" EXCLUDE
-)
+# Install the surface decoration packs (window and shell surface decoration;
+# the third shader-pack category alongside shaders + animations) from the
+# pinned phosphor-surface-packs tree, to
+# ${KDE_INSTALL_DATADIR}/${PHOSPHOR_SURFACE_PACKS_DATA_SUBDIR}. Every process
+# that draws them discovers that subdir under ${XDG_DATA_DIRS}; user packs in
+# ~/.local/share/${PHOSPHOR_SURFACE_PACKS_DATA_SUBDIR} win.
+phosphor_install_surface_packs()
 
 # Install bundled pointer shader packs (pointer trails, halos, click ripples;
 # the fourth shader-pack family). The kwin-effect and the settings preview

@@ -42,14 +42,18 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-# param id -> glob of the metadata files that must agree on its description.
+# param id -> glob of the metadata files that must agree on its description, relative
+# to the directory the caller passes in. The surface packs live in their own repository,
+# phosphor-surface-packs, and the gate passes the packs directory of the commit
+# cmake/PlasmaZonesDependencies.cmake pins (scripts/pinned_surface_packs.py), because
+# that is the set this checkout ships.
 SHARED_PARAM_TEXT = {
-    "roundBottomCorners": "plasmazones/data/surface/*/metadata.json",
+    "roundBottomCorners": "*/metadata.json",
 }
 
 
 def shared_param_problems(repo: Path) -> list[tuple[str, str]]:
-    """Return (repo-relative path, message) for every pack whose shared text drifted.
+    """Return (path relative to `repo`, message) for every pack whose shared text drifted.
 
     `repo` is passed in and every glob is anchored on it, NEVER on the process CWD:
     a CWD-relative glob makes this rule a silent no-op from any other directory, which

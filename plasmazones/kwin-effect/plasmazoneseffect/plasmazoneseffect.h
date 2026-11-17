@@ -1743,7 +1743,7 @@ private:
     // transition on the SAME OffscreenEffect setShader() slot — see decorations.cpp.
 
     /// Compile-on-first-use + cache the surface shader pack @p packId (window
-    /// border / rounded corners / glow / …) from data/surface via the
+    /// border / rounded corners / glow / …) from phosphor-surface-packs via the
     /// SurfaceShaderRegistry, keyed by pack id in m_compiledPacks. Returns the
     /// cached CompiledSurfacePack (whose `shader` is nullptr when the pack is missing
     /// or its compile failed — decoration then no-ops for that pack), or nullptr only
@@ -1758,7 +1758,7 @@ private:
     CompiledSurfacePack* compiledPack(const QString& packId, const PhosphorSurfaceShaders::DecorationProfile& profile);
 
     /// Populate the surface-shader registry's search paths (the bundled
-    /// ${XDG_DATA_DIRS}/plasmazones/surface dirs + the user override) on first
+    /// ${XDG_DATA_DIRS}/phosphor-works/surface dirs + the user override) on first
     /// use. One-shot: the registry's live-reload watcher then tracks pack edits.
     void ensureSurfaceRegistryPaths();
 
@@ -2111,7 +2111,7 @@ private:
     QPointF foldCursorFor(KWin::EffectWindow* w, const QRectF& canvasGeo, bool mayAnimate, const QPointF& cursor) const;
 
     /// Surface-shader pack registry (the "surface" category: window border /
-    /// rounded corners / glow / …). Discovers data/surface packs; the effect
+    /// rounded corners / glow / …). Discovers the phosphor-surface-packs packs; the effect
     /// compiles each pack a resolved decoration chain references.
     PhosphorSurfaceShaders::SurfaceShaderRegistry m_surfaceShaderRegistry;
     bool m_surfaceRegistryPathsAdded = false; ///< one-shot guard for the search-path population

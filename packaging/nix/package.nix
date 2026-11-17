@@ -86,8 +86,8 @@
 
 let
   # ── Source archives ──────────────────────────────────────────────────────
-  # The phosphor-libs commit and the branding release pinned (version, URL and
-  # SHA-256) in cmake/PlasmaZonesDependencies.cmake, and Luau and valijson,
+  # The phosphor-libs commit, the branding release and the surface packs commit
+  # pinned (version, URL and SHA-256) in cmake/PlasmaZonesDependencies.cmake, and Luau and valijson,
   # pinned by that phosphor-libs commit in its cmake/PhosphorDependencies.cmake. The build
   # runs in the sandbox with no network, so they are fetched here as fixed-output
   # derivations and handed to CMake as one directory (PHOSPHOR_DEPS_ARCHIVES in
@@ -102,11 +102,11 @@ let
   # pin. Bump both forms together.
   depsArchives = linkFarm "plasmazones-deps-archives" [
     {
-      name = "phosphor-libs-c5d6ee8a24f803607b403f90b8625b94b8a25110.tar.gz";
+      name = "phosphor-libs-793344a136af82d067e4a8b0e5abe0d57404f74a.tar.gz";
       path = fetchurl {
-        url = "https://github.com/phosphor-works/phosphor-libs/archive/c5d6ee8a24f803607b403f90b8625b94b8a25110.tar.gz";
-        # sha256 f072437c31f9b96e5ed43c32e55bc0e6e8c7ac7323262dbeaf871008c670e8e6
-        hash = "sha256-8HJDfDH5uW5e1Dwy5VvA5ujHrHMjJi2+r4cQCMZw6OY=";
+        url = "https://github.com/phosphor-works/phosphor-libs/archive/793344a136af82d067e4a8b0e5abe0d57404f74a.tar.gz";
+        # sha256 a35b8fbdec56b8ed17368d5d4df149c9cd473f7a974aa815e7db78a0c19281fd
+        hash = "sha256-o1uPvexWuO0XNo1dTfFJyc1HP3qXSqgV59t4oMGSgf0=";
       };
     }
     {
@@ -131,6 +131,14 @@ let
         url = "https://github.com/phosphor-works/branding/releases/download/v0.1.0/phosphor-branding-0.1.0.tar.gz";
         # sha256 53c7247e7e2c304a4d2e75a7bdd1a87164c63c1defa4159f3cef8da23d8244b3
         hash = "sha256-U8ckfn4sMEpNLnWnvdGocWTGPB3vpBWfPO+Noj2CRLM=";
+      };
+    }
+    {
+      name = "phosphor-surface-packs-e89d9f7bb6320eab8b6a0b3325858d2ca5356ce3.tar.gz";
+      path = fetchurl {
+        url = "https://github.com/phosphor-works/phosphor-surface-packs/archive/e89d9f7bb6320eab8b6a0b3325858d2ca5356ce3.tar.gz";
+        # sha256 fbbf0b9849d83396029bc4e310c3dcac49c08758e73d560538888e685f0a5e30
+        hash = "sha256-+78LmEnYM5YCm8TjEMPcrEnAh1jnPVYFOIiOaF8KXjA=";
       };
     }
   ];
@@ -322,10 +330,11 @@ stdenv.mkDerivation (finalAttrs: {
     # GPL-3.0-or-later for the app, daemon, editor, settings and KCM;
     # LGPL-2.1-or-later for the bundled Phosphor component libraries.
     # MIT and BSD-2-Clause for the bundled Luau runtime and valijson headers, which
-    # are compiled into the shipped objects, and CC0-1.0 for the two AppStream
-    # metainfo files the package installs. Same set the RPM spec's License tag names,
-    # and for the same reason it records there.
-    license = with licenses; [ gpl3Plus lgpl21Plus mit bsd2 cc0 ];
+    # are compiled into the shipped objects, BSD-3-Clause for the vibrancy block in
+    # the installed surface packs' shared/surface_color.glsl, and CC0-1.0 for the
+    # two AppStream metainfo files the package installs. Same set the RPM spec's
+    # License tag names, and for the same reason it records there.
+    license = with licenses; [ gpl3Plus lgpl21Plus mit bsd2 bsd3 cc0 ];
     maintainers = [ ];   # Add your nixpkgs handle here when submitting upstream
     platforms = [ "x86_64-linux" "aarch64-linux" ];
 

@@ -1502,7 +1502,7 @@ private:
 
     /// Surface shader effect discovery (window border / rounded corners / glow
     /// — the third shader-pack category beside zone shaders + animation
-    /// transitions). Scans `plasmazones/surface` from XDG data dirs and monitors
+    /// transitions). Scans the surface pack subdir of the XDG data dirs and monitors
     /// for user-dropped packs via QFileSystemWatcher, mirroring
     /// m_animationShaderRegistry. The daemon warm-bakes discovered packs so the
     /// first surface paint never blocks on glslang, and lends the registry to

@@ -18,13 +18,19 @@ repo's `plasmazones/data/` layout, with the shared pieces symlinked in:
 
 ```bash
 T=scratchpad/<theme>
-mkdir -p $T/plasmazones/data/{animations,overlays,surface,curves} \
+mkdir -p $T/plasmazones/data/{animations,overlays,curves} $T/surface-packs \
          $T/renders $T/sets/{motionsets,decorationsets,overlaysets}
 ln -sfn ../../../../plasmazones/data/schemas $T/plasmazones/data/schemas
 # The shared schemas come from the pinned phosphor-libs tree. The script finds it from
 # the pin file under --root, which a scratchpad has none of, so name the tree outright.
 export PHOSPHOR_LIBS_DIR=$(python3 scripts/pinned_phosphor_libs.py)
-for f in animations overlays surface; do ln -sfn ../../../../../plasmazones/data/$f/shared $T/plasmazones/data/$f/shared; done
+for f in animations overlays; do ln -sfn ../../../../../plasmazones/data/$f/shared $T/plasmazones/data/$f/shared; done
+# Surface packs belong to phosphor-surface-packs, not this repository. Their scratchpad is a
+# packs directory of its own, with the pinned packs' shared/ linked in, and the schema gate
+# reads it through PHOSPHOR_SURFACE_PACKS_DIR.
+ln -sfn "$(python3 scripts/pinned_surface_packs.py)/shared" $T/surface-packs/shared
+export PHOSPHOR_SURFACE_PACKS_DIR=$PWD/$T/surface-packs
+S=$T/surface-packs
 ```
 
 Two schema roots, not one: the libraries' schemas, the shader-family metadata and curve
@@ -34,7 +40,7 @@ which root each schema is in. `validate-json-schemas.py` checks every mapped
 schema exists before it filters to the files you named, so a single missing root fails the
 gate outright rather than skipping.
 
-Packs go in `$T/plasmazones/data/<family>/<id>/`, curves in
+Packs go in `$T/plasmazones/data/<family>/<id>/` (surface packs in `$S/<id>/`), curves in
 `$T/plasmazones/data/curves/`, set files in `$T/sets/<kind>/`. Every gate below is written
 against `$P`, which is `$T/plasmazones/data` while the packs are in the scratchpad (the
 default, and the whole run for `--into user`) and `plasmazones/data` after they have been
@@ -48,8 +54,10 @@ P=plasmazones/data         # after the --into repo copy
 ## 1. Schema (fast, author-time)
 
 ```bash
-python3 scripts/validate-json-schemas.py --root $T plasmazones/data/animations/<id>/metadata.json plasmazones/data/overlays/<id>/metadata.json plasmazones/data/surface/<id>/metadata.json plasmazones/data/curves/<theme>-settle.json plasmazones/data/curves/<theme>-release.json
+python3 scripts/validate-json-schemas.py --root $T plasmazones/data/animations/<id>/metadata.json plasmazones/data/overlays/<id>/metadata.json $PWD/$S/<id>/metadata.json plasmazones/data/curves/<theme>-settle.json plasmazones/data/curves/<theme>-release.json
 ```
+The surface pack is the exception to what follows: it is matched against the packs directory
+PHOSPHOR_SURFACE_PACKS_DIR names, so it is passed as an absolute path.
 This is the one gate that does NOT take `$P`: the script resolves a relative file argument
 against `--root`, not against the working directory, so the paths are written `plasmazones/data/...`
 whichever root is in force (`--root $T` for the scratchpad; drop the flag once the packs are
@@ -70,9 +78,9 @@ or `glslangValidator` on PATH for animation, surface and pointer packs, and HARD
 ```bash
 build/bin/plasmazones-shader-validate --animation $P/animations/<id>
 build/bin/plasmazones-shader-validate --overlay   $P/overlays/<id>
-build/bin/plasmazones-shader-validate --surface   $P/surface/<id>
+build/bin/plasmazones-shader-validate --surface   $S/<id>
 # or auto-detect on several packs at once (the sibling shared/ symlink is what makes detection work):
-build/bin/plasmazones-shader-validate $P/animations/<a> $P/overlays/<b> $P/surface/<c>
+build/bin/plasmazones-shader-validate $P/animations/<a> $P/overlays/<b> $S/<c>
 ```
 Exit 0 = all OK, 1 = errors, 2 = usage. It checks metadata parse, appliesTo tokens, param
 types/ids and slot budget, texture paths, buffer shaders, the strip and main() entry
@@ -126,10 +134,10 @@ Run the full suite before handing over: `ctest --test-dir build --output-on-fail
 ## 4. Prose and licence (`check-conventions.py` covers packs inside the repo; check a scratchpad pack by hand)
 
 ```bash
-grep -nE '"(name|description)".*(—|&mdash;| - |;)' $P/animations/<id>/metadata.json $P/overlays/<id>/metadata.json $P/surface/<id>/metadata.json
-grep -nE '"#[0-9a-fA-F]{8}"' $P/animations/<id>/metadata.json $P/overlays/<id>/metadata.json $P/surface/<id>/metadata.json
-grep -L 'SPDX-License-Identifier' $P/animations/<id>/* $P/overlays/<id>/* $P/surface/<id>/*
-head -2 $P/animations/<id>/effect.frag $P/surface/<id>/effect.frag $P/overlays/<id>/effect.frag
+grep -nE '"(name|description)".*(—|&mdash;| - |;)' $P/animations/<id>/metadata.json $P/overlays/<id>/metadata.json $S/<id>/metadata.json
+grep -nE '"#[0-9a-fA-F]{8}"' $P/animations/<id>/metadata.json $P/overlays/<id>/metadata.json $S/<id>/metadata.json
+grep -L 'SPDX-License-Identifier' $P/animations/<id>/* $P/overlays/<id>/* $S/<id>/*
+head -2 $P/animations/<id>/effect.frag $S/<id>/effect.frag $P/overlays/<id>/effect.frag
 ```
 Expected: no em-dash (typed or as the `&mdash;` escape), no clause-splicing semicolon and no
 spaced hyphen in any `name`/`description`; every eight-digit colour is alpha-FIRST
@@ -173,7 +181,7 @@ copy for `--into user`, the repo copy after `--into repo`:
 ```bash
 cp -r $P/animations/<id> ~/.local/share/plasmazones/animations/
 cp -r $P/overlays/<id>   ~/.local/share/plasmazones/overlays/
-cp -r $P/surface/<id>    ~/.local/share/plasmazones/surface/
+cp -r $S/<id>            ~/.local/share/phosphor-works/surface/
 cp $P/curves/<theme>-*.json ~/.local/share/plasmazones/curves/
 cp $T/sets/motionsets/<slug>.json     ~/.local/share/plasmazones/motionsets/
 cp $T/sets/decorationsets/<slug>.json ~/.local/share/plasmazones/decorationsets/
@@ -184,10 +192,11 @@ root is picked up; if a pack does not appear, that is the case to check first.
 
 Re-run the validator against the INSTALLED copy, not only the source tree:
 ```bash
-build/bin/plasmazones-shader-validate ~/.local/share/plasmazones/animations/<id> ~/.local/share/plasmazones/overlays/<id> ~/.local/share/plasmazones/surface/<id>
+build/bin/plasmazones-shader-validate ~/.local/share/plasmazones/animations/<id> ~/.local/share/plasmazones/overlays/<id> ~/.local/share/phosphor-works/surface/<id>
 ```
 An installed pack has no sibling `shared/`, so the validator resolves the family's helpers
-through the XDG data chain, normally `/usr/share/plasmazones/<family>/shared`. That is a
+through the XDG data chain, normally `/usr/share/plasmazones/<family>/shared` (for a surface pack
+`/usr/share/phosphor-works/surface/shared`). That is a
 different lookup from the sibling one a scratchpad or source-tree pack uses, and a pack that
 validates there can still fail once installed. It presupposes an installed PlasmaZones. On a
 machine without one the auto-detect run warns `no sibling shared/ marker, validating as an

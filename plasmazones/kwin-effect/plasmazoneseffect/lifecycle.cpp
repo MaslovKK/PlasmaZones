@@ -13,6 +13,7 @@
 #include <PhosphorProtocol/ServiceConstants.h>
 #include <PhosphorProtocol/DragMarshalling.h>
 #include <PhosphorProtocol/Registration.h>
+#include <PhosphorSurface/SurfacePackLocation.h>
 
 #include <effect/effecthandler.h>
 #include <core/output.h>
@@ -81,6 +82,9 @@ PlasmaZonesEffect::PlasmaZonesEffect()
     , m_decorationManager(std::make_unique<DecorationManager>(*m_compositorBridge))
 {
     PhosphorProtocol::registerWireTypes();
+    // Where the library's own surface pack lookups (the `builtin:` buffer
+    // fallback) search, the subdir phosphor-surface-packs installs to.
+    PhosphorSurfaceShaders::setSurfacePackDataSubdir(QStringLiteral(PHOSPHOR_SURFACE_PACKS_DATA_SUBDIR));
 
     // The pointer pass reads KWin's cursor-hide counter to notice a software
     // KVM taking the pointer away (see PointerDecorationPass::cursorSpriteGone).

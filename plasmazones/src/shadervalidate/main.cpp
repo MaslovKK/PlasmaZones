@@ -26,7 +26,7 @@
 //     the Qt-RHI preview and compositor paths. All animation validation needs
 //     glslangValidator or glslang on PATH for the classic-GL compile. The
 //     default vertex and daemon multipass buffers also bake on Qt-RHI.
-//   • surface/decoration packs (--surface, data/surface/*):
+//   • surface/decoration packs (--surface, phosphor-surface-packs' packs/*):
 //     SurfaceShaderEffect + paramPreamble; validates effect.frag and the buffer
 //     passes on BOTH the daemon Qt-RHI path and, through glslang, the compositor
 //     PLASMAZONES_KWIN path every decoration ships on. A vertex the pack
@@ -56,6 +56,7 @@
 #include <PhosphorShaders/ShaderIncludeResolver.h>
 #include <PhosphorShaders/ShaderRegistry.h>
 #include <PhosphorSurface/SurfaceShaderEffect.h>
+#include <PhosphorSurface/SurfacePackLocation.h>
 #include <PhosphorSurface/SurfaceShaderRegistry.h>
 
 #include <QDir>
@@ -200,6 +201,10 @@ int emitPreamble(const QString& packDir, PackModel model, bool quiet, QTextStrea
 
 int main(int argc, char** argv)
 {
+    // The installed-copy fallback of SurfaceShaderRegistry's `builtin:` buffer
+    // tokens looks here, so it matches the runtime's.
+    PhosphorSurfaceShaders::setSurfacePackDataSubdir(QStringLiteral(PHOSPHOR_SURFACE_PACKS_DATA_SUBDIR));
+
     QTextStream out(stdout);
     QTextStream errStream(stderr);
 
@@ -257,7 +262,7 @@ int main(int argc, char** argv)
                   << "  --overlay, -o        force zone/overlay packs (data/overlays/*); -o selects a model, "
                      "not an output file\n"
                   << "  --animation, -a      force transition/animation packs (data/animations/*)\n"
-                  << "  --surface, -s        force surface-layer packs (data/surface/*)\n"
+                  << "  --surface, -s        force surface-layer packs (phosphor-surface-packs)\n"
                   << "  --pointer, -p        force pointer packs (data/pointer/*)\n"
                   << "  --quiet, -q          print only failing packs\n"
                   << "  --emit-preamble      write each pack's p_generated.glsl autocomplete sidecar (no validation)\n"

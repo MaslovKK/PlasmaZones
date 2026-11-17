@@ -29,9 +29,10 @@ pre-commit:
     json-schema:
       # Explicit per-type globs mirroring scripts/validate-json-schemas.py's
       # SCHEMA_MAP, plus the app's schema directory and the pin file that picks
-      # the phosphor-libs commit the shared schemas come from, so editing a
-      # schema or bumping the pin re-checks its data, and the gate script and
-      # its tree finder, so a change to its rules is run against the whole set
+      # the phosphor-libs commit the shared schemas come from and the surface
+      # packs commit, so editing a schema or bumping a pin re-checks its data,
+      # and the gate script and its tree finders, so a change to its rules is
+      # run against the whole set
       # before it lands. A single `data/**/*.json` does
       # NOT match reliably in lefthook's matcher, so the paths are enumerated.
       glob:
@@ -40,7 +41,6 @@ pre-commit:
         - "plasmazones/data/curves/*.json"
         - "plasmazones/data/animations/*/metadata.json"
         - "plasmazones/data/overlays/*/metadata.json"
-        - "plasmazones/data/surface/*/metadata.json"
         - "plasmazones/data/pointer/*/metadata.json"
         - "cmake/PlasmaZonesDependencies.cmake"
         - "plasmazones/data/schemas/*.json"
@@ -48,6 +48,7 @@ pre-commit:
         - "plasmazones/data/placement-hosts/*.json"
         - "scripts/validate-json-schemas.py"
         - "scripts/pinned_phosphor_libs.py"
+        - "scripts/pinned_surface_packs.py"
       # Hard gate: when a schema-governed data file, a schema or the gate
       # script is staged, validate the whole mapped set against the committed
       # JSON Schemas and fail the commit on any mismatch, so data and schemas
@@ -184,8 +185,8 @@ pre-commit:
       # data/animations/** were the only shader tree with no pre-commit
       # validation. Same best-effort skip when the binary isn't built.
       #
-      # A second skip, shared with the surface and pointer hooks below: these
-      # three families also compile for the compositor, which the validator
+      # A second skip, shared with the pointer hook below: these families
+      # also compile for the compositor, which the validator
       # does by running `glslangValidator` or `glslang` from PATH, and it fails
       # every pack when neither is there. ctest gets the pinned release through
       # phosphor_put_glslang_on_test_path(), which sets PATH per test and so
@@ -196,17 +197,6 @@ pre-commit:
         if [ ! -x "$bin" ]; then echo "plasmazones-shader-validate not built (build/bin/) — skipping animation shader validation; build the target to enable this local gate" >&2;
         elif command -v glslangValidator >/dev/null 2>&1 || command -v glslang >/dev/null 2>&1; then exec "$bin" --quiet --animation plasmazones/data/animations;
         else echo "neither glslangValidator nor glslang is on PATH, so animation shader validation is skipped. Install glslang to enable this local gate" >&2; fi'
-    shader-validate-surface:
-      glob: "plasmazones/data/surface/**/*.{frag,vert,glsl,json}"
-      # Surface (decoration) packs use a distinct authoring model, so validate
-      # them with --surface separately from the overlay packs above. Same
-      # best-effort skips as the animation hook, when the binary isn't built or
-      # no glslang is on PATH; CI's shader_validate_surface is the hard gate.
-      run: >
-        sh -c 'bin=build/bin/plasmazones-shader-validate;
-        if [ ! -x "$bin" ]; then echo "plasmazones-shader-validate not built (build/bin/) — skipping surface shader validation; build the target to enable this local gate" >&2;
-        elif command -v glslangValidator >/dev/null 2>&1 || command -v glslang >/dev/null 2>&1; then exec "$bin" --quiet --surface plasmazones/data/surface;
-        else echo "neither glslangValidator nor glslang is on PATH, so surface shader validation is skipped. Install glslang to enable this local gate" >&2; fi'
     shader-validate-pointer:
       glob: "plasmazones/data/pointer/**/*.{frag,vert,glsl,json}"
       # Pointer packs are the fourth authoring model, with their own CI gate
