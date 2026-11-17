@@ -84,7 +84,7 @@ void SettingsController::wireDaemonSubscriptions(QStringList& failedSubscription
     subscribeDaemonSignal(QString(PhosphorProtocol::Service::Interface::LayoutRegistry), QStringLiteral("daemonReady"),
                           SLOT(onDaemonReady()));
 
-    // Async window picker reply channel. Emitted by SettingsAdaptor whenever
+    // Async window picker reply channel. Emitted by SettingsService whenever
     // the KWin effect answers a runningWindowsRequested call via
     // provideRunningWindows(). The signal carries the JSON payload directly
     // so clients don't need a follow-up blocking fetch.

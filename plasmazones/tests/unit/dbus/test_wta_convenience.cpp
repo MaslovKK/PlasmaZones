@@ -50,7 +50,7 @@ private Q_SLOTS:
 
         QSignalSpy spy(m_wta, &WindowTracker::applyGeometryRequested);
 
-        m_snapAdaptor->moveWindowToZone(windowId, m_zoneIds[0]);
+        m_snapService->moveWindowToZone(windowId, m_zoneIds[0]);
 
         QCOMPARE(spy.count(), 1);
         QCOMPARE(spy.at(0).at(0).toString(), windowId);
@@ -66,7 +66,7 @@ private Q_SLOTS:
         QString windowId = registerWindow(QStringLiteral("firefox|12345"));
         QSignalSpy spy(m_wta, &WindowTracker::applyGeometryRequested);
 
-        m_snapAdaptor->moveWindowToZone(windowId, QStringLiteral("nonexistent-zone-id"));
+        m_snapService->moveWindowToZone(windowId, QStringLiteral("nonexistent-zone-id"));
 
         QCOMPARE(spy.count(), 0);
     }
@@ -75,7 +75,7 @@ private Q_SLOTS:
     {
         QSignalSpy spy(m_wta, &WindowTracker::applyGeometryRequested);
 
-        m_snapAdaptor->moveWindowToZone(QString(), m_zoneIds[0]);
+        m_snapService->moveWindowToZone(QString(), m_zoneIds[0]);
 
         QCOMPARE(spy.count(), 0);
     }
@@ -431,7 +431,7 @@ private Q_SLOTS:
         QSignalSpy spy(m_wta, &WindowTracker::applyGeometryRequested);
         int x = 0, y = 0, wd = 0, h = 0;
         bool shouldSnap = true;
-        m_snapAdaptor->resolveWindowRestore(w2, m_screenId, false, static_cast<int>(PhosphorEngine::WindowKind::Normal),
+        m_snapService->resolveWindowRestore(w2, m_screenId, false, static_cast<int>(PhosphorEngine::WindowKind::Normal),
                                             static_cast<int>(PhosphorEngine::RestoreReason::Open), /*minWidth=*/0,
                                             /*minHeight=*/0, x, y, wd, h, shouldSnap);
 
@@ -518,7 +518,7 @@ private Q_SLOTS:
         QSignalSpy spy(m_wta, &WindowTracker::applyGeometryRequested);
         int x = 0, y = 0, wd = 0, h = 0;
         bool shouldSnap = true;
-        m_snapAdaptor->resolveWindowRestore(w, m_screenId, false, static_cast<int>(PhosphorEngine::WindowKind::Normal),
+        m_snapService->resolveWindowRestore(w, m_screenId, false, static_cast<int>(PhosphorEngine::WindowKind::Normal),
                                             static_cast<int>(PhosphorEngine::RestoreReason::Open), /*minWidth=*/0,
                                             /*minHeight=*/0, x, y, wd, h, shouldSnap);
 
@@ -742,7 +742,7 @@ private Q_SLOTS:
 
         QSignalSpy spy(m_wta, &WindowTracker::applyGeometryRequested);
 
-        m_snapAdaptor->swapWindowsById(window1, window2);
+        m_snapService->swapWindowsById(window1, window2);
 
         QCOMPARE(spy.count(), 2);
 
@@ -769,7 +769,7 @@ private Q_SLOTS:
 
         QSignalSpy spy(m_wta, &WindowTracker::applyGeometryRequested);
 
-        m_snapAdaptor->swapWindowsById(window1, window2);
+        m_snapService->swapWindowsById(window1, window2);
 
         QCOMPARE(spy.count(), 0);
     }
@@ -886,7 +886,7 @@ private Q_SLOTS:
         QVERIFY(foundUnsnapped);
     }
 
-    // A context release (TilingAdaptor::applyMembershipResult dropping a window
+    // A context release (TilingService::applyMembershipResult dropping a window
     // from a desktop or activity it has left, per window or per screen) does NOT
     // run through uncommitSnap, so the engine emits no windowSnapStateChanged;
     // WindowTracker::relayWindowReleasedFromContext says why that signal

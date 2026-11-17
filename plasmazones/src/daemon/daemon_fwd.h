@@ -84,22 +84,32 @@ class OverlayService;
 
 class ShortcutManager;
 class ShellCheatsheetBridge;
+class LayoutService;
 class LayoutAdaptor;
+class SettingsService;
 class SettingsAdaptor;
 class ShaderAdaptor;
+class ShaderService;
 class ControlAdaptor;
+class ControlService;
 class CompositorBridgeAdaptor;
 class OverlayAdaptor;
+class OverlayControlService;
 class ZoneDetectionAdaptor;
+class ZoneQueryService;
 class WindowTracker;
 class WindowTrackingAdaptor;
 class DragResolver;
 class WindowDragAdaptor;
 class RuleAdaptor;
+class RuleService;
 class UnifiedLayoutController;
 class WorkspaceController;
+class TilingService;
 class TilingAdaptor;
 class AutotileAdaptor;
+class AutotileService;
+class ScrollingService;
 class ScrollingAdaptor;
 class ScreenModeRouter;
 class CrossSurfaceResolver;
@@ -115,6 +125,7 @@ class ContextResolver;
 
 namespace PlasmaZones {
 class SettingsConfigStore;
+class SnapService;
 class SnapAdaptor;
 class ShaderRegistry;
 } // namespace PlasmaZones

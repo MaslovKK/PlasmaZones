@@ -479,7 +479,7 @@ private Q_SLOTS:
         QVERIFY(zonesOn(2, kWindow).isEmpty());
     }
 
-    // The read SnapAdaptor's desktop-arrival re-apply depends on. Its answer
+    // The read SnapService's desktop-arrival re-apply depends on. Its answer
     // becomes GEOMETRY, and zoneForWindow is the wrong question to ask for
     // that: it reports the window's PRIMARY membership, which falls back to
     // another desktop's store while the one in view holds nothing, and
@@ -1793,7 +1793,7 @@ private:
         return ids;
     }
 
-    /// Wire the engine's resnap batch the way SnapAdaptor does, so what the
+    /// Wire the engine's resnap batch the way SnapService does, so what the
     /// pass asks for is actually committed, and keep a copy of the entries.
     /// A payload that fails to parse is reported by cleanup().
     void wireResnapCommit(QVector<PhosphorEngine::ZoneAssignmentEntry>* seen)

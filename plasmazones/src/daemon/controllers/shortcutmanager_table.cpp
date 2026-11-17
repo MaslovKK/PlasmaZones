@@ -572,7 +572,7 @@ const StaticEntry kStaticEntries[] = {
     // a single meaningful value would be a setting for nothing. The STEP pan
     // has no keyboard row — it is the wheel's (Meta+Shift+wheel, registered
     // by the KWin effect and reading the view scroll step through the
-    // ScrollingAdaptor's provider), for the same reason Meta+wheel's column
+    // ScrollingService's provider), for the same reason Meta+wheel's column
     // focus has no keyboard twin.
     {kIdScrollViewPageBack, &ConfigDefaults::scrollingViewPageBackShortcut, &Settings::scrollingViewPageBackShortcut,
      QT_TRANSLATE_NOOP("plasmazones", "Scroll View Back a Page"),

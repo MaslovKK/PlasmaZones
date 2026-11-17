@@ -645,7 +645,7 @@ private Q_SLOTS:
     // getAllScreenAssignments JSON readback rely on to avoid round-tripping
     // the synthesized default back into stored state (which would shadow
     // future global-default changes). The KCM JSON gate added in
-    // src/dbus/layoutadaptor/assignment.cpp is correct only as long as
+    // src/runtime/services/layoutservice/assignment.cpp is correct only as long as
     // this invariant holds — pin it here so a future refactor that
     // accidentally makes hasExplicitAssignment provider-aware would fail
     // this test.

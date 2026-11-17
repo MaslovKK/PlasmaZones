@@ -4,7 +4,7 @@
 /**
  * @file test_tiling_adaptor_map.cpp
  *
- * Pins the placement-map surfaces of TilingAdaptor, the ones the Phosphor
+ * Pins the placement-map surfaces of TilingService, the ones the Phosphor
  * shell's map rebuilds a screen from and follows focus through:
  *
  *  1. currentTilesJson is "[]" before any batch, replays the last batch
@@ -40,7 +40,7 @@
 #include <PhosphorEngine/PlacementEngineBase.h>
 #include <PhosphorScrollEngine/ScrollEngine.h>
 
-#include "dbus/tilingadaptor/tilingadaptor.h"
+#include "runtime/services/tilingservice/tilingservice.h"
 
 using namespace PlasmaZones;
 
@@ -92,13 +92,13 @@ private Q_SLOTS:
     void testCurrentTilesJson_replaysLastBatchPerScreen()
     {
         QObject adaptorParent;
-        TilingAdaptor adaptor(nullptr, &adaptorParent);
+        TilingService adaptor(nullptr, &adaptorParent);
 
         // Nothing relayed yet, and an empty screen id, both answer "[]".
         QCOMPARE(adaptor.currentTilesJson(QStringLiteral("DP-1")), QStringLiteral("[]"));
         QCOMPARE(adaptor.currentTilesJson(QString()), QStringLiteral("[]"));
 
-        QSignalSpy wire(&adaptor, &TilingAdaptor::windowsTileRequested);
+        QSignalSpy wire(&adaptor, &TilingService::windowsTileRequested);
         QVERIFY(wire.isValid());
 
         // One batch naming two screens: the replay is per screen, restricted
@@ -156,7 +156,7 @@ private Q_SLOTS:
     void testCurrentTilesJson_prunesClosedWindowsAndClears()
     {
         QObject adaptorParent;
-        TilingAdaptor adaptor(nullptr, &adaptorParent);
+        TilingService adaptor(nullptr, &adaptorParent);
         adaptor.relayTileRequestsJson(
             batchJson({tiled(QStringLiteral("app|a"), QStringLiteral("DP-1"), 0, 0, 600, 760),
                        tiled(QStringLiteral("app|b"), QStringLiteral("DP-1"), 600, 0, 600, 760),
@@ -202,18 +202,18 @@ private Q_SLOTS:
         engine.setActiveScreens({QStringLiteral("DP-1")});
 
         QObject adaptorParent;
-        TilingAdaptor adaptor(nullptr, &adaptorParent);
+        TilingService adaptor(nullptr, &adaptorParent);
         adaptor.setLifecycleEngines({&engine});
         connect(&engine, &PhosphorEngine::PlacementEngineBase::activateWindowRequested, &adaptor,
-                &TilingAdaptor::focusWindowRequested);
+                &TilingService::focusWindowRequested);
         connect(&engine, &PhosphorEngine::PlacementEngineBase::placementChanged, &adaptor,
-                &TilingAdaptor::tilingChanged);
+                &TilingService::tilingChanged);
         connect(&engine, &PhosphorEngine::PlacementEngineBase::activateWindowRequested, &adaptor,
                 [&](const QString& windowId) {
                     adaptor.notifyWindowFocused(windowId, engine.screenForTrackedWindow(windowId));
                 });
 
-        QSignalSpy spy(&adaptor, &TilingAdaptor::focusedWindowChanged);
+        QSignalSpy spy(&adaptor, &TilingService::focusedWindowChanged);
         QVERIFY(spy.isValid());
 
         // Nothing managed yet: the live read is empty, and so is a foreign
@@ -285,8 +285,8 @@ private Q_SLOTS:
     void floatRelayGoesOutAgainAfterTheMemoryIsForgotten()
     {
         QObject adaptorParent;
-        TilingAdaptor adaptor(nullptr, &adaptorParent);
-        QSignalSpy spy(&adaptor, &TilingAdaptor::windowFloatingChanged);
+        TilingService adaptor(nullptr, &adaptorParent);
+        QSignalSpy spy(&adaptor, &TilingService::windowFloatingChanged);
         const QString w = QStringLiteral("app|a");
         adaptor.relayWindowFloatingChanged(w, true, QStringLiteral("DP-1"));
         adaptor.relayWindowFloatingChanged(w, true, QStringLiteral("DP-1"));
@@ -310,9 +310,9 @@ private Q_SLOTS:
             });
         engine.setActiveScreens({QStringLiteral("DP-1")});
         QObject adaptorParent;
-        TilingAdaptor adaptor(nullptr, &adaptorParent);
+        TilingService adaptor(nullptr, &adaptorParent);
         adaptor.setLifecycleEngines({&engine});
-        QSignalSpy spy(&adaptor, &TilingAdaptor::windowFloatingChanged);
+        QSignalSpy spy(&adaptor, &TilingService::windowFloatingChanged);
         const QString w = QStringLiteral("app|a");
         adaptor.relayWindowFloatingChanged(w, true, QStringLiteral("DP-1"));
         QCOMPARE(spy.count(), 1);

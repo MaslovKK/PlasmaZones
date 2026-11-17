@@ -2,79 +2,70 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #include "shaderadaptor.h"
-#include "core/interfaces/shaderregistry.h"
+
+#include "runtime/services/shaderservice.h"
 
 namespace PlasmaZones {
 
-ShaderAdaptor::ShaderAdaptor(ShaderRegistry* registry, QObject* parent)
+ShaderAdaptor::ShaderAdaptor(ShaderService* service, QObject* parent)
     : QDBusAbstractAdaptor(parent)
-    , m_registry(registry)
+    , m_service(service)
 {
-    // Relay ShaderRegistry signals to D-Bus
-    if (m_registry) {
-        connect(m_registry, &ShaderRegistry::shaderCompilationStarted, this, &ShaderAdaptor::shaderCompilationStarted);
-        connect(m_registry, &ShaderRegistry::shaderCompilationFinished, this,
-                &ShaderAdaptor::shaderCompilationFinished);
-        connect(m_registry, &ShaderRegistry::shadersChanged, this, &ShaderAdaptor::shadersChanged);
-    }
+    Q_ASSERT(service);
+    connect(service, &ShaderService::shaderCompilationStarted, this, &ShaderAdaptor::shaderCompilationStarted);
+    connect(service, &ShaderService::shaderCompilationFinished, this, &ShaderAdaptor::shaderCompilationFinished);
+    connect(service, &ShaderService::shadersChanged, this, &ShaderAdaptor::shadersChanged);
 }
+
+ShaderAdaptor::~ShaderAdaptor() = default;
 
 QVariantList ShaderAdaptor::availableShaders()
 {
-    return m_registry ? m_registry->availableShadersVariant() : QVariantList();
+    return m_service ? m_service->availableShaders() : QVariantList{};
 }
 
 QVariantMap ShaderAdaptor::shaderInfo(const QString& shaderId)
 {
-    return m_registry ? m_registry->shaderInfo(shaderId) : QVariantMap();
+    return m_service ? m_service->shaderInfo(shaderId) : QVariantMap{};
 }
 
 QVariantMap ShaderAdaptor::defaultShaderParams(const QString& shaderId)
 {
-    return m_registry ? m_registry->defaultParams(shaderId) : QVariantMap();
+    return m_service ? m_service->defaultShaderParams(shaderId) : QVariantMap{};
 }
 
 QVariantMap ShaderAdaptor::translateShaderParams(const QString& shaderId, const QVariantMap& params)
 {
-    return m_registry ? m_registry->translateParamsToUniforms(shaderId, params) : QVariantMap();
+    return m_service ? m_service->translateShaderParams(shaderId, params) : QVariantMap{};
 }
 
 bool ShaderAdaptor::shadersEnabled()
 {
-    return m_registry ? m_registry->shadersEnabled() : false;
+    return m_service ? m_service->shadersEnabled() : bool{};
 }
 
 bool ShaderAdaptor::userShadersEnabled()
 {
-    return m_registry ? m_registry->userShadersEnabled() : false;
+    return m_service ? m_service->userShadersEnabled() : bool{};
 }
 
 QString ShaderAdaptor::userShaderDirectory()
 {
-    return m_registry ? m_registry->userShaderDirectory() : QString();
+    return m_service ? m_service->userShaderDirectory() : QString{};
 }
 
 void ShaderAdaptor::openUserShaderDirectory()
 {
-    if (m_registry) {
-        m_registry->openUserShaderDirectory();
+    if (m_service) {
+        m_service->openUserShaderDirectory();
     }
 }
 
 void ShaderAdaptor::refreshShaders()
 {
-    if (m_registry) {
-        m_registry->refresh();
+    if (m_service) {
+        m_service->refreshShaders();
     }
-}
-
-void ShaderAdaptor::detach()
-{
-    if (!m_registry) {
-        return;
-    }
-    disconnect(m_registry, nullptr, this, nullptr);
-    m_registry = nullptr;
 }
 
 } // namespace PlasmaZones

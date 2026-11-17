@@ -13,7 +13,7 @@
 #include "daemon/daemon.h"
 #include "helpers.h"
 
-#include "dbus/snapadaptor/snapadaptor.h"
+#include "runtime/services/snapservice/snapservice.h"
 #include "runtime/windowtracker/windowtracker.h"
 
 #include <PhosphorContext/ContextResolver.h>
