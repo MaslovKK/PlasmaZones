@@ -54,7 +54,7 @@
 #include <QTest>
 #include <QXmlStreamReader>
 
-#include "dbus/autotileadaptor/autotileadaptor.h"
+#include "dbus/autotileadaptor.h"
 #include "dbus/tilingadaptor/tilingadaptor.h"
 #include "dbus/scrollingadaptor/scrollingadaptor.h"
 #include "dbus/compositorbridgeadaptor.h"

@@ -5,8 +5,7 @@
 
 #include "plasmazones_export.h"
 
-#include <PhosphorProtocol/AutotileMarshalling.h>
-#include <QDBusAbstractAdaptor>
+#include <PhosphorProtocol/AutotileTypes.h>
 #include <QObject>
 #include <QString>
 #include <QStringList>
@@ -22,9 +21,10 @@ class AutotileEngine;
 namespace PlasmaZones {
 
 /**
- * @brief D-Bus adaptor for the autotile placement engine
+ * @brief The autotile placement engine's service, behind
+ *        org.phosphor_works.Placement.Autotile
  *
- * Provides D-Bus interface: org.phosphor_works.Placement.Autotile
+ * Bound to D-Bus by AutotileAdaptor (dbus/autotileadaptor.h).
  *
  * The autotile-SPECIFIC wire surface, sibling to org.phosphor_works.Placement.Scrolling:
  * algorithm selection, master-area ratio/count, master promote/demote,
@@ -34,10 +34,9 @@ namespace PlasmaZones {
  * and one geometry pipeline for the whole tiling family, and TilingAdaptor
  * routes per screen through IPlacementEngine.
  */
-class PLASMAZONES_EXPORT AutotileAdaptor : public QDBusAbstractAdaptor
+class PLASMAZONES_EXPORT AutotileService : public QObject
 {
     Q_OBJECT
-    Q_CLASSINFO("D-Bus Interface", "org.phosphor_works.Placement.Autotile")
 
     Q_PROPERTY(QString algorithm READ algorithm WRITE setAlgorithm NOTIFY algorithmChanged)
     Q_PROPERTY(double masterRatio READ masterRatio WRITE setMasterRatio NOTIFY configChanged)
@@ -53,7 +52,7 @@ class PLASMAZONES_EXPORT AutotileAdaptor : public QDBusAbstractAdaptor
 
 public:
     /**
-     * @brief Construct an AutotileAdaptor
+     * @brief Construct an AutotileService
      *
      * @param engine The AutotileEngine to expose via D-Bus. Borrowed.
      * @param algorithmRegistry Injected tile-algorithm registry. Borrowed —
@@ -61,9 +60,9 @@ public:
      *        Used for algorithm validation/enumeration on the D-Bus surface.
      * @param parent Parent QObject (typically the daemon)
      */
-    explicit AutotileAdaptor(PhosphorTileEngine::AutotileEngine* engine,
+    explicit AutotileService(PhosphorTileEngine::AutotileEngine* engine,
                              PhosphorTiles::ITileAlgorithmRegistry* algorithmRegistry, QObject* parent = nullptr);
-    ~AutotileAdaptor() override = default;
+    ~AutotileService() override = default;
 
     // Property accessors
     QString algorithm() const;

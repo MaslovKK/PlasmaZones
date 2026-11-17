@@ -1390,14 +1390,16 @@ private:
     // unique_ptr member destructors, so without an explicit detach the
     // adaptors would see dangling pointers for a destruction-ordering
     // window (and any queued D-Bus call landing in that window would UAF).
-    ShaderAdaptor* m_shaderAdaptor = nullptr;
+    ShaderService* m_shaderService = nullptr;
+    ShaderAdaptor* m_shaderAdaptor = nullptr; // D-Bus binding of m_shaderService, deleted before it
     ControlAdaptor* m_controlAdaptor = nullptr;
-    // Unified Rule store + its D-Bus adaptor. The store owns rules.json
-    // (m_ruleStoreWatcher folds in outside writes) and the adaptor exposes it
-    // on org.phosphor_works.Placement.Rules. Adaptor is Qt-parented (raw pointer); it
-    // borrows the store, so stop() calls detach() before the store unique_ptr
-    // is destroyed.
-    RuleAdaptor* m_ruleAdaptor = nullptr;
+    // Unified Rule store + its service. The store owns rules.json
+    // (m_ruleStoreWatcher folds in outside writes) and the service serves it,
+    // bound to org.phosphor_works.Placement.Rules by m_ruleAdaptor. Both are
+    // Qt-parented (raw pointers); the service borrows the store, so stop()
+    // calls detach() before the store unique_ptr is destroyed.
+    RuleService* m_ruleService = nullptr;
+    RuleAdaptor* m_ruleAdaptor = nullptr; // D-Bus binding of m_ruleService, deleted before it
     /// Scrolling-engine wire surface (org.phosphor_works.Placement.Scrolling) — the
     /// scroll-specific screen set; lifecycle traffic rides the shared
     /// tiling adaptor. Qt-parented; stop() clears its engine pointer
@@ -1498,7 +1500,8 @@ private:
     /// selection, master ops, and autotile config; lifecycle traffic rides
     /// the shared tiling adaptor. Qt-parented; stop() clears its engine
     /// pointer before the engine unique_ptr resets.
-    AutotileAdaptor* m_autotileAdaptor = nullptr;
+    AutotileService* m_autotileService = nullptr;
+    AutotileAdaptor* m_autotileAdaptor = nullptr; // D-Bus binding of m_autotileService, deleted before it
 
     /// Phase 6: animation shader effect discovery. Scans
     /// `plasmazones/animations` from XDG data dirs and monitors for

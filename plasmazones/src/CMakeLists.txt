@@ -167,6 +167,8 @@ set(plasmazones_core_SRCS
     dbus/settingsadaptor/settingsadaptor.h
     dbus/shaderadaptor.cpp
     dbus/shaderadaptor.h
+    runtime/services/shaderservice.cpp
+    runtime/services/shaderservice.h
     dbus/compositorbridgeadaptor.cpp
     dbus/compositorbridgeadaptor.h
     dbus/controladaptor.cpp
@@ -180,6 +182,8 @@ set(plasmazones_core_SRCS
     runtime/services/zonequeryservice.h
     dbus/ruleadaptor.cpp
     dbus/ruleadaptor.h
+    runtime/services/ruleservice.cpp
+    runtime/services/ruleservice.h
     # snapnavigationtargets moved to phosphor-libs/libs/phosphor-snap-engine/
     dbus/windowtrackingadaptor.cpp
     dbus/windowtrackingadaptor.h
@@ -224,9 +228,11 @@ set(plasmazones_core_SRCS
     runtime/dragresolver/dragresolver.h
     dbus/scrollingadaptor/scrollingadaptor.cpp
     dbus/scrollingadaptor/scrollingadaptor.h
-    dbus/autotileadaptor/autotileadaptor.cpp
-    dbus/autotileadaptor/config.cpp
-    dbus/autotileadaptor/autotileadaptor.h
+    dbus/autotileadaptor.cpp
+    dbus/autotileadaptor.h
+    runtime/services/autotileservice/autotileservice.cpp
+    runtime/services/autotileservice/config.cpp
+    runtime/services/autotileservice/autotileservice.h
     dbus/tilingadaptor/tilingadaptor.cpp
     dbus/tilingadaptor/relay.cpp
     dbus/tilingadaptor/mapmodel.cpp

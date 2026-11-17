@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 fuddlesworth
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#include "autotileadaptor.h"
+#include "autotileservice.h"
 
 #include <PhosphorTileEngine/AutotileConfig.h>
 #include <PhosphorTileEngine/AutotileEngine.h>
@@ -17,7 +17,7 @@ namespace PlasmaZones {
 // Helper Methods
 // ═══════════════════════════════════════════════════════════════════════════
 
-bool AutotileAdaptor::ensureEngine(const char* methodName) const
+bool AutotileService::ensureEngine(const char* methodName) const
 {
     if (!m_engine) {
         qCWarning(lcDbusAutotile) << "Cannot" << methodName << "- engine not available";
@@ -26,7 +26,7 @@ bool AutotileAdaptor::ensureEngine(const char* methodName) const
     return true;
 }
 
-bool AutotileAdaptor::ensureEngineAndConfig(const char* methodName) const
+bool AutotileService::ensureEngineAndConfig(const char* methodName) const
 {
     if (!m_engine) {
         qCWarning(lcDbusAutotile) << "Cannot" << methodName << "- engine not available";
@@ -43,7 +43,7 @@ bool AutotileAdaptor::ensureEngineAndConfig(const char* methodName) const
 // Property Accessors - Config values with DRY macros
 // ═══════════════════════════════════════════════════════════════════════════
 
-double AutotileAdaptor::masterRatio() const
+double AutotileService::masterRatio() const
 {
     if (!m_engine || !m_engine->config()) {
         return ConfigDefaults::autotileSplitRatio();
@@ -54,7 +54,7 @@ double AutotileAdaptor::masterRatio() const
 // NOTE: D-Bus property changes (masterRatio, masterCount, etc.) update runtime state
 // only. They are NOT written back to KConfig/Settings. Per-screen state (including
 // splitRatio) is persisted separately via PhosphorTiles::TilingState save/load on daemon shutdown.
-void AutotileAdaptor::setMasterRatio(double ratio)
+void AutotileService::setMasterRatio(double ratio)
 {
     if (!ensureEngineAndConfig("setMasterRatio")) {
         return;
@@ -68,7 +68,7 @@ void AutotileAdaptor::setMasterRatio(double ratio)
     }
 }
 
-int AutotileAdaptor::masterCount() const
+int AutotileService::masterCount() const
 {
     if (!m_engine || !m_engine->config()) {
         return ConfigDefaults::autotileMasterCount();
@@ -76,7 +76,7 @@ int AutotileAdaptor::masterCount() const
     return m_engine->config()->masterCount;
 }
 
-void AutotileAdaptor::setMasterCount(int count)
+void AutotileService::setMasterCount(int count)
 {
     if (!ensureEngineAndConfig("setMasterCount")) {
         return;
@@ -90,7 +90,7 @@ void AutotileAdaptor::setMasterCount(int count)
     }
 }
 
-int AutotileAdaptor::innerGap() const
+int AutotileService::innerGap() const
 {
     if (!m_engine || !m_engine->config()) {
         return ConfigDefaults::innerGap();
@@ -98,7 +98,7 @@ int AutotileAdaptor::innerGap() const
     return m_engine->config()->innerGap;
 }
 
-int AutotileAdaptor::outerGap() const
+int AutotileService::outerGap() const
 {
     if (!m_engine || !m_engine->config()) {
         return ConfigDefaults::outerGap();
@@ -106,7 +106,7 @@ int AutotileAdaptor::outerGap() const
     return m_engine->config()->outerGap;
 }
 
-bool AutotileAdaptor::smartGaps() const
+bool AutotileService::smartGaps() const
 {
     if (!m_engine || !m_engine->config()) {
         return ConfigDefaults::autotileSmartGaps();
@@ -114,7 +114,7 @@ bool AutotileAdaptor::smartGaps() const
     return m_engine->config()->smartGaps;
 }
 
-void AutotileAdaptor::setSmartGaps(bool enabled)
+void AutotileService::setSmartGaps(bool enabled)
 {
     if (!ensureEngineAndConfig("setSmartGaps")) {
         return;
@@ -126,7 +126,7 @@ void AutotileAdaptor::setSmartGaps(bool enabled)
     }
 }
 
-bool AutotileAdaptor::focusNewWindows() const
+bool AutotileService::focusNewWindows() const
 {
     if (!m_engine || !m_engine->config()) {
         return ConfigDefaults::autotileFocusNewWindows();
@@ -134,7 +134,7 @@ bool AutotileAdaptor::focusNewWindows() const
     return m_engine->config()->focusNewWindows;
 }
 
-void AutotileAdaptor::setFocusNewWindows(bool enabled)
+void AutotileService::setFocusNewWindows(bool enabled)
 {
     if (!ensureEngineAndConfig("setFocusNewWindows")) {
         return;
@@ -150,7 +150,7 @@ void AutotileAdaptor::setFocusNewWindows(bool enabled)
 // Ratio/Count Adjustment
 // ═══════════════════════════════════════════════════════════════════════════
 
-void AutotileAdaptor::increaseMasterRatio(double delta)
+void AutotileService::increaseMasterRatio(double delta)
 {
     if (!ensureEngine("increaseMasterRatio")) {
         return;
@@ -166,7 +166,7 @@ void AutotileAdaptor::increaseMasterRatio(double delta)
     m_engine->increaseMasterRatio(delta);
 }
 
-void AutotileAdaptor::decreaseMasterRatio(double delta)
+void AutotileService::decreaseMasterRatio(double delta)
 {
     if (!ensureEngine("decreaseMasterRatio")) {
         return;
@@ -182,7 +182,7 @@ void AutotileAdaptor::decreaseMasterRatio(double delta)
     m_engine->decreaseMasterRatio(delta);
 }
 
-void AutotileAdaptor::increaseMasterCount()
+void AutotileService::increaseMasterCount()
 {
     if (!ensureEngine("increaseMasterCount")) {
         return;
@@ -193,7 +193,7 @@ void AutotileAdaptor::increaseMasterCount()
     m_engine->increaseMasterCount();
 }
 
-void AutotileAdaptor::decreaseMasterCount()
+void AutotileService::decreaseMasterCount()
 {
     if (!ensureEngine("decreaseMasterCount")) {
         return;

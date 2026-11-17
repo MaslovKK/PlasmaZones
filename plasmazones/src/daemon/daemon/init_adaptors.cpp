@@ -41,13 +41,16 @@
 // Needed as COMPLETE types, not just forward declarations: the re-entry
 // preamble below deletes them, and deleting through an incomplete type calls
 // neither the destructor nor a class-specific operator delete.
-#include "dbus/autotileadaptor/autotileadaptor.h"
+#include "dbus/autotileadaptor.h"
+#include "runtime/services/autotileservice/autotileservice.h"
 #include "dbus/scrollingadaptor/scrollingadaptor.h"
 #include "dbus/snapadaptor/snapadaptor.h"
 #include "dbus/shaderadaptor.h"
+#include "runtime/services/shaderservice.h"
 #include "dbus/compositorbridgeadaptor.h"
 #include "dbus/controladaptor.h"
 #include "dbus/ruleadaptor.h"
+#include "runtime/services/ruleservice.h"
 
 namespace PlasmaZones {
 
@@ -72,6 +75,8 @@ void Daemon::initCoreAdaptors()
     m_snapAdaptor = nullptr;
     delete m_autotileAdaptor;
     m_autotileAdaptor = nullptr;
+    delete m_autotileService;
+    m_autotileService = nullptr;
     // TilingAdaptor and ScrollingAdaptor belong to this set too: both are
     // QDBusAbstractAdaptor children of the D-Bus-registered Daemon object and
     // both are unconditionally re-newed in initEnginesAndWiring, which
@@ -104,8 +109,12 @@ void Daemon::initCoreAdaptors()
     m_compositorBridge = nullptr;
     delete m_ruleAdaptor;
     m_ruleAdaptor = nullptr;
+    delete m_ruleService;
+    m_ruleService = nullptr;
     delete m_shaderAdaptor;
     m_shaderAdaptor = nullptr;
+    delete m_shaderService;
+    m_shaderService = nullptr;
     delete m_settingsAdaptor;
     m_settingsAdaptor = nullptr;
     delete m_layoutAdaptor;
@@ -147,15 +156,17 @@ void Daemon::initCoreAdaptors()
     connect(m_settings.get(), &Settings::defaultLayoutIdChanged, m_layoutAdaptor, &LayoutAdaptor::invalidateCache);
     m_settingsAdaptor = new SettingsAdaptor(m_settings.get(), &m_profileRegistry, this);
 
-    // Shader adaptor - shader discovery, compilation lifecycle, file monitoring.
-    // Held as a member so stop() can detach() it before the unique_ptr member
-    // that owns m_shaderRegistry runs its destructor.
-    m_shaderAdaptor = new ShaderAdaptor(m_shaderRegistry.get(), this);
+    // Shader service - shader discovery, compilation lifecycle, file monitoring,
+    // and its D-Bus binding. Held as a member so stop() can detach() it before
+    // the unique_ptr member that owns m_shaderRegistry runs its destructor.
+    m_shaderService = new ShaderService(m_shaderRegistry.get(), this);
+    m_shaderAdaptor = new ShaderAdaptor(m_shaderService, this);
 
-    // Rule adaptor - the unified org.phosphor_works.Placement.Rules surface.
-    // Held as a member so stop() can detach() it before the unique_ptr that
-    // owns m_ruleStore runs its destructor.
-    m_ruleAdaptor = new RuleAdaptor(m_ruleStore.get(), this);
+    // Rule service - the unified org.phosphor_works.Placement.Rules surface,
+    // and its D-Bus binding. Held as a member so stop() can detach() it before
+    // the unique_ptr that owns m_ruleStore runs its destructor.
+    m_ruleService = new RuleService(m_ruleStore.get(), this);
+    m_ruleAdaptor = new RuleAdaptor(m_ruleService, this);
 
     // Compositor bridge adaptor - compositor-agnostic window control protocol.
     // Held as a member so the support report and the registration watchdog

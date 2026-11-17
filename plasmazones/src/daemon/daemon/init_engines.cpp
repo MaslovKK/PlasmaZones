@@ -26,12 +26,13 @@
 #include "dbus/settingsadaptor/settingsadaptor.h"
 #include "runtime/windowtracker/windowtracker.h"
 #include "runtime/dragresolver/dragresolver.h"
-#include "dbus/autotileadaptor/autotileadaptor.h"
+#include "dbus/autotileadaptor.h"
+#include "runtime/services/autotileservice/autotileservice.h"
 #include "dbus/tilingadaptor/tilingadaptor.h"
 #include "dbus/scrollingadaptor/scrollingadaptor.h"
 #include "dbus/snapadaptor/snapadaptor.h"
 #include "dbus/controladaptor.h"
-#include "dbus/ruleadaptor.h"
+#include "runtime/services/ruleservice.h"
 
 #include <PhosphorIdentity/WindowId.h>
 #include <PhosphorZones/LayoutRegistry.h>
@@ -972,7 +973,8 @@ void Daemon::initEnginesAndWiring()
     // the authority, so a window that leaves a desktop is released here
     // (TilingAdaptor::setWindowRegistry; the effect relays a genuine move).
     m_tilingAdaptor->setWindowRegistry(m_windowRegistry.get());
-    m_autotileAdaptor = new AutotileAdaptor(autotileEngine, m_algorithmRegistry.get(), this);
+    m_autotileService = new AutotileService(autotileEngine, m_algorithmRegistry.get(), this);
+    m_autotileAdaptor = new AutotileAdaptor(m_autotileService, this);
     m_scrollingAdaptor = new ScrollingAdaptor(scrollEngine, this);
     // The wheel's view step, from ShortcutManager (ctor-owned, never reset).
     m_scrollingAdaptor->setViewScrollStepProvider([this]() {

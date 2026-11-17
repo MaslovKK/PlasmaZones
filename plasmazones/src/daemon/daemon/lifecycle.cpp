@@ -28,14 +28,14 @@
 #include "runtime/windowtracker/windowtracker.h"
 #include "dbus/windowtrackingadaptor.h"
 #include "runtime/dragresolver/dragresolver.h"
-#include "dbus/autotileadaptor/autotileadaptor.h"
+#include "runtime/services/autotileservice/autotileservice.h"
 #include "dbus/tilingadaptor/tilingadaptor.h"
 #include "dbus/scrollingadaptor/scrollingadaptor.h"
 #include "dbus/snapadaptor/snapadaptor.h"
-#include "dbus/shaderadaptor.h"
+#include "runtime/services/shaderservice.h"
 #include "dbus/compositorbridgeadaptor.h"
 #include "dbus/controladaptor.h"
-#include "dbus/ruleadaptor.h"
+#include "runtime/services/ruleservice.h"
 
 #include <PhosphorServiceIdle/IdleService.h>
 #include <PhosphorShaders/ShaderPresetStore.h>
@@ -431,14 +431,14 @@ void Daemon::stop()
     if (m_settingsAdaptor) {
         m_settingsAdaptor->detach();
     }
-    if (m_shaderAdaptor) {
-        m_shaderAdaptor->detach();
+    if (m_shaderService) {
+        m_shaderService->detach();
     }
     if (m_controlAdaptor) {
         m_controlAdaptor->detach();
     }
-    if (m_ruleAdaptor) {
-        m_ruleAdaptor->detach();
+    if (m_ruleService) {
+        m_ruleService->detach();
     }
 
     // Shader registries + preset store + warm-bake pool: torn down ABOVE the
@@ -560,8 +560,8 @@ void Daemon::stop()
     if (m_tilingAdaptor) {
         m_tilingAdaptor->clearEngine();
     }
-    if (m_autotileAdaptor) {
-        m_autotileAdaptor->clearEngine();
+    if (m_autotileService) {
+        m_autotileService->clearEngine();
     }
     if (m_scrollingAdaptor) {
         m_scrollingAdaptor->clearEngine();

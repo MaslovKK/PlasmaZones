@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 fuddlesworth
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#include "autotileadaptor.h"
+#include "autotileservice.h"
 
 #include "core/platform/logging.h"
 
@@ -13,23 +13,23 @@
 
 namespace PlasmaZones {
 
-AutotileAdaptor::AutotileAdaptor(PhosphorTileEngine::AutotileEngine* engine,
+AutotileService::AutotileService(PhosphorTileEngine::AutotileEngine* engine,
                                  PhosphorTiles::ITileAlgorithmRegistry* algorithmRegistry, QObject* parent)
-    : QDBusAbstractAdaptor(parent)
+    : QObject(parent)
     , m_engine(engine)
     , m_algorithmRegistry(algorithmRegistry)
 {
-    Q_ASSERT_X(m_algorithmRegistry, "AutotileAdaptor",
+    Q_ASSERT_X(m_algorithmRegistry, "AutotileService",
                "null ITileAlgorithmRegistry — setAlgorithm / availableAlgorithms / algorithmInfo will crash");
     if (!m_engine) {
-        qCWarning(lcDbusAutotile) << "AutotileAdaptor created with null engine";
+        qCWarning(lcDbusAutotile) << "AutotileService created with null engine";
         return;
     }
-    connect(m_engine, &PhosphorEngine::PlacementEngineBase::algorithmChanged, this, &AutotileAdaptor::algorithmChanged);
-    qCDebug(lcDbusAutotile) << "AutotileAdaptor initialized";
+    connect(m_engine, &PhosphorEngine::PlacementEngineBase::algorithmChanged, this, &AutotileService::algorithmChanged);
+    qCDebug(lcDbusAutotile) << "AutotileService initialized";
 }
 
-bool AutotileAdaptor::ensureRegistry(const char* methodName) const
+bool AutotileService::ensureRegistry(const char* methodName) const
 {
     // Release-build pair of the ctor Q_ASSERT_X: these are D-Bus-callable
     // slots, so a wiring bug must degrade to a warning, not a crash
@@ -41,7 +41,7 @@ bool AutotileAdaptor::ensureRegistry(const char* methodName) const
     return true;
 }
 
-QString AutotileAdaptor::algorithm() const
+QString AutotileService::algorithm() const
 {
     if (!m_engine) {
         return QString();
@@ -49,7 +49,7 @@ QString AutotileAdaptor::algorithm() const
     return m_engine->algorithm();
 }
 
-void AutotileAdaptor::setAlgorithm(const QString& algorithmId)
+void AutotileService::setAlgorithm(const QString& algorithmId)
 {
     if (!ensureEngine("setAlgorithm") || !ensureRegistry("setAlgorithm")) {
         return;
@@ -65,7 +65,7 @@ void AutotileAdaptor::setAlgorithm(const QString& algorithmId)
     }
 }
 
-void AutotileAdaptor::swapWindows(const QString& windowId1, const QString& windowId2)
+void AutotileService::swapWindows(const QString& windowId1, const QString& windowId2)
 {
     if (!ensureEngine("swapWindows")) {
         return;
@@ -83,7 +83,7 @@ void AutotileAdaptor::swapWindows(const QString& windowId1, const QString& windo
     m_engine->swapWindows(windowId1, windowId2);
 }
 
-void AutotileAdaptor::promoteToMaster(const QString& windowId)
+void AutotileService::promoteToMaster(const QString& windowId)
 {
     if (!ensureEngine("promoteToMaster")) {
         return;
@@ -96,7 +96,7 @@ void AutotileAdaptor::promoteToMaster(const QString& windowId)
     m_engine->promoteToMaster(windowId);
 }
 
-void AutotileAdaptor::demoteFromMaster(const QString& windowId)
+void AutotileService::demoteFromMaster(const QString& windowId)
 {
     if (!ensureEngine("demoteFromMaster")) {
         return;
@@ -109,7 +109,7 @@ void AutotileAdaptor::demoteFromMaster(const QString& windowId)
     m_engine->demoteFromMaster(windowId);
 }
 
-void AutotileAdaptor::focusMaster()
+void AutotileService::focusMaster()
 {
     if (!ensureEngine("focusMaster")) {
         return;
@@ -118,7 +118,7 @@ void AutotileAdaptor::focusMaster()
     m_engine->focusMaster();
 }
 
-void AutotileAdaptor::focusNext()
+void AutotileService::focusNext()
 {
     if (!ensureEngine("focusNext")) {
         return;
@@ -127,7 +127,7 @@ void AutotileAdaptor::focusNext()
     m_engine->focusNext();
 }
 
-void AutotileAdaptor::focusPrevious()
+void AutotileService::focusPrevious()
 {
     if (!ensureEngine("focusPrevious")) {
         return;
@@ -136,7 +136,7 @@ void AutotileAdaptor::focusPrevious()
     m_engine->focusPrevious();
 }
 
-QStringList AutotileAdaptor::availableAlgorithms()
+QStringList AutotileService::availableAlgorithms()
 {
     if (!ensureRegistry("availableAlgorithms")) {
         return {};
@@ -144,7 +144,7 @@ QStringList AutotileAdaptor::availableAlgorithms()
     return m_algorithmRegistry->availableAlgorithms();
 }
 
-PhosphorProtocol::AlgorithmInfoEntry AutotileAdaptor::algorithmInfo(const QString& algorithmId)
+PhosphorProtocol::AlgorithmInfoEntry AutotileService::algorithmInfo(const QString& algorithmId)
 {
     if (!ensureRegistry("algorithmInfo")) {
         return {};
@@ -174,7 +174,7 @@ PhosphorProtocol::AlgorithmInfoEntry AutotileAdaptor::algorithmInfo(const QStrin
     return entry;
 }
 
-void AutotileAdaptor::clearEngine()
+void AutotileService::clearEngine()
 {
     if (m_engine) {
         // Drop exactly the connection the constructor made. A blanket
@@ -182,7 +182,7 @@ void AutotileAdaptor::clearEngine()
         // connections some other wiring installed between this engine and
         // this adaptor, which this method has no business owning.
         disconnect(m_engine, &PhosphorEngine::PlacementEngineBase::algorithmChanged, this,
-                   &AutotileAdaptor::algorithmChanged);
+                   &AutotileService::algorithmChanged);
         m_engine = nullptr;
     }
 }
