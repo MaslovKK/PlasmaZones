@@ -27,18 +27,11 @@ Files: packaging/local-install/install.sh
 Copyright: 2026 abirkel <abirkel@users.noreply.github.com>
 License: GPL-3.0-or-later
 
-# All phosphor-* extracted libraries ship as LGPL so third-party
-# plugins / shells can link them without inheriting GPL — see CLAUDE.md
-# for the per-tree license rules. The rest of them come from the pinned
-# phosphor-libs archive, declared with the other archives below.
-Files: phosphor-shell-libs/libs/phosphor-*/*
-Copyright: 2026 fuddlesworth <fuddlesworth@users.noreply.github.com>
-License: LGPL-2.1-or-later
-
-# The LGPL tier's own scaffolding, which the libs/phosphor-* glob above does not
-# reach. These carry LGPL-2.1-or-later in their own SPDX headers, so the
-# Files: * catch-all was asserting GPL-3 over them in the packaging metadata
-# while the sources said otherwise.
+# The LGPL build scaffolding. These carry LGPL-2.1-or-later in their own SPDX
+# headers, so the Files: * catch-all would assert GPL-3 over them in the
+# packaging metadata while the sources say otherwise. The Phosphor libraries
+# themselves come from the pinned phosphor-libs archive, declared with the
+# other archives below.
 #
 # cmake/ is MIXED, so its LGPL members are named one by one rather than
 # globbed: format-qml.cmake, PhosphorCPack.cmake, PhosphorTranslations.cmake,
@@ -46,8 +39,6 @@ License: LGPL-2.1-or-later
 # resolving to the catch-all.
 Files: cmake/PlasmaZonesDependencies.cmake
        cmake/PhosphorTier.cmake
-       phosphor-shell-libs/CMakeLists.txt
-       phosphor-shell-libs/moon.yml
 Copyright: 2026 fuddlesworth <fuddlesworth@users.noreply.github.com>
 License: LGPL-2.1-or-later
 

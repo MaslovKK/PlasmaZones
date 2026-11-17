@@ -470,14 +470,11 @@ def _wiring_failures(partition_readable) -> list[str]:
 
 
 def _license_tree_failures(partition_readable) -> list[str]:
-    """rule_license's per-tier split, against a fake tree.
+    """rule_license's app-tier rule, against a fake tree.
 
-    The LGPL half was entirely unpinned: replacing its `libs/phosphor-` test with `if
-    False:` produced ZERO findings and a green suite, because without that arm the two
-    library trees match none of the GPL-3 prefixes either, so `expected_license` returns
-    None and both are SKIPPED rather than misreported. CLAUDE.md calls the split out by
-    name ("Never 'fix' a lib header to GPL-3 without understanding the split"), and half
-    the machine check for it could be deleted invisibly.
+    The LGPL libraries left this repository for phosphor-libs and
+    phosphor-shell-libs, so what remains is the GPL-3 app trees and the
+    ungoverned data tree, and each of those cases must keep its verdict.
 
     Reaches the rule the same way _spdx_suffix_failures does, by redirecting the gate's
     REPO."""
@@ -492,19 +489,11 @@ def _license_tree_failures(partition_readable) -> list[str]:
 
     # (path, identifier in the header, must it be reported?)
     cases = [
-        # A library tree with a GPL-3 header is the defect the LGPL arm exists to catch.
-        ("phosphor-shell-libs/libs/phosphor-x/src/a.cpp", gpl3, True),
-        ("phosphor-shell-libs/libs/phosphor-x/src/a.cpp", lgpl, False),
-        # A library's own TESTS follow the library, not the app-tier rule.
-        ("phosphor-shell-libs/libs/phosphor-x/tests/test_a.cpp", gpl3, True),
-        ("phosphor-shell-libs/libs/phosphor-x/tests/test_a.cpp", lgpl, False),
-        # The app tier is the mirror: LGPL there is the defect.
+        # An LGPL header in an app tier is the defect.
         ("plasmazones/src/a.cpp", lgpl, True),
         ("plasmazones/src/a.cpp", gpl3, False),
         ("phosphor-shell/src/b.cpp", lgpl, True),
         ("scripts/x.py", lgpl, True),
-        # The shell-libs EXAMPLES are app-tier, unlike its libs.
-        ("phosphor-shell-libs/examples/demo/c.cpp", lgpl, True),
         # The data tree is deliberately ungoverned: the licence follows the
         # incorporated content, so neither identifier may be reported.
         ("plasmazones/data/surface/glass/effect.frag", gpl3, False),

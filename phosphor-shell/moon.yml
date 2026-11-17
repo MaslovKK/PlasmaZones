@@ -13,10 +13,8 @@ tags: ['cmake']
 # editing a bundled surface pack would mark only plasmazones affected and this
 # tier's tests would not run under `--affected`. The workspace-relative test
 # input below is what closes it. The pin file is the second input: the shell
-# builds on the phosphor-libs commit cmake/PlasmaZonesDependencies.cmake pins,
-# which is not a project here.
-dependsOn:
-  - 'phosphor-shell-libs'
+# builds on the phosphor-libs and phosphor-shell-libs commits
+# cmake/PlasmaZonesDependencies.cmake pins, which are not projects here.
 
 project:
   name: 'Phosphor shell'

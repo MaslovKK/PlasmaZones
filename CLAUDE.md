@@ -18,6 +18,7 @@ The Phosphor libraries (engines, rendering, layer-shell, animation, config, ipc,
 - Once the library change is merged, bump the pin: the commit, URL, FILE and SHA-256 together, then the same archive in every recipe the dep-pins rule names. A bump can move the library tree's own Luau and valijson pins too, and the rule reports those.
 - The scripts that read library files without a build (the JSON schema gate, the dep-pins rule) find the pinned tree with `scripts/pinned_phosphor_libs.py`, which unpacks the pinned archive into `.cache/phosphor-libs/`. `PHOSPHOR_LIBS_DIR=<checkout>` points them at a local tree instead.
 - In CMake the library tree is `${phosphor-libs_SOURCE_DIR}` and its build tree `${phosphor-libs_BINARY_DIR}`. Its shared helper modules (`PhosphorTestIsolation`, `PhosphorLibTesting`, `PhosphorTestPch`) are in `${PHOSPHOR_LIBS_CMAKE_DIR}`, which is also on `CMAKE_MODULE_PATH`.
+- The shell libraries (theme, popout, the `Phosphor.*` surfaces, the `phosphor-service-*` libraries) are the same kind of repository, [phosphor-works/phosphor-shell-libs](https://github.com/phosphor-works/phosphor-shell-libs), checked out as `../phosphor-shell-libs`. Only the shell tier needs them, so `plasmazones_add_phosphor_shell_libs()` adds them under `BUILD_PHOSPHOR_SHELL`, after phosphor-libs, and the phosphor-libs pin here is the one that tree uses. Its pin is in the same file but outside the recipes, because no package builds the shell. Override it with `-DCPM_phosphor-shell-libs_SOURCE=<dir>` or `-DPHOSPHOR_SHELL_LIBS_GIT_REF=<ref>`.
 
 ## Behavioral Rules (Always Enforced)
 - NEVER question or doubt what the user says they did (installed, restarted, tested, etc.) — trust them and focus on the code
@@ -37,7 +38,6 @@ The Phosphor libraries (engines, rendering, layer-shell, animation, config, ipc,
 - Source, tests and data live INSIDE a tier, not at the root. There is no
   top-level `/src`, `/tests`, `/config` or `/examples`:
   - `plasmazones/{src,tests,data}` for the app tier
-  - `phosphor-shell-libs/{libs/<lib>,examples}` for the shell libraries and their demos
   - `phosphor-shell/{src,shell,tests}` for the shell binary and its bundled QML
 - Use `/docs` for documentation and markdown files
 - Use `/scripts` for repo-level checks and dev harnesses
@@ -47,8 +47,8 @@ The Phosphor libraries (engines, rendering, layer-shell, animation, config, ipc,
 ## License
 - SPDX headers on every file whose format supports comments: `// SPDX-FileCopyrightText: 2026 fuddlesworth`. Data assets in formats with no comment syntax are exempt. JSON is such a format, so no `.json` file needs a header wherever it sits. The usual cases are `plasmazones/data/**/*.json`, and every `metadata.json` (the ones Qt and KWin plugins embed, such as `plasmazones/kwin-effect/metadata.json` and the plugin demo's `plugins/cpu-meter/metadata.json`, and test fixtures such as wallpaper package metadata) — never add a header to those, it makes the file invalid.
 - License identifier depends on the tree:
-  - **App tiers** (`plasmazones/**` except its `data/` trees, `phosphor-shell/**`, `phosphor-shell-libs/examples/**`, `scripts/**`): `GPL-3.0-or-later`
-  - **Reusable libraries, including their own tests** (`phosphor-shell-libs/libs/phosphor-*/**`, which subsumes each library's `tests/`, and everything in phosphor-libs): `LGPL-2.1-or-later`
+  - **App tiers** (`plasmazones/**` except its `data/` trees, `phosphor-shell/**`, `scripts/**`): `GPL-3.0-or-later`
+  - **Reusable libraries, including their own tests** (everything in phosphor-libs, and phosphor-shell-libs' `libs/`): `LGPL-2.1-or-later`
   - A library's own `tests/` follow the library (LGPL), NOT the app-tier GPL rule: test code that links and ships inside an LGPL lib must not taint that lib's build tree with GPL. The GPL `plasmazones/tests/**` rule means only the top-level app test tree.
   - **Bundled animation and pointer shader packs** (`plasmazones/data/animations/**` and `plasmazones/data/pointer/**` shader source: `.frag`, `.vert`, `.glsl`): `LGPL-2.1-or-later` for PlasmaZones-original shaders, so a third-party pack or tool can build on them. The exception is incorporated upstream copyleft. A shader that copies verbatim or ports GPL-3.0 upstream code (the Burn-My-Windows ports and their `shared/bmw_compat.glsl` shim, the niri `honeycomb` port) MUST stay `GPL-3.0-or-later` and carries a second `SPDX-FileCopyrightText` crediting the upstream author, because PlasmaZones is not the copyright holder of those bodies and cannot relicense them. The license follows the incorporated content and is never a per-directory blanket, so a pack's `.frag` and `.vert` may legitimately differ (a GPL-derived `.frag` beside a PlasmaZones-original LGPL `.vert`). Ports of permissively-licensed upstreams such as the MIT gl-transitions `desktop-*` frags may be LGPL. Generated editor aids like `p_generated.glsl` are gitignored and carry no SPDX header. (`plasmazones/data/overlays/**` is currently GPL and `plasmazones/data/surface/**` is mixed. Neither has been normalized, so follow the existing header in those trees.)
   - Rationale: the shell is GPL; libraries are LGPL so third-party plugins / tools can link them without inheriting GPL. Never "fix" a lib header to GPL-3 without understanding the split.
@@ -227,8 +227,9 @@ On Linux (native):
 # installing it.
 #
 # BUILD_PHOSPHOR_SHELL also defaults to OFF, and it gates the whole Phosphor
-# shell tier: phosphor-shell-libs/libs/phosphor-shell*, the bar, control center, launcher, power
-# and popout libraries, their demos, and their tests. Configure without it and
+# shell tier: the phosphor-shell-libs repository (the shell, bar, control
+# center, launcher, power and popout libraries and their tests) and the
+# phosphor-shell binary. Configure without it and
 # none of that is built, so ctest passes without ever running those suites.
 # Pass it when working on anything under the shell tier. It requires
 # USE_KDE_FRAMEWORKS=ON (the default), since those libraries need KF6 Kirigami
@@ -282,11 +283,11 @@ python3 scripts/check-conventions.py --list-rules
 ```
 
 ### Per-tier builds with moon
-The repo is a [moon](https://moonrepo.dev) workspace. CMake still does every compile; moon adds the tier graph on top: one command per tier, dependency ordering, and affected-only runs locally (CI still drives CMake directly). The three tiers are the projects `phosphor-shell-libs`, `phosphor-shell` and `plasmazones`, plus `repo` for the whole-tree checks. phosphor-libs is not a project: it is the pinned repository above, and the pin file is a test input of every tier. Install moon from the AUR (`moon-bin`) or with `proto install moon`.
+The repo is a [moon](https://moonrepo.dev) workspace. CMake still does every compile; moon adds the tier graph on top: one command per tier, dependency ordering, and affected-only runs locally (CI still drives CMake directly). The two tiers are the projects `phosphor-shell` and `plasmazones`, plus `repo` for the whole-tree checks. phosphor-libs and phosphor-shell-libs are not projects: they are the pinned repositories above, and the pin file is a test input of every tier. Install moon from the AUR (`moon-bin`) or with `proto install moon`.
 
 ```bash
 moon run plasmazones:build          # build that tier and its upstream tiers (configure runs first each time)
-moon run phosphor-shell-libs:test        # ctest --test-dir build/phosphor-shell-libs
+moon run phosphor-shell:test        # ctest --test-dir build/phosphor-shell
 moon run :test --affected           # every tier touched by the working-tree diff
 moon run repo:check                 # conventions + JSON schema gates
 moon run repo:install               # whole-tree install (needs root at the default prefix)
@@ -312,11 +313,8 @@ Layer enforcement is on (`.moon/workspace.yml`): an application tier may not dep
 - Standalone settings app (`plasmazones-settings`) + minimal KCM launcher
 
 ### Directory Structure
-The tree is three product tiers plus repo-level support directories. Each tier has its own `CMakeLists.txt` (entered from the root one) and its own `moon.yml` project. The core libraries all three build on are the phosphor-libs repository (see phosphor-libs above).
+The tree is two product tiers plus repo-level support directories. Each tier has its own `CMakeLists.txt` (entered from the root one) and its own `moon.yml` project. The libraries they build on are the phosphor-libs and phosphor-shell-libs repositories (see phosphor-libs above).
 ```
-phosphor-shell-libs/     — tier 2: shell libraries (BUILD_PHOSPHOR_SHELL)
-  libs/phosphor-*/       — theme, popout, phosphor-shell*, phosphor-service-* (all but idle)
-  examples/              — demos and CLI acceptance harnesses
 phosphor-shell/          — tier 3: the shell binary (BUILD_PHOSPHOR_SHELL)
   src/                   — shell process controllers and transports
   cli/phosphorctl/       — typed IPC CLI

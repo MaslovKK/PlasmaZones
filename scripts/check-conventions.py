@@ -285,7 +285,6 @@ def rule_spdx(files: list[str]) -> list[Violation]:
 # Rule: license
 # --------------------------------------------------------------------------
 
-LGPL = "LGPL-2.1-or-later"
 GPL3 = "GPL-3.0-or-later"
 
 # The shader trees are deliberately mixed: a pack's .frag may be GPL (a port of
@@ -303,14 +302,11 @@ LICENSE_UNGOVERNED = re.compile(r"^plasmazones/data/")
 def expected_license(path: str) -> str | None:
     if LICENSE_UNGOVERNED.search(path):
         return None
-    if re.search(r"(^|/)libs/phosphor-", path):
-        # A library's own tests follow the library. Test code that links and
-        # ships inside an LGPL lib must not taint that lib's tree with GPL.
-        return LGPL
     # The app tiers: plasmazones (daemon, editor, settings, KCM, KWin effect,
     # tools, tests) and phosphor-shell (binary, CLI, shell QML, tests), plus
-    # the shell-libs example harnesses and the repo-level scripts.
-    if path.startswith(("plasmazones/", "phosphor-shell/", "phosphor-shell-libs/examples/", "scripts/")):
+    # the repo-level scripts. The LGPL libraries live in the phosphor-libs and
+    # phosphor-shell-libs repositories, which check their own headers.
+    if path.startswith(("plasmazones/", "phosphor-shell/", "scripts/")):
         return GPL3
     return None
 
@@ -339,8 +335,7 @@ def rule_license(files: list[str]) -> list[Violation]:
                     "license",
                     f,
                     line_of(head, m.start()),
-                    f"license is {got}, but this tree is {want} "
-                    f"({'reusable library, LGPL so third-party plugins can link it' if want == LGPL else 'app/daemon/editor tree'})",
+                    f"license is {got}, but this tree is {want} (app/daemon/editor tree)",
                 )
             )
     return out
@@ -850,7 +845,7 @@ def rule_dep_pins(files: list[str]) -> list[Violation]:
 
 RULES = {
     "spdx": (rule_spdx, "SPDX header present on every file whose format supports comments"),
-    "license": (rule_license, "GPL-3 app tree vs LGPL-2.1 libs/phosphor-* split"),
+    "license": (rule_license, "GPL-3 on the app trees (the LGPL libraries live in their own repositories)"),
     "i18n-cpp": (rule_i18n_cpp, "C++ uses PhosphorI18n::tr(), never i18n()/KLocalizedString"),
     "config-keys": (rule_config_keys, "config group/key strings go through ConfigDefaults:: accessors"),
     "prose": (rule_prose, "user-facing strings carry no em-dash splice, clause semicolon or spaced hyphen"),

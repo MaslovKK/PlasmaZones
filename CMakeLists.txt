@@ -192,11 +192,10 @@ add_compile_definitions(QT_NO_CAST_FROM_ASCII)
 option(USE_KDE_FRAMEWORKS "Build with KDE Frameworks integration" ON)
 
 # Opt-in build for the in-progress phosphor-shell desktop shell and its
-# supporting libraries (phosphor-shell-libs/libs/phosphor-shell plus the
-# gated phosphor-service-* group; phosphor-shell-libs/CMakeLists.txt holds
-# the authoritative list, since this file now only enters the two tier
-# directories). Also builds the phosphor-shell binary and phosphorctl, and
-# the bundled shell QML tree under phosphor-shell/shell/. Default OFF so
+# supporting libraries, the phosphor-shell-libs repository at the commit
+# cmake/PlasmaZonesDependencies.cmake pins. Also builds the phosphor-shell
+# binary and phosphorctl, and the bundled shell QML tree under
+# phosphor-shell/shell/. Default OFF so
 # packaging / downstream installs of PlasmaZones don't pick up shell
 # artefacts before the shell ships. Enable explicitly for shell
 # development:
@@ -211,7 +210,7 @@ option(BUILD_PHOSPHOR_SHELL "Build the phosphor-shell desktop shell (work in pro
 if(BUILD_PHOSPHOR_SHELL AND NOT USE_KDE_FRAMEWORKS)
     message(FATAL_ERROR
         "BUILD_PHOSPHOR_SHELL requires USE_KDE_FRAMEWORKS=ON: the shell tier "
-        "(phosphor-shell-libs/libs/phosphor-shell-bar, phosphor-shell-libs/libs/phosphor-shell-power, phosphor-shell-libs/libs/phosphor-shell-control-center, phosphor-shell-libs/libs/phosphor-shell-launcher, phosphor-shell-libs/libs/phosphor-shell-lock) depends on KF6 "
+        "(phosphor-shell-libs' bar, power, control-center, launcher and lock libraries) depends on KF6 "
         "Kirigami for icon rendering and has no Qt-only fallback.")
 endif()
 
@@ -303,14 +302,8 @@ file(GLOB_RECURSE ALL_CLANG_FORMAT_SOURCE_FILES
     ${CMAKE_SOURCE_DIR}/plasmazones/kwin-effect/*.hpp
     ${CMAKE_SOURCE_DIR}/plasmazones/tests/*.cpp
     ${CMAKE_SOURCE_DIR}/plasmazones/tests/*.h
-    ${CMAKE_SOURCE_DIR}/phosphor-shell-libs/libs/*.cpp
-    ${CMAKE_SOURCE_DIR}/phosphor-shell-libs/libs/*.h
-    ${CMAKE_SOURCE_DIR}/phosphor-shell-libs/libs/*.hpp
-    ${CMAKE_SOURCE_DIR}/phosphor-shell-libs/examples/*.cpp
     ${CMAKE_SOURCE_DIR}/phosphor-shell/*.cpp
-    ${CMAKE_SOURCE_DIR}/phosphor-shell-libs/examples/*.h
     ${CMAKE_SOURCE_DIR}/phosphor-shell/*.h
-    ${CMAKE_SOURCE_DIR}/phosphor-shell-libs/examples/*.hpp
     ${CMAKE_SOURCE_DIR}/phosphor-shell/*.hpp
     # Built only with -DBUILD_TOOLS=ON, but this glob is filesystem-based
     # rather than target-based, so the entry is unconditional. Without it
@@ -329,8 +322,6 @@ file(GLOB_RECURSE ALL_QML_FILES
     ${CMAKE_SOURCE_DIR}/plasmazones/src/*.qml
     ${CMAKE_SOURCE_DIR}/phosphor-shell/cli/*.qml
     ${CMAKE_SOURCE_DIR}/plasmazones/kcm/*.qml
-    ${CMAKE_SOURCE_DIR}/phosphor-shell-libs/libs/*.qml
-    ${CMAKE_SOURCE_DIR}/phosphor-shell-libs/examples/*.qml
     ${CMAKE_SOURCE_DIR}/phosphor-shell/*.qml
 )
 if(QMLFORMAT AND ALL_QML_FILES)
@@ -372,24 +363,24 @@ include_directories("${CMAKE_BINARY_DIR}/generated")
 # ═══════════════════════════════════════════════════════════════════════════════
 # Tiers
 # ═══════════════════════════════════════════════════════════════════════════════
-# The tree is split into three product tiers, each a directory with its own
+# The tree is split into two product tiers, each a directory with its own
 # CMakeLists.txt and, in the moon workspace, its own project:
 #
-#   phosphor-shell-libs/ the Phosphor desktop shell libraries and services,
-#                        gated behind BUILD_PHOSPHOR_SHELL
 #   phosphor-shell/      the phosphor-shell binary, phosphorctl and the shell
 #                        QML tree, gated behind BUILD_PHOSPHOR_SHELL
 #   plasmazones/         the PlasmaZones daemon, editor, settings, KCM, KWin
 #                        effect, bundled data and tests
 #
-# All three build on phosphor-libs, added above. Every tier CMakeLists is
+# Both build on phosphor-libs, added above. The shell tier builds on the
+# phosphor-shell-libs repository too, added just before it, and plasmazones
+# links its PhosphorTheme when the shell is on. Every tier CMakeLists is
 # entered from here, so the shared Qt/KF6 setup above applies to all of them.
 # Order follows the dependency chain: the shell libraries and the shell, then
 # plasmazones. Target-based linking resolves at generate time, so the order is
 # documentation, not a constraint. The engine QML firewall that used to sit here
 # runs inside phosphor-libs, next to the engines it guards.
 if(BUILD_PHOSPHOR_SHELL)
-    add_subdirectory(phosphor-shell-libs)
+    plasmazones_add_phosphor_shell_libs()
     add_subdirectory(phosphor-shell)
 endif()
 

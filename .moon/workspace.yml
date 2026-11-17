@@ -2,9 +2,9 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # moon workspace: one project per product tier, plus the repo root for the
-# checks that span tiers. The libraries every tier builds on are not a project
-# here: they are the phosphor-libs repository, built from the commit
-# cmake/PlasmaZonesDependencies.cmake pins. CMake stays the build system inside each tier;
+# checks that span tiers. The libraries the tiers build on are not projects
+# here: they are the phosphor-libs and phosphor-shell-libs repositories, built
+# from the commits cmake/PlasmaZonesDependencies.cmake pins. CMake stays the build system inside each tier;
 # moon orders the tiers and runs only the affected ones. It does NOT cache
 # the build and test results: those tasks set `cache: false` because the
 # four tiers share one build directory (see .moon/tasks/cmake.yml), and
@@ -14,7 +14,6 @@ $schema: 'https://moonrepo.dev/schemas/workspace.json'
 
 projects:
   repo: '.'
-  phosphor-shell-libs: 'phosphor-shell-libs'
   phosphor-shell: 'phosphor-shell'
   plasmazones: 'plasmazones'
 

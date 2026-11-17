@@ -7,12 +7,6 @@ layer: 'application'
 stack: 'systems'
 tags: ['cmake']
 
-# phosphor-shell-libs is reached only under BUILD_PHOSPHOR_SHELL: the daemon's
-# shell appearance adapter (plasmazones_shellappearance) and the Phosphor window
-# decoration plugin (kwin-effect/shell-decoration) both link PhosphorTheme.
-dependsOn:
-  - 'phosphor-shell-libs'
-
 project:
   name: 'PlasmaZones'
   description: 'Window snapping, tiling and scrolling for KDE Plasma. Covers the daemon, editor, settings, KCM, KWin effect, bundled data and tests.'
