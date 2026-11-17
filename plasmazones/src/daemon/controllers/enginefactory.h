@@ -74,7 +74,7 @@ struct EngineSet
  * - PlacementEngineBase* — when you need QObject signal connections
  *   (e.g. UnifiedLayoutController, WindowTracker).
  * - IPlacementEngine* — when you only call interface methods, no
- *   signals (e.g. ControlAdaptor, WindowDragAdaptor, SupportReport).
+ *   signals (e.g. ControlAdaptor, DragResolver, SupportReport).
  *
  * @param layoutManager   Layout registry (borrowed, must outlive engines)
  * @param windowTracker   Window tracking service (borrowed)

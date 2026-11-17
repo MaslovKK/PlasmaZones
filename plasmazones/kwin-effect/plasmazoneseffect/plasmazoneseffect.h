@@ -3508,7 +3508,7 @@ private:
     /**
      * @brief Map DragModifier enum value to Qt modifier flags
      *
-     * Must stay in sync with WindowDragAdaptor::checkModifier() in the daemon.
+     * Must stay in sync with DragResolver::checkModifier() in the daemon.
      * The enum values are defined in src/core/interfaces.h (DragModifier).
      */
     /**

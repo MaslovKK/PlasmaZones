@@ -46,6 +46,7 @@
 #include "core/types/dmabufthumbnail.h"
 #include "dbus/dbushelpers.h"
 #include "dbus/overlayadaptor.h"
+#include "runtime/services/overlaycontrolservice.h"
 
 #include "helpers/BusPeer.h"
 #include "helpers/IsolatedConfigGuard.h"
@@ -456,7 +457,9 @@ private:
         StubZoneDetector detector;
         StubSettings settings;
         BusHost host; // destroyed first, with the adaptors it owns
-        OverlayAdaptor* adaptor = new OverlayAdaptor(&overlay, &detector, layouts.get(), nullptr, &settings, &host);
+        OverlayControlService* service =
+            new OverlayControlService(&overlay, &detector, layouts.get(), nullptr, &settings, &host);
+        OverlayAdaptor* adaptor = new OverlayAdaptor(service, &overlay, &host);
         ProbeAdaptor* probe = new ProbeAdaptor(&host);
     };
 };

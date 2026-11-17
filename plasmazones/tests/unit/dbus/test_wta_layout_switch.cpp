@@ -10,7 +10,7 @@
  *        restores once per pass or burst of passes. Plus a layout deleted
  *        under its windows, a switch to no layout that keeps the zones, the
  *        two other re-applies with snapping switched off
- *        (SnapAdaptor::reapplySnapZones for a settings reflow and
+ *        (SnapService::reapplySnapZones for a settings reflow and
  *        getUpdatedWindowGeometries for a resolution change), and the
  *        resolution-change setting read live.
  */
@@ -275,7 +275,7 @@ private Q_SLOTS:
     {
         FloatBackFixture f;
         QObject adaptorParent; // dies before the fixture's engine and adaptor
-        auto* snapAdaptor = new SnapAdaptor(f.snap.get(), f.wta, &f.settings, &adaptorParent);
+        auto* snapAdaptor = new SnapService(f.snap.get(), f.wta, &f.settings, &adaptorParent);
         const auto detach = qScopeGuard([snapAdaptor] {
             snapAdaptor->clearEngine();
         });

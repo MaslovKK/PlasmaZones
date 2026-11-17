@@ -3,10 +3,10 @@
 
 /**
  * @file test_rule_adaptor.cpp
- * @brief Behaviour of RuleAdaptor, the org.phosphor_works.Placement.Rules surface.
+ * @brief Behaviour of RuleService, behind the org.phosphor_works.Placement.Rules surface.
  *
  * The contract-sync test covers the XML's SHAPE only. What it cannot check is
- * whether the slots honour their DocStrings, and RuleAdaptor is the adaptor
+ * whether the slots honour their DocStrings, and RuleService is the service
  * where that gap costs the most: every refusal it makes is a refusal to
  * OVERWRITE the persisted rule set, so a guard that silently stops working
  * loses user data rather than a feature. This file pins:
@@ -39,7 +39,7 @@
 #include <PhosphorRules/RuleSet.h>
 #include <PhosphorRules/RuleStore.h>
 
-#include "dbus/ruleadaptor.h"
+#include "runtime/services/ruleservice.h"
 
 #include <memory>
 
@@ -62,7 +62,7 @@ private Q_SLOTS:
         QVERIFY(m_dir->isValid());
         m_store = new RuleStore(m_dir->filePath(QStringLiteral("rules.json")));
         m_parent = new QObject(nullptr);
-        m_adaptor = new RuleAdaptor(m_store, m_parent);
+        m_adaptor = new RuleService(m_store, m_parent);
     }
 
     void cleanup()
@@ -80,7 +80,7 @@ private Q_SLOTS:
     // reads back. Every refusal test below is only meaningful against this.
     void testSetAllRules_roundTrips()
     {
-        QSignalSpy changedSpy(m_adaptor, &RuleAdaptor::rulesChanged);
+        QSignalSpy changedSpy(m_adaptor, &RuleService::rulesChanged);
 
         const Rule first = makeRule(QStringLiteral("konsole"));
         const Rule second = makeRule(QStringLiteral("dolphin"));
@@ -124,7 +124,7 @@ private Q_SLOTS:
             malformed.append(noActions);
         }
 
-        QSignalSpy changedSpy(m_adaptor, &RuleAdaptor::rulesChanged);
+        QSignalSpy changedSpy(m_adaptor, &RuleService::rulesChanged);
         QVERIFY(!m_adaptor->setAllRules(payloadFor(malformed)));
         QCOMPARE(m_store->ruleSet().count(), 2);
         QCOMPARE(changedSpy.count(), 0);
@@ -149,7 +149,7 @@ private Q_SLOTS:
         invalid.actions = {action};
         QVERIFY2(!invalid.isValid(), "fixture must be a rule the commit filter rejects, or this test proves nothing");
 
-        QSignalSpy changedSpy(m_adaptor, &RuleAdaptor::rulesChanged);
+        QSignalSpy changedSpy(m_adaptor, &RuleService::rulesChanged);
         QVERIFY(!m_adaptor->setAllRules(payloadFor({invalid})));
         QCOMPARE(m_store->ruleSet().count(), 2);
         QCOMPARE(changedSpy.count(), 0);
@@ -269,7 +269,7 @@ private Q_SLOTS:
 
         // detach() also severs the relay, so a store that outlives the
         // adaptor's interest cannot keep pushing onto a dead wire.
-        QSignalSpy changedSpy(m_adaptor, &RuleAdaptor::rulesChanged);
+        QSignalSpy changedSpy(m_adaptor, &RuleService::rulesChanged);
         m_store->setAllRules({makeRule(QStringLiteral("dolphin"))});
         QCOMPARE(changedSpy.count(), 0);
     }
@@ -319,7 +319,7 @@ private:
     std::unique_ptr<QTemporaryDir> m_dir;
     RuleStore* m_store = nullptr;
     QObject* m_parent = nullptr;
-    RuleAdaptor* m_adaptor = nullptr;
+    RuleService* m_adaptor = nullptr;
 };
 
 QTEST_MAIN(TestRuleAdaptor)

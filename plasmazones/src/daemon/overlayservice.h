@@ -679,7 +679,7 @@ public:
 
     /// Forwarders to the active picker slot's QML moveSelection /
     /// confirmSelection functions. Used by global-accel callbacks
-    /// (registered by WindowDragAdaptor on picker show) since the
+    /// (registered by DragResolver on picker show) since the
     /// shell is kbd-None and the picker content's QML Shortcuts can't
     /// fire. No-op when no picker is visible.
     void pickerMoveSelection(int dx, int dy);

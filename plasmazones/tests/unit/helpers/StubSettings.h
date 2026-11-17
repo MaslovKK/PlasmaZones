@@ -1628,7 +1628,7 @@ public:
     // consumer predicate untestable through an unoverridden stub — the same
     // hazard the scrollingRestoreFloatedWindowsOnLogin comment above records.
     // The consumer is the D-Bus settings registry
-    // (settingsadaptor_registry_scrolling.cpp), which reads these through
+    // (settingsservice_registry_scrolling.cpp), which reads these through
     // ISettings and pushes them to the KWin effect's tab loader. There is no
     // overlayservice tab surface at all. The tab GEOMETRY keys (position,
     // width, gap, length, place-within-column, hide-for-single-tab) are NOT

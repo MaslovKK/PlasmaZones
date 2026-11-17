@@ -13,7 +13,7 @@
 #include "core/platform/logging.h"
 #include "core/interfaces/settings_interfaces.h"
 #include "core/utils/utils.h"
-#include "dbus/tilingadaptor/tilingadaptor.h"
+#include "runtime/services/tilingservice/tilingservice.h"
 #include "runtime/windowtracker/windowtracker.h"
 #include <PhosphorScreens/Manager.h>
 #include <PhosphorScreens/ScreenIdentity.h>
@@ -74,7 +74,7 @@ inline void applyStickyScreenPins(WindowTracker* adaptor, PhosphorEngine::IPlace
 /// next) had the pass adopt windows into a state the same handler then tore
 /// down, taking the windows' other memberships with it. The adopts only
 /// schedule retiles, which coalesce behind the announce that follows.
-inline void reconcileMembershipsForScreens(TilingAdaptor* adaptor, const QStringList& screenIds)
+inline void reconcileMembershipsForScreens(TilingService* adaptor, const QStringList& screenIds)
 {
     if (!adaptor) {
         return;

@@ -873,7 +873,7 @@ bool TilingHandler::handleWindowOutputChanged(KWin::EffectWindow* w, ReAdd readd
                 });
 
         // NOTE: Do NOT call windowUnsnapped here. The drag-drop handler
-        // (WindowDragAdaptor::dragStopped) manages the zone assignment transition.
+        // (DragResolver::dragStopped) manages the zone assignment transition.
         // Firing windowUnsnapped now would race with the snap-to-zone D-Bus call
         // from the drop handler, destroying the zone assignment that was just created.
         // The drop handler's cross-screen path already clears stale state.

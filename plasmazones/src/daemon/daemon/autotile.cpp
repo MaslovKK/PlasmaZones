@@ -3,7 +3,7 @@
 
 #include "daemon/daemon.h"
 #include "daemon/overlayservice.h"
-#include "dbus/tilingadaptor/tilingadaptor.h"
+#include "runtime/services/tilingservice/tilingservice.h"
 #include "daemon/controllers/unifiedlayoutcontroller.h"
 #include <PhosphorZones/LayoutRegistry.h>
 #include <PhosphorZones/LayoutComputeService.h>
@@ -17,9 +17,9 @@
 #include <PhosphorPlacement/WindowTrackingService.h>
 #include <PhosphorContext/ContextResolver.h>
 #include "config/settings.h"
-#include "dbus/layoutadaptor/layoutadaptor.h"
-#include "dbus/snapadaptor/snapadaptor.h"
-#include "dbus/windowdragadaptor/windowdragadaptor.h"
+#include "runtime/services/layoutservice/layoutservice.h"
+#include "runtime/services/snapservice/snapservice.h"
+#include "runtime/dragresolver/dragresolver.h"
 #include "runtime/windowtracker/internal.h"
 #include "runtime/windowtracker/windowtracker.h"
 #include <PhosphorEngine/PlacementEngineBase.h>
@@ -662,14 +662,14 @@ void Daemon::updateEngineScreens()
     // sets-unchanged short-circuit: a desktop switch changes the map while
     // both engines' screen sets stay identical. The adaptor owns the
     // emit-on-change dedup, so the unconditional push costs one map compare.
-    if (m_tilingAdaptor) {
+    if (m_tilingService) {
         QVariantMap activeLayouts;
         for (const QString& screenId : effectiveIds) {
             activeLayouts.insert(
                 screenId,
                 m_layoutManager->rulesVisibleActiveLayoutId(screenId, currentDesktopForScreen(screenId), activity));
         }
-        m_tilingAdaptor->setActiveLayouts(activeLayouts);
+        m_tilingService->setActiveLayouts(activeLayouts);
     }
 }
 
@@ -735,13 +735,13 @@ QSet<QString> Daemon::diffActiveAssignments()
     // already routes through here, so publishing from this spot is what keeps a
     // remote ActiveLayout matcher (the KWin effect's window-rule queries) from
     // needing to re-derive the cascade itself.
-    if (m_layoutAdaptor) {
+    if (m_layoutService) {
         QHash<QString, QString> activeIds;
         activeIds.reserve(m_activeAssignmentByScreen.size());
         for (auto it = m_activeAssignmentByScreen.constBegin(); it != m_activeAssignmentByScreen.constEnd(); ++it) {
             activeIds.insert(it.key(), it.value().assignmentId);
         }
-        m_layoutAdaptor->publishActiveAssignments(activeIds, changed);
+        m_layoutService->publishActiveAssignments(activeIds, changed);
         // Every edge that moves a getScreenStates field other than the tiled
         // count (a desktop or activity switch, a screen add or removal, an
         // assignment apply, a rule reconcile) ends in a diff here, including
@@ -750,7 +750,7 @@ QSet<QString> Daemon::diffActiveAssignments()
         // queues its own (init_engines.cpp). Not once stop() has begun,
         // which cancels a queued one.
         if (!m_shuttingDown) {
-            m_layoutAdaptor->scheduleScreenStatesCheck();
+            m_layoutService->scheduleScreenStatesCheck();
         }
     }
     return changed;
@@ -836,7 +836,7 @@ void Daemon::restateSnapGapChanges(const QSet<QString>& alreadyPlaced)
 {
     // Nothing is recorded when nothing can restate: the move stays in the
     // tracker for the next pass instead of being taken and lost.
-    if (!m_snapAdaptor || !m_screenManager || !m_layoutManager || m_shuttingDown) {
+    if (!m_snapService || !m_screenManager || !m_layoutManager || m_shuttingDown) {
         return;
     }
     const QStringList moved =
@@ -856,7 +856,7 @@ void Daemon::restateSnapGapChanges(const QSet<QString>& alreadyPlaced)
     // A re-statement batch like the settings gap path (m_gapResnapTimer): no OSD,
     // no Snap Assist. reapplySnapZones keeps it to the screens snapping runs on,
     // so a tiled screen's frozen snap zones are left as memory (F469).
-    m_snapAdaptor->reapplySnapZones(toRestate, /*restatement=*/true);
+    m_snapService->reapplySnapZones(toRestate, /*restatement=*/true);
 }
 
 SnapGapTracker::Verdict Daemon::snapGapVerdict(const QString& screenId) const
@@ -877,10 +877,10 @@ SnapGapTracker::Verdict Daemon::snapGapVerdict(const QString& screenId) const
 
 void Daemon::applyChangedAssignments(const QSet<QString>& changed)
 {
-    if (changed.isEmpty() || !m_layoutAdaptor) {
+    if (changed.isEmpty() || !m_layoutService) {
         return;
     }
-    m_layoutAdaptor->applyAssignmentChangesFor(changed);
+    m_layoutService->applyAssignmentChangesFor(changed);
     // The apply resnaps and announces, but the controller's current layout,
     // the global active layout and the layout filter still describe the old
     // verdict, so the cycle shortcut, zone detection and an open cheatsheet's
@@ -959,7 +959,7 @@ void Daemon::scheduleReconcileActiveAssignments()
         // A trigger landing in the same event-loop turn as stop() leaves this
         // single-shot queued past teardown; without the gate a non-empty diff
         // would drive a full assignment-apply pass on a stopped daemon
-        // (m_layoutAdaptor is Qt-parented and outlives the per-sender
+        // (m_layoutService is Qt-parented and outlives the per-sender
         // connection sweep).
         if (m_shuttingDown) {
             return;
@@ -1519,7 +1519,7 @@ void Daemon::processPendingGeometryUpdates()
     // cap, and it is invalidated only by a pass that finds no session. A
     // real drag begun while the flag is still stranded is therefore not held
     // either, until a pass sees the flag clear.
-    if (m_windowDragAdaptor && m_windowDragAdaptor->isDragSessionActive()) {
+    if (m_dragResolver && m_dragResolver->isDragSessionActive()) {
         if (!m_geometryDeferralClock.isValid()) {
             m_geometryDeferralClock.start();
             m_geometryDeferralCapLogged = false;

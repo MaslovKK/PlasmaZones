@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 fuddlesworth
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-// moveWindowToZone, swapWindowsById moved to SnapAdaptor
-// (src/dbus/snapadaptor/commit.cpp).
+// moveWindowToZone, swapWindowsById moved to SnapService
+// (src/runtime/services/snapservice/commit.cpp).
 //
 // getWindowState, getAllWindowStates stay — they are cross-mode queries
 // over every engine's state.

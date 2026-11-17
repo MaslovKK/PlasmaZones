@@ -11,7 +11,7 @@
  * The assertions live in test_settings_registry_contract.cpp.
  *
  * The contract this exists to enforce, and why it is worth this much machinery, is written
- * out in full above keysFetchedByEffect below. The short version: SettingsAdaptor resolves
+ * out in full above keysFetchedByEffect below. The short version: SettingsService resolves
  * keys through a HAND-MAINTAINED registry, so a fetch of an unregistered key compiles,
  * links, runs, and silently keeps its built-in default. This scrape is the only thing that
  * notices — and it has been broken, silently, EIGHT times, each time in a way that left it

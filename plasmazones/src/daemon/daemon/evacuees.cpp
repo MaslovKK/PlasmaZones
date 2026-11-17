@@ -4,7 +4,7 @@
 #include "daemon/daemon.h"
 #include "helpers.h"
 
-#include "dbus/windowdragadaptor/windowdragadaptor.h"
+#include "runtime/dragresolver/dragresolver.h"
 #include "runtime/windowtracker/windowtracker.h"
 #include "core/platform/logging.h"
 #include <PhosphorIdentity/VirtualScreenId.h>
@@ -33,8 +33,8 @@ void Daemon::retireOutputPlacements(const QString& physicalScreenId)
     // not, and neither caller may depend on which engine holds the preview.
     // Here and not in the screen-removed handler alone, so the effect's
     // settle report, which can retire the output first, cancels too (F1043).
-    if (m_windowDragAdaptor) {
-        m_windowDragAdaptor->cancelDragInsertPreviewsForScreen(physicalScreenId);
+    if (m_dragResolver) {
+        m_dragResolver->cancelDragInsertPreviewsForScreen(physicalScreenId);
     }
     // Park next, while the engines still hold the output's contexts: the
     // windows KWin is moving off it may come back. Idempotent, so the effect's
@@ -130,7 +130,7 @@ void Daemon::applyScreenDesktopSeed(const QString& screenId, int desktop)
     }
     updateEngineScreens();
     if (m_screenManager) {
-        reconcileMembershipsForScreens(m_tilingAdaptor, m_screenManager->virtualScreenIdsFor(screenId));
+        reconcileMembershipsForScreens(m_tilingService, m_screenManager->virtualScreenIdsFor(screenId));
     }
 }
 

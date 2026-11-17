@@ -1031,7 +1031,7 @@ OverlayService::LayoutIncludeFlags OverlayService::resolvePerScreenLayoutInclude
     // bails on the empty list); a Templates screen gets the native template
     // cards via the isScrolling arm below. (The drag-time
     // popup is already suppressed on engine-owned screens by
-    // WindowDragAdaptor's dragMoved gate; here that is defence in depth.)
+    // DragResolver's dragMoved gate; here that is defence in depth.)
     // The daemon-injected resolver routes through
     // ScreenModeRouter::engineFor, so a disabled/gated scrolling assignment
     // correctly downgrades to snapping and keeps its manual list. The raw

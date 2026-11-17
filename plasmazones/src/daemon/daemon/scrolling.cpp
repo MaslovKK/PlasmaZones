@@ -18,9 +18,9 @@
 // declares OverlayService only.
 #include "daemon/overlayservice.h"
 // Complete type needed for setScrollEffectBehaviour — daemon.h forward
-// declares ScrollingAdaptor only.
-#include "dbus/scrollingadaptor/scrollingadaptor.h"
-#include "dbus/tilingadaptor/tilingadaptor.h"
+// declares ScrollingService only.
+#include "runtime/services/scrollingservice/scrollingservice.h"
+#include "runtime/services/tilingservice/tilingservice.h"
 #include "seedorderfilter.h"
 
 #include "runtime/windowtracker/windowtracker.h"
@@ -479,7 +479,7 @@ void Daemon::updateScrollingScreens(const QSet<QString>& scrollingScreens)
         // presentation state. Pushed even when EMPTY, like the engine map
         // above — empty is how a screen whose rules stopped overriding falls
         // back to the global look.
-        if (m_tilingAdaptor) {
+        if (m_tilingService) {
             QVariantMap paint;
             if (params.tabIndicatorStyle) {
                 paint.insert(WindowPaintKeys::tabStyle(), *params.tabIndicatorStyle);
@@ -520,7 +520,7 @@ void Daemon::updateScrollingScreens(const QSet<QString>& scrollingScreens)
             if (params.tabIndicatorFontStrikeout) {
                 paint.insert(WindowPaintKeys::tabFontStrikeout(), *params.tabIndicatorFontStrikeout);
             }
-            m_tilingAdaptor->setScrollTabPaintOverrides(screenId, paint);
+            m_tilingService->setScrollTabPaintOverrides(screenId, paint);
         }
         // The drop indicator's overrides are keyed by the QML property names
         // its slot reads and handed to the overlay rather than the engine. ALL
@@ -593,14 +593,14 @@ void Daemon::updateScrollingScreens(const QSet<QString>& scrollingScreens)
     // insertions, so the same membership could be built in two different orders
     // and the adaptor's emit-on-change compare — an order-sensitive list
     // compare — would report a change that isn't one.
-    // ScrollingAdaptor::setScrollEffectBehaviour sorts and de-duplicates on
+    // ScrollingService::setScrollEffectBehaviour sorts and de-duplicates on
     // entry. That is the published-contract boundary and it covers every
     // producer, not just this one, so sorting a second time here would be dead
     // work claiming the same ownership. Screens that LEFT scrolling are absent
     // by construction (the walk only visits the current set), so the
     // departing-screen cleanup below has nothing to undo.
-    if (m_scrollingAdaptor) {
-        m_scrollingAdaptor->setScrollEffectBehaviour(ffmScreens, cropScreens, verticalAxisScreens);
+    if (m_scrollingService) {
+        m_scrollingService->setScrollEffectBehaviour(ffmScreens, cropScreens, verticalAxisScreens);
         // Pushed alongside, not folded in: the block list rides its own
         // property because it is re-derived per relayout while these three
         // answer settings and rules. This pass is the one place both change
@@ -608,7 +608,7 @@ void Daemon::updateScrollingScreens(const QSet<QString>& scrollingScreens)
         // is how raising a cap back to no-cap clears a membership the
         // relayout path would otherwise never revisit, since it returns
         // early once no screen caps.
-        m_scrollingAdaptor->setScrollFocusScrollBlockedWindows(scrollFocusScrollBlockedWindows());
+        m_scrollingService->setScrollFocusScrollBlockedWindows(scrollFocusScrollBlockedWindows());
     }
     m_scrollEngine->setActiveScreens(scrollingScreens);
 
@@ -631,8 +631,8 @@ void Daemon::updateScrollingScreens(const QSet<QString>& scrollingScreens)
         // And the effect's tab paint overrides for the departed screen: the
         // pills it painted there are gone with the strip, and a stale map
         // would colour the next strip this screen hosts.
-        if (m_tilingAdaptor) {
-            m_tilingAdaptor->setScrollTabPaintOverrides(screenId, {});
+        if (m_tilingService) {
+            m_tilingService->setScrollTabPaintOverrides(screenId, {});
         }
     }
 
@@ -685,7 +685,7 @@ void Daemon::publishScrollFocusScrollBlocks()
     // the callers that reach it another way. Without this the push below would
     // still be a no-op (the adaptor compares before emitting), but it would
     // build and canonicalize the list to discover that.
-    if (!m_scrollingAdaptor || m_scrollFfmMaxScrollPercent.isEmpty()) {
+    if (!m_scrollingService || m_scrollFfmMaxScrollPercent.isEmpty()) {
         return;
     }
     // Only the block list is pushed. The three screen lists answer settings
@@ -696,7 +696,7 @@ void Daemon::publishScrollFocusScrollBlocks()
     // that had not moved, on a path that runs per relayout. The adaptor's
     // emit-on-change gate then makes a scroll that crosses no window's
     // threshold a local no-op rather than a bus broadcast.
-    m_scrollingAdaptor->setScrollFocusScrollBlockedWindows(scrollFocusScrollBlockedWindows());
+    m_scrollingService->setScrollFocusScrollBlockedWindows(scrollFocusScrollBlockedWindows());
 }
 
 /// Deliberately NOT liveness-gated, unlike the two providers wired in
