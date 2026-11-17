@@ -534,7 +534,7 @@ mkdir -p "$HOME_N/config" "$HOME_N/data" "$HOME_N/cache" "$HOME_N/state"
 # under test and some of it may be the probe's own.
 if [ "$KEEP_STATE" = "1" ] && [ -d "$HOME_N/data/plasmazones" ]; then
     shadowing=0
-    for sub in layouts scrolling-templates curves overlays animations surface pointer algorithms; do
+    for sub in layouts scrolling-templates curves overlays animations pointer algorithms; do
         [ -d "$HOME_N/data/plasmazones/$sub" ] || continue
         for entry in "$HOME_N/data/plasmazones/$sub"/*; do
             if [ -e "$entry" ] && [ -e "$REPO/plasmazones/data/$sub/${entry##*/}" ]; then
@@ -560,10 +560,18 @@ fi
 REPO_DATA="$NEST/repo-data"
 rm -rf "$REPO_DATA"
 mkdir -p "$REPO_DATA/plasmazones" "$REPO_DATA/phosphor-works"
-for sub in layouts scrolling-templates curves overlays animations surface pointer algorithms; do
+for sub in layouts scrolling-templates curves overlays animations pointer algorithms; do
     ln -s "$REPO/plasmazones/data/$sub" "$REPO_DATA/plasmazones/$sub"
 done
 ln -s "$REPO/plasmazones/data/placement-hosts" "$REPO_DATA/phosphor-works/placement-hosts"
+# The surface packs are not in this checkout: they come from the pinned
+# phosphor-surface-packs commit, or the local packs directory
+# PHOSPHOR_SURFACE_PACKS_DIR names, and install to phosphor-works/surface.
+if ! SURFACE_PACKS="$(python3 "$REPO/scripts/pinned_surface_packs.py")"; then
+    echo "refusing: cannot find the surface packs (see the error above)" >&2
+    exit 1
+fi
+ln -s "$SURFACE_PACKS" "$REPO_DATA/phosphor-works/surface"
 
 # KWin keeps the virtual-desktop count and names in this same kwinrc
 # ([Desktops] Number= / Id_N=), and it preserves the [Plugins] group across

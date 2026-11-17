@@ -37,6 +37,7 @@
 #include <QTest>
 
 #include "core/types/constants.h"
+#include "config/configdefaults.h"
 #include "runtime/services/layoutservice/layoutservice.h"
 #include <PhosphorLayoutApi/LayoutId.h>
 #include <PhosphorZones/AssignmentEntry.h>
@@ -63,7 +64,8 @@ private Q_SLOTS:
         m_guard = std::make_unique<IsolatedConfigGuard>();
         m_parent = new QObject(nullptr);
         m_layoutManager = PlasmaZones::TestHelpers::makeLayoutRegistry(QStringLiteral("plasmazones/layouts"), m_parent);
-        m_store = std::make_unique<PhosphorZones::ScrollingTemplateStore>();
+        m_store = std::make_unique<PhosphorZones::ScrollingTemplateStore>(
+            PlasmaZones::ConfigDefaults::scrollingTemplatesSubdir());
         m_layoutManager->setScrollingTemplateStore(m_store.get());
         PhosphorZones::ScrollingTemplate templ;
         templ.name = QStringLiteral("Template");
@@ -392,7 +394,7 @@ private Q_SLOTS:
         QTemporaryDir systemRoot;
         QVERIFY(systemRoot.isValid());
         const QString systemDir =
-            systemRoot.path() + QLatin1Char('/') + PhosphorZones::ScrollingTemplateStore::templateSubdirectory();
+            systemRoot.path() + QLatin1Char('/') + PlasmaZones::ConfigDefaults::scrollingTemplatesSubdir();
         QVERIFY(QDir().mkpath(systemDir));
 
         // XDG_DATA_DIRS pinned to the temp root alone, so the scan sees this

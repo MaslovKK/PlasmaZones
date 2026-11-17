@@ -13,10 +13,7 @@
 #include <PhosphorProtocol/ServiceConstants.h>
 #include <PhosphorProtocol/DragMarshalling.h>
 #include <PhosphorProtocol/Registration.h>
-#ifdef PHOSPHOR_BUILD_SHELL
-#include <PhosphorTheme/AppearanceWatcher.h>
-#include <PhosphorTheme/ShellPalette.h>
-#endif
+#include <PhosphorSurface/SurfacePackLocation.h>
 
 #include <effect/effecthandler.h>
 #include <core/output.h>
@@ -81,11 +78,13 @@ PlasmaZonesEffect::PlasmaZonesEffect()
     , m_desktopTransition(this)
     , m_stripTransition(this)
     , m_dragTracker(std::make_unique<DragTracker>(this))
-    , m_shellOverview(std::make_unique<ShellOverview>(this))
     , m_compositorBridge(std::make_unique<KWinCompositorBridge>(*this))
     , m_decorationManager(std::make_unique<DecorationManager>(*m_compositorBridge))
 {
     PhosphorProtocol::registerWireTypes();
+    // Where the library's own surface pack lookups (the `builtin:` buffer
+    // fallback) search, the subdir phosphor-surface-packs installs to.
+    PhosphorSurfaceShaders::setSurfacePackDataSubdir(QStringLiteral(PHOSPHOR_SURFACE_PACKS_DATA_SUBDIR));
 
     // The pointer pass reads KWin's cursor-hide counter to notice a software
     // KVM taking the pointer away (see PointerDecorationPass::cursorSpriteGone).
@@ -154,34 +153,12 @@ PlasmaZonesEffect::PlasmaZonesEffect()
     // Last, and it must stay last: the existing-window sweep inside can reach
     // code that expects the daemon subscriptions above to be wired.
     initExistingWindowsAndInput();
-    // Independent of the sweep: the shell's touchpad gestures only fire once
-    // a daemon is up to relay them, and reportShellGesture is one-way.
-    initTouchpadGestures();
 
     // Palette-derived pack parameters are cached per window, so a scheme
     // change must refresh them even when the daemon's accent colours are pinned.
     if (auto* app = QCoreApplication::instance()) {
         app->installEventFilter(this);
     }
-#ifdef PHOSPHOR_BUILD_SHELL
-    m_shellAppearance = std::make_unique<PhosphorTheme::AppearanceWatcher>();
-    const auto refreshAppearance = [this] {
-        const bool active = m_shellAppearance->desktopStyleActive();
-        const auto palette = PhosphorTheme::ShellPalette::fromSettings(m_shellAppearance->values());
-        std::array<QColor, 4> colors;
-        for (int i = 0; i < int(colors.size()); ++i) {
-            colors[i] = palette.windowColor(i);
-        }
-        if (active == m_shellDesktopStyleActive && colors == m_shellWindowColors) {
-            return;
-        }
-        m_shellDesktopStyleActive = active;
-        m_shellWindowColors = colors;
-        scheduleBorderSweep();
-    };
-    connect(m_shellAppearance.get(), &PhosphorTheme::AppearanceWatcher::changed, this, refreshAppearance);
-    refreshAppearance();
-#endif
 }
 
 bool PlasmaZonesEffect::eventFilter(QObject* watched, QEvent* event)
@@ -377,9 +354,6 @@ PlasmaZonesEffect::~PlasmaZonesEffect()
     if (auto* app = QCoreApplication::instance()) {
         app->removeEventFilter(this);
     }
-#ifdef PHOSPHOR_BUILD_SHELL
-    m_shellAppearance.reset();
-#endif
     // Give KWin back the stock effects the suppression unloaded (show-desktop
     // scripts for the peek, magiclamp/squash/maximize for window packs) — a
     // runtime unload of THIS effect (KCM toggle) must not leave the user

@@ -290,8 +290,8 @@ GPL3 = "GPL-3.0-or-later"
 # The shader trees are deliberately mixed: a pack's .frag may be GPL (a port of
 # GPL upstream, carrying a second copyright line crediting that author) while
 # its .vert is PlasmaZones-original LGPL. The license follows the incorporated
-# content, so it cannot be derived from the path. data/overlays and data/surface
-# are likewise un-normalised. These trees are checked for header *presence*
+# content, so it cannot be derived from the path. data/overlays is likewise
+# un-normalised. These trees are checked for header *presence*
 # by the spdx rule and are exempt from the per-tree license rule.
 # Anchored to the real data tree. An unanchored "(^|/)data/" also
 # swallowed plasmazones/tests/**/data/, quietly un-governing real GPL-3
@@ -820,8 +820,14 @@ def rule_shared_param_text(files: list[str]) -> list[Violation]:
     del files
     _add_script_dir_to_path()
     from conventions_shared_text import shared_param_problems
+    from pinned_surface_packs import PinnedTreeError, tree
 
-    return [Violation("shared-param-text", p, 0, m) for p, m in shared_param_problems(REPO)]
+    try:
+        packs = tree(REPO)
+    except PinnedTreeError as e:
+        return [Violation("shared-param-text", "cmake/PlasmaZonesDependencies.cmake", 0,
+                          f"cannot find the pinned surface packs ({e}), so no pack was compared")]
+    return [Violation("shared-param-text", f"surface-packs:{p}", 0, m) for p, m in shared_param_problems(packs)]
 
 
 # Rule: dep-pins — every packaging recipe that fetches the third-party archives

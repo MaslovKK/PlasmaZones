@@ -13,7 +13,7 @@ import org.kde.kirigami as Kirigami
  *
  * Chrome (border, rounded corners, glow, shadow) is NOT drawn here — it is
  * owned entirely by the surface-decoration pipeline (SurfaceDecoration.qml +
- * the data/surface/* packs), which captures this card and re-renders it with
+ * the phosphor-surface-packs packs), which captures this card and re-renders it with
  * the resolved decoration. PopupFrame just supplies a square-cornered opaque
  * body for that capture: the border pack clips it to the resolved corner
  * radius and draws the border, the shadow pack draws the halo. A card whose

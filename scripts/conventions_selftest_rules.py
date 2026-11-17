@@ -262,7 +262,7 @@ def _prose_extraction_failures(partition_readable) -> list[str]:
         # And the data-JSON gate itself. iter_json_prose has four dedicated assertions, but
         # the `data/` + .json test that routes files INTO it had none, so narrowing that
         # gate silenced 208 files.
-        "plasmazones/data/surface/probe/metadata.json": f'{{"description": "{splice}"}}\n',
+        "plasmazones/data/pointer/probe/metadata.json": f'{{"description": "{splice}"}}\n',
     }
 
     saved_repo = g["REPO"]
@@ -495,8 +495,8 @@ def _license_tree_failures(partition_readable) -> list[str]:
         ("scripts/x.py", lgpl, True),
         # The data tree is deliberately ungoverned: the licence follows the
         # incorporated content, so neither identifier may be reported.
-        ("plasmazones/data/surface/glass/effect.frag", gpl3, False),
-        ("plasmazones/data/surface/glass/effect.frag", lgpl, False),
+        ("plasmazones/data/overlays/probe/effect.frag", gpl3, False),
+        ("plasmazones/data/overlays/probe/effect.frag", lgpl, False),
         # A tests/**/data/ path is NOT one of those trees — the anchor is what keeps it
         # governed, and an unanchored pattern used to swallow it.
         ("plasmazones/tests/unit/data/d.cpp", lgpl, True),

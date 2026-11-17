@@ -36,7 +36,6 @@
 #include "effect_state.h"
 #include "pixelsizedecisions.h"
 #include "placementstatement.h"
-#include "compositor/shelloverview.h"
 #include "kwincompat.h" // KWinCompat::PaintResult — the paint hooks' return type per KWin version
 #include "shader_resolve.h"
 #include "types.h"
@@ -88,10 +87,6 @@ struct PointerButtonEvent;
 
 namespace PhosphorAnimation {
 class IMotionClock;
-}
-
-namespace PhosphorTheme {
-class AppearanceWatcher;
 }
 
 namespace PlasmaZones {
@@ -436,7 +431,6 @@ public:
     QString getWindowAppId(KWin::EffectWindow* w) const;
 
 private:
-    friend class ShellOverview;
     void setupWindowConnections(KWin::EffectWindow* w);
     /// Wire and seed the window's desktop and activity handling (window_desktop_connections.cpp); once per
     /// window, from setupWindowConnections inside its idempotency guard.
@@ -1425,13 +1419,6 @@ private:
     // See resolveWindowAppearance.
     QColor m_borderAccentColor;
     QColor m_borderInactiveColor;
-    // Only active while Phosphor owns the native titlebar. The seed profile
-    // supplies the chain; this supplies its declared per-window identity input.
-    bool m_shellDesktopStyleActive = false;
-    std::array<QColor, 4> m_shellWindowColors;
-#ifdef PHOSPHOR_BUILD_SHELL
-    std::unique_ptr<PhosphorTheme::AppearanceWatcher> m_shellAppearance;
-#endif
 
     // Config defaults fill appearance slots that per-window rules leave unset.
     // Decoration slots use their scope; the floating layer uses float state
@@ -1647,7 +1634,7 @@ private:
     void scheduleColumnAnswerCatchUp();
 
     void updateWindowDecoration(const QString& windowId, KWin::EffectWindow* w);
-    bool decorationFocused(const QString& windowId, KWin::EffectWindow* w, const WindowDecoration& decoration) const;
+    bool decorationFocused(KWin::EffectWindow* w, const WindowDecoration& decoration) const;
 
     /// Poll-defer a decorated, minimized window's teardown while an animation
     /// still paints it. A minimized window is only isVisible() while some
@@ -1756,7 +1743,7 @@ private:
     // transition on the SAME OffscreenEffect setShader() slot — see decorations.cpp.
 
     /// Compile-on-first-use + cache the surface shader pack @p packId (window
-    /// border / rounded corners / glow / …) from data/surface via the
+    /// border / rounded corners / glow / …) from phosphor-surface-packs via the
     /// SurfaceShaderRegistry, keyed by pack id in m_compiledPacks. Returns the
     /// cached CompiledSurfacePack (whose `shader` is nullptr when the pack is missing
     /// or its compile failed — decoration then no-ops for that pack), or nullptr only
@@ -1771,7 +1758,7 @@ private:
     CompiledSurfacePack* compiledPack(const QString& packId, const PhosphorSurfaceShaders::DecorationProfile& profile);
 
     /// Populate the surface-shader registry's search paths (the bundled
-    /// ${XDG_DATA_DIRS}/plasmazones/surface dirs + the user override) on first
+    /// ${XDG_DATA_DIRS}/phosphor-works/surface dirs + the user override) on first
     /// use. One-shot: the registry's live-reload watcher then tracks pack edits.
     void ensureSurfaceRegistryPaths();
 
@@ -2124,7 +2111,7 @@ private:
     QPointF foldCursorFor(KWin::EffectWindow* w, const QRectF& canvasGeo, bool mayAnimate, const QPointF& cursor) const;
 
     /// Surface-shader pack registry (the "surface" category: window border /
-    /// rounded corners / glow / …). Discovers data/surface packs; the effect
+    /// rounded corners / glow / …). Discovers the phosphor-surface-packs packs; the effect
     /// compiles each pack a resolved decoration chain references.
     PhosphorSurfaceShaders::SurfaceShaderRegistry m_surfaceShaderRegistry;
     bool m_surfaceRegistryPathsAdded = false; ///< one-shot guard for the search-path population
@@ -2437,13 +2424,6 @@ private:
     /// the existing-window sweep can reach code that expects the subscriptions to
     /// be live.
     void initExistingWindowsAndInput();
-
-    /// Register the Phosphor shell's touchpad gestures with KWin's recognizer
-    /// (definition in gestures.cpp). Each completed gesture is reported to
-    /// the daemon through CompositorBridge.reportGesture, which relays it to
-    /// the shell. The bridge advertises the "gestures" capability for this.
-    void initTouchpadGestures();
-    void reportShellGesture(const QString& kind, const QString& direction, uint fingerCount);
 
     /// Coalesce a full border sweep to the end of the event-loop turn. The
     /// config-default appearance loaders (and the accent / inactive colour
@@ -3343,7 +3323,6 @@ private:
     void evictLruTextureIfOverBound(const ShaderTransition* pending);
 
     std::unique_ptr<DragTracker> m_dragTracker;
-    std::unique_ptr<ShellOverview> m_shellOverview;
     std::unique_ptr<ICompositorBridge> m_compositorBridge;
     /// Owns title-bar hide/restore state. Effect handlers and rules use this
     /// owner model, never KWin::Window::setNoBorder directly. No public

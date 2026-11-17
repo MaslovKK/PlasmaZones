@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
 // Shared fullscreen-quad vertex stage for the POINTER shader family, modelled
-// on data/surface/shared/surface.vert. It ships alongside the include and
+// on phosphor-surface-packs' shared/surface.vert. It ships alongside the include and
 // resolves from the preview / kwin-effect include paths, so a pack needs no
 // vertex shader of its own.
 //

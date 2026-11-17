@@ -46,6 +46,7 @@ endif()
 # under org/phosphor and header/CMake package files stay manifest-covered).
 # Covers: bin, lib, share/applications, share/autostart, share/dbus-1/interfaces,
 # share/icons, share/kglobalaccel, share/phosphor-works/placement-hosts,
+# share/phosphor-works/surface (its empty directories only, in step 3),
 # share/plasmazones, lib/.../qml, lib/.../plugins
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -223,7 +224,31 @@ endforeach()
 message(STATUS "")
 message(STATUS "[3/5] Removing empty parent directories...")
 
+# The surface packs directory is shared with the other apps that draw the
+# packs, so it is never removed whole. The manifest took this build's files,
+# and here only the directories that left empty go, deepest first.
+set(SURFACE_PACKS_DIR "$ENV{DESTDIR}@KDE_INSTALL_FULL_DATADIR@/@PHOSPHOR_SURFACE_PACKS_DATA_SUBDIR@")
+if(IS_DIRECTORY "${SURFACE_PACKS_DIR}")
+    file(GLOB_RECURSE surface_dirs LIST_DIRECTORIES true "${SURFACE_PACKS_DIR}/*")
+    list(SORT surface_dirs ORDER DESCENDING)
+    list(APPEND surface_dirs "${SURFACE_PACKS_DIR}")
+    foreach(dir ${surface_dirs})
+        if(IS_DIRECTORY "${dir}")
+            file(GLOB dir_contents "${dir}/*")
+            list(LENGTH dir_contents num_files)
+            if(num_files EQUAL 0)
+                message(STATUS "  Removing empty surface pack directory: ${dir}")
+                execute_process(COMMAND "@CMAKE_COMMAND@" -E remove_directory "${dir}" ERROR_QUIET)
+            endif()
+        endif()
+    endforeach()
+endif()
+
 set(PARENT_DIRS
+    # The library tree's own data and licence notices, which the manifest
+    # removed file by file.
+    "$ENV{DESTDIR}@KDE_INSTALL_FULL_DATADIR@/phosphor-libs"
+    "$ENV{DESTDIR}@KDE_INSTALL_FULL_DATADIR@/licenses/phosphor-libs"
     "$ENV{DESTDIR}@KDE_INSTALL_FULL_DATADIR@/phosphor-works/placement-hosts"
     "$ENV{DESTDIR}@KDE_INSTALL_FULL_DATADIR@/phosphor-works"
     "$ENV{DESTDIR}@KDE_INSTALL_FULL_QMLDIR@/org/kde/kcms"

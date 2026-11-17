@@ -102,7 +102,6 @@ set(plasmazones_effect_SRCS
     plasmazoneseffect/preset_sweep.cpp
     plasmazoneseffect/lifecycle_wiring_daemon.cpp
     plasmazoneseffect/lifecycle_wiring_drag.cpp
-    plasmazoneseffect/gestures.cpp
     plasmazoneseffect/decoration_appearance.cpp
     plasmazoneseffect/decorations.cpp
     plasmazoneseffect/decoration_teardown.cpp
@@ -213,8 +212,6 @@ set(plasmazones_effect_SRCS
     compositor/scrolltabindicatorpainter.cpp
     compositor/scrolltabindicatorpainter_raster.cpp
     compositor/scrolltabindicatorpainter.h
-    compositor/shelloverview.cpp
-    compositor/shelloverview.h
     compositor/compositorclock.cpp
     compositor/compositorclock.h
     compositor/deferredwindowcommits.h
@@ -329,7 +326,7 @@ target_link_libraries(kwin_effect_plasmazones PRIVATE
     PhosphorShaders::PhosphorShaders
     # PhosphorSurface: the surface-shader pack registry/contract. The effect
     # compiles the selected surface pack (window border / rounded corners) from
-    # data/surface via SurfaceShaderRegistry, the third shader-pack category
+    # phosphor-surface-packs via SurfaceShaderRegistry, the third shader-pack category
     # alongside animations + overlay shaders. GPL->LGPL link is fine.
     PhosphorSurface::PhosphorSurface
     # PhosphorPointer: the pointer-shader pack registry, contract, profile and
@@ -359,9 +356,7 @@ target_include_directories(kwin_effect_plasmazones PRIVATE
 # the KWIN_EFFECT_FACTORY_SUPPORTED macro. The source file MUST include
 # "plasmazoneseffect.moc" at the end for MOC to process the generated Q_OBJECT class.
 
-# Native titlebars share the shell palette and geometry.
+# The shell's native titlebar decoration plugin.
 if(BUILD_PHOSPHOR_SHELL)
-    target_compile_definitions(kwin_effect_plasmazones PRIVATE PHOSPHOR_BUILD_SHELL=1)
-    target_link_libraries(kwin_effect_plasmazones PRIVATE PhosphorTheme::PhosphorTheme)
     add_subdirectory(shell-decoration)
 endif()

@@ -274,7 +274,8 @@ Daemon::Daemon(QObject* parent)
     // The native scrolling-template store is created here (before the
     // bundle build so the template provider registers) and injected into
     // the registry in initServices.
-    m_scrollingTemplateStore = std::make_unique<PhosphorZones::ScrollingTemplateStore>();
+    m_scrollingTemplateStore =
+        std::make_unique<PhosphorZones::ScrollingTemplateStore>(ConfigDefaults::scrollingTemplatesSubdir());
     m_scrollingTemplateStore->loadTemplates();
     buildStandardLayoutSourceBundle(m_layoutSources, m_layoutManager.get(), m_algorithmRegistry.get(),
                                     m_scrollingTemplateStore.get());

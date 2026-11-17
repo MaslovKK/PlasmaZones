@@ -24,8 +24,7 @@
  *  5. Registration over the bus is held to the compositor identity check:
  *     with none installed every one is refused, and a peer that fails it
  *     cannot register first and keep the compositor out.
- *  6. CompositorBridge.reportGesture and reportModifierState answer to the
- *     same gate, reportGesture before anything else.
+ *  6. CompositorBridge.reportModifierState answers to the same gate.
  *  7. A source tripwire over the shipped adaptors: every method an interface
  *     XML documents as compositor-only (AccessDenied for any caller but the
  *     compositor) gates its slot, and every gated slot whose method the XML
@@ -361,40 +360,6 @@ private Q_SLOTS:
         QVERIFY(isBusError(squatter.call(ProbeInterface, QStringLiteral("report")), QDBusError::AccessDenied));
         QCOMPARE(compositor.call(ProbeInterface, QStringLiteral("report")).type(), QDBusMessage::ReplyMessage);
         QCOMPARE(f.probe->reports, 1);
-    }
-
-    void aGestureFromAStrangerIsRefused()
-    {
-        Fixture f;
-        BusPeer bridgePeer(&f.host, QStringLiteral("GestureBridge"));
-        BusPeer stranger(&f.host, QStringLiteral("GestureStranger"));
-        QVERIFY(bridgePeer.ready() && stranger.ready());
-        QVERIFY(registers(bridgePeer, {QStringLiteral("gestures")}));
-        QSignalSpy gestures(f.bridge, &CompositorBridgeAdaptor::gestureReported);
-
-        const QVariantList swipe{QStringLiteral("swipe"), QStringLiteral("up"), 3u};
-        const QDBusMessage refused = stranger.call(BridgeInterface, QStringLiteral("reportGesture"), swipe);
-        QVERIFY2(isBusError(refused, QDBusError::AccessDenied), qPrintable(refused.errorMessage()));
-        QCOMPARE(gestures.count(), 0);
-
-        QCOMPARE(bridgePeer.call(BridgeInterface, QStringLiteral("reportGesture"), swipe).type(),
-                 QDBusMessage::ReplyMessage);
-        QCOMPARE(gestures.count(), 1);
-    }
-
-    // The caller is checked before the capability: a stranger's gesture while
-    // no gestures-capable bridge is registered used to get a silent success.
-    void aGestureFromAStrangerIsRefusedWithoutTheCapability()
-    {
-        Fixture f;
-        BusPeer bridgePeer(&f.host, QStringLiteral("PlainBridge"));
-        BusPeer stranger(&f.host, QStringLiteral("PlainStranger"));
-        QVERIFY(bridgePeer.ready() && stranger.ready());
-        QVERIFY(registers(bridgePeer));
-
-        const QVariantList swipe{QStringLiteral("swipe"), QStringLiteral("up"), 3u};
-        const QDBusMessage refused = stranger.call(BridgeInterface, QStringLiteral("reportGesture"), swipe);
-        QVERIFY2(isBusError(refused, QDBusError::AccessDenied), qPrintable(refused.errorMessage()));
     }
 
     void modifierStateFromAStrangerIsRefused()

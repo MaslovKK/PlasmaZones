@@ -81,7 +81,7 @@ void PlasmaZonesEffect::slotDaemonReady()
         PhosphorProtocol::ClientHelpers::asyncCall(
             PhosphorProtocol::Service::Interface::CompositorBridge, QStringLiteral("registerBridge"),
             {QStringLiteral("kwin"), QString::number(PhosphorProtocol::Service::ApiVersion),
-             QStringList{QStringLiteral("borderless"), QStringLiteral("animation"), QStringLiteral("gestures")}}),
+             QStringList{QStringLiteral("borderless"), QStringLiteral("animation")}}),
         this);
     connect(watcher, &QDBusPendingCallWatcher::finished, this,
             [this, registrationGeneration](QDBusPendingCallWatcher* w) {

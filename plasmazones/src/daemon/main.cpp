@@ -18,6 +18,7 @@
 #include <PhosphorConfig/HostDirectory.h>
 #include <PhosphorProtocol/Registration.h>
 #include <PhosphorProtocol/ServiceConstants.h>
+#include <PhosphorSurface/SurfacePackLocation.h>
 #include <PhosphorWayland/LayerShellPluginLoader.h>
 #include <PhosphorWayland/LayerSurface.h>
 
@@ -491,6 +492,10 @@ int main(int argc, char* argv[])
     PlasmaZones::applyOpenGlGpuPreference(gpuDevice);
 
     QGuiApplication app(argc, argv);
+    // Before any QML or surface pack lookup: the library's own surface pack
+    // lookups (SurfaceShaderItem's include paths, the `builtin:` buffer
+    // fallback) search the subdir phosphor-surface-packs installs to.
+    PhosphorSurfaceShaders::setSurfacePackDataSubdir(PlasmaZones::ConfigDefaults::surfacePacksSubdir());
 
     // Publish the daemon-private variables changed above, so spawn sites in
     // plasmazones_core (e.g. LayoutService::launchEditor) can undo them for a

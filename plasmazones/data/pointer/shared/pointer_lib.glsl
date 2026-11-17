@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
 // Shared helpers for POINTER shader packs — the pointer-family cousin of
-// data/surface/shared/surface_lib.glsl. Pulls in the uniform contract
+// phosphor-surface-packs' shared/surface_lib.glsl. Pulls in the uniform contract
 // (pointer_uniforms.glsl) and layers the idioms every pointer pack would
 // otherwise re-derive inline: pixel-space lookup, trail access, segment
 // distance, event timers, the brand gradient and premultiplied output.

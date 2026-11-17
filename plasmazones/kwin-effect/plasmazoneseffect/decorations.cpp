@@ -568,7 +568,7 @@ void PlasmaZonesEffect::updateWindowDecoration(const QString& windowId, KWin::Ef
     if (showBorder) {
         // Easy mode: the resolved border appearance rides the built-in
         // "border" pack's OWN declared parameters (borderWidth / cornerRadius /
-        // activeColor / inactiveColor, see data/surface/border/metadata.json),
+        // activeColor / inactiveColor, see phosphor-surface-packs' border/metadata.json),
         // routed by id through the same translateSurfaceParams path every
         // other pack's overrides take — no positional slot layout is assumed
         // anywhere. width / radius fall back to the shared DecorationDefaults
@@ -658,18 +658,14 @@ void PlasmaZonesEffect::updateWindowDecoration(const QString& windowId, KWin::Ef
     // uses); background / foreground come from the compositor's palette, which
     // tracks the active colour scheme. Built once for the whole chain.
     // ApplicationPaletteChange schedules a coalesced sweep even when the
-    // daemon's accent settings are pinned. The shell's identity palette uses
-    // the same appearance watcher as its native titlebar and dynamic seeds.
+    // daemon's accent settings are pinned.
     const QPalette pal = QGuiApplication::palette();
-    const auto windowColorIndex = m_shellOverview->windowColorIndex(w);
-    const QColor windowAccent =
-        m_shellDesktopStyleActive && windowColorIndex ? m_shellWindowColors[*windowColorIndex] : QColor();
     const PhosphorSurfaceShaders::SurfaceThemeColors themeColors{
         m_borderAccentColor.isValid() ? m_borderAccentColor
                                       : QColor(QString(PhosphorCompositor::DecorationDefaults::FallbackAccentHex)),
         m_borderInactiveColor.isValid() ? m_borderInactiveColor
                                         : QColor(QString(PhosphorCompositor::DecorationDefaults::FallbackInactiveHex)),
-        pal.color(QPalette::Active, QPalette::Window), pal.color(QPalette::Active, QPalette::WindowText), windowAccent};
+        pal.color(QPalette::Active, QPalette::Window), pal.color(QPalette::Active, QPalette::WindowText)};
     const bool maximized = w->isFullScreen() || (w->window() && w->window()->maximizeMode() == KWin::MaximizeFull);
     // Drop the packs a maximized window hides BEFORE the chain-wide votes below,
     // so a hidden pack neither casts a silhouette vote nor pads the canvas. The

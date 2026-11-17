@@ -36,7 +36,7 @@ namespace PlasmaZones {
 // surface_compile.cpp (compiledPack() / ensureSurfaceRegistryPaths()),
 // reusing the shared GLSL include / param-preamble
 // / #define-PLASMAZONES_KWIN pipeline. The border is the first surface
-// shader pack: data/surface/border, loaded via SurfaceShaderRegistry.
+// shader pack: phosphor-surface-packs' border, loaded via SurfaceShaderRegistry.
 // ─────────────────────────────────────────────────────────────────────────────
 
 // Lazily compile the passthrough present shader. It samples a bound texture
@@ -233,17 +233,13 @@ void PlasmaZonesEffect::reconcileDecorationShader(const QString& windowId, KWin:
     // through removeWindowDecoration, which clears the shader and unredirects.
 }
 
-bool PlasmaZonesEffect::decorationFocused(const QString& windowId, KWin::EffectWindow* w,
-                                          const WindowDecoration& decoration) const
+bool PlasmaZonesEffect::decorationFocused(KWin::EffectWindow* w, const WindowDecoration& decoration) const
 {
     if (decoration.isShellSurface) {
         return true;
     }
     if (!w || !KWin::effects) {
         return false;
-    }
-    if (m_shellDesktopStyleActive && m_shellOverview->windowColorIndex(w)) {
-        return m_shellOverview->windowFocused(windowId);
     }
     return w == KWin::effects->activeWindow();
 }
@@ -406,9 +402,8 @@ void PlasmaZonesEffect::pushBorderUniforms(KWin::EffectWindow* w, const WindowDe
     // most once per frame. @p windowId is threaded from the fold so this hot
     // path does not recompute getWindowId(w) per pack.
     if (pack.uFocusedLoc >= 0) {
-        // Use the same focus source as the fold cache and native titlebar,
-        // including retained application focus while a shell popup is open.
-        const bool focused = decorationFocused(windowId, w, wb);
+        // Use the same focus source as the fold cache.
+        const bool focused = decorationFocused(w, wb);
         shader->setUniform(pack.uFocusedLoc, advanceFocusFade(windowId, focused));
     }
     // uSurfaceOpacity is a LEGACY constant now: the retired handlesOpacity

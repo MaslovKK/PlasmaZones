@@ -17,7 +17,7 @@ uniform name from memory. Schemas: `../phosphor-libs/data/schemas/<family>-metad
 |---|---|---|---|---|
 | animation | `animations/<id>/` | `pTransition(uv, t)`, or `pIn` + `pOut` | compositor + settings preview | `.claude/skills/shader-theme/references/animations.md` |
 | overlay | `overlays/<id>/` | `pZone(ZoneCtx z)` or `pImage(vec2 fragCoord)` | daemon (Qt-RHI) only | `…/references/overlays-surface.md` |
-| surface | `surface/<id>/` | `pSurface(vec2 uv)` | compositor + daemon/preview | `…/references/overlays-surface.md` |
+| surface | `../phosphor-surface-packs/packs/<id>/` (phosphor-surface-packs) | `pSurface(vec2 uv)` | compositor + daemon/preview | `…/references/overlays-surface.md` |
 | pointer | `pointer/<id>/` | `pPointer(vec2 uv)` | compositor + settings preview | no reference: `pointer/shared/pointer_uniforms.glsl`, `pointer_lib.glsl` |
 
 ## A pack
@@ -44,7 +44,8 @@ uniform name from memory. Schemas: `../phosphor-libs/data/schemas/<family>-metad
 
 - `metadata.json` and curve JSON carry NO header. Each `.frag`/`.vert`/`.glsl` opens with
   `// SPDX-FileCopyrightText: 2026 fuddlesworth` and `// SPDX-License-Identifier: …`. Keep an existing file's licence.
-- New PlasmaZones-original shader: `LGPL-2.1-or-later` for animation, surface and pointer; `GPL-3.0-or-later` for overlay.
+- New PlasmaZones-original shader: `LGPL-2.1-or-later` for animation and pointer; `GPL-3.0-or-later` for overlay. Surface
+  packs follow phosphor-surface-packs' own rules (its README and `scripts/check.py`).
 - A port of GPL upstream, or anything including `animations/shared/bmw_compat.glsl`, is `GPL-3.0-or-later` with a second
   `SPDX-FileCopyrightText` for the upstream author, AND a per-file stanza in `packaging/debian/copyright` after the LGPL
   `plasmazones/data/animations/*` one (DEP-5 is last-match-wins). A permissive port kept LGPL still needs a stanza
@@ -60,7 +61,7 @@ pinned by `static_assert` on size and offsets:
 |---|---|---|
 | overlay | `overlays/shared/common.glsl` | `phosphor-rendering/include/PhosphorRendering/ZoneShaderCommon.h`, `ZoneUniformExtension.h`; scaffold `plasmazones/src/daemon/rendering/zoneentryscaffold.cpp` |
 | animation | `animations/shared/animation_uniforms.glsl` | `phosphor-animation/include/PhosphorAnimation/AnimationUniformExtension.h`, `AnimationShaderContract.h`, `src/contract_pins.cpp` |
-| surface | `surface/shared/surface_uniforms.glsl` | `phosphor-surface/include/PhosphorSurface/SurfaceShaderUniforms.h`, `SurfaceShaderContract.h`, `src/surface_contract_pins.cpp`, `src/surfaceuniformprofile.cpp` |
+| surface | `../phosphor-surface-packs/packs/shared/surface_uniforms.glsl` | `phosphor-surface/include/PhosphorSurface/SurfaceShaderUniforms.h`, `SurfaceShaderContract.h`, `src/surface_contract_pins.cpp`, `src/surfaceuniformprofile.cpp` |
 | pointer | `pointer/shared/pointer_uniforms.glsl` | `phosphor-pointer/include/PhosphorPointer/PointerShaderUniforms.h`, `PointerShaderContract.h`, `src/pointer_contract_pins.cpp`, `src/pointeruniformextension.cpp` |
 
 1. Change the GLSL block and the C++ struct together, std140 (a `vec3` takes 16 bytes, an array element at least 16).

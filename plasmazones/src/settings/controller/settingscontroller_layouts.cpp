@@ -532,7 +532,7 @@ void SettingsController::exportScrollingTemplate(const QString& templateId, cons
 
 void SettingsController::openScrollingTemplatesFolder()
 {
-    const QString path = PhosphorZones::ScrollingTemplateStore::userTemplateDirectory();
+    const QString path = m_localTemplateStore->userTemplateDirectory();
     QDir dir(path);
     if (!dir.exists()) {
         dir.mkpath(QStringLiteral("."));

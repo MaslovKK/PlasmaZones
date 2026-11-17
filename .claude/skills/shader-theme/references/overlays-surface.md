@@ -6,19 +6,19 @@ SPDX-License-Identifier: GPL-3.0-or-later
 # Overlay (zone) and surface (decoration) pack contracts
 
 Source of truth: `plasmazones/data/overlays/shared/common.glsl`, `plasmazones/src/daemon/rendering/zoneentryscaffold.cpp`,
-`../phosphor-libs/data/schemas/shader-metadata.schema.json`; `plasmazones/data/surface/shared/surface_uniforms.glsl`,
-`plasmazones/data/surface/shared/surface_lib.glsl`, `../phosphor-libs/libs/phosphor-surface/include/PhosphorSurface/SurfaceShaderEffect.h`,
+`../phosphor-libs/data/schemas/shader-metadata.schema.json`; `../phosphor-surface-packs/packs/shared/surface_uniforms.glsl`,
+`../phosphor-surface-packs/packs/shared/surface_lib.glsl`, `../phosphor-libs/libs/phosphor-surface/include/PhosphorSurface/SurfaceShaderEffect.h`,
 `../phosphor-libs/data/schemas/surface-metadata.schema.json`. Read the two shared headers before writing.
 
 | | overlay | surface |
 |---|---|---|
-| dir | `plasmazones/data/overlays/<id>/` | `plasmazones/data/surface/<id>/` |
+| dir | `plasmazones/data/overlays/<id>/` | `../phosphor-surface-packs/packs/<id>/` (phosphor-surface-packs, then a pin bump here) |
 | files | `metadata.json`, `effect.frag`, optional `passN.frag` | `metadata.json`, `effect.frag`, optional `passN.frag`, optional vertex shader, up to three `textures` |
 | licence header | `GPL-3.0-or-later` | mixed tree: LGPL for a new PlasmaZones-original pack, but the bundled backdrop packs (blur, glass, frosted-glass, rippled-glass, rain-glass, duotone, mosaic) are `GPL-3.0-or-later`; follow the closest sibling and CLAUDE.md "License" |
 | entry | `vec4 pZone(ZoneCtx z)` or `vec4 pImage(vec2 fragCoord)` | `vec4 pSurface(vec2 uv)` |
 | runtime | daemon only (Qt-RHI) | daemon AND KWin compositor, same source; the compositor compiles it with `PLASMAZONES_KWIN` defined and the shared modules carry both arms, so never add a branch on it yourself |
 | colour default | `#RRGGBB` or `#AARRGGBB` (Qt form, alpha FIRST); all families parse with `QColor`, and a CSS-style `#RRGGBBAA` is silently misread, not rejected | same |
-| user dir | `~/.local/share/plasmazones/overlays/<id>` | `~/.local/share/plasmazones/surface/<id>` |
+| user dir | `~/.local/share/plasmazones/overlays/<id>` | `~/.local/share/phosphor-works/surface/<id>` |
 | selection | `Overlays.OverlayShaderTree` global/per-layout assignment, or rule override | `Decorations.DecorationProfileTree` chain per surface path |
 
 No `preview.png`. No `#version`, no in/out declarations, no `main()`: the scaffold prepends

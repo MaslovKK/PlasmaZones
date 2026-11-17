@@ -91,6 +91,7 @@ tasks:
     inputs:
       - 'scripts/validate-json-schemas.py'
       - 'scripts/pinned_phosphor_libs.py'
+      - 'scripts/pinned_surface_packs.py'
       - 'cmake/PlasmaZonesDependencies.cmake'
       - 'plasmazones/data/**/*.json'
 
