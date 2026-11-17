@@ -54,10 +54,10 @@ set(PLASMAZONES_DEPS phosphor-libs branding)
 # The phosphor-libs commit PlasmaZones builds against (LGPL-2.1-or-later,
 # phosphor-works/phosphor-libs): its placement engines, rendering, layer-shell
 # and config libraries. A commit, not a release, so VERSION is the commit hash.
-set(PLASMAZONES_DEP_phosphor-libs_VERSION "5cc4ed09736e12942019caf761427cd2a88cd001")
-set(PLASMAZONES_DEP_phosphor-libs_URL "https://github.com/phosphor-works/phosphor-libs/archive/5cc4ed09736e12942019caf761427cd2a88cd001.tar.gz")
-set(PLASMAZONES_DEP_phosphor-libs_FILE "phosphor-libs-5cc4ed09736e12942019caf761427cd2a88cd001.tar.gz")
-set(PLASMAZONES_DEP_phosphor-libs_SHA256 "97b1ca72e5f4a8ed972da46445ca03a6dacf48d7d017536eba7d0c32d0210ef2")
+set(PLASMAZONES_DEP_phosphor-libs_VERSION "c5d6ee8a24f803607b403f90b8625b94b8a25110")
+set(PLASMAZONES_DEP_phosphor-libs_URL "https://github.com/phosphor-works/phosphor-libs/archive/c5d6ee8a24f803607b403f90b8625b94b8a25110.tar.gz")
+set(PLASMAZONES_DEP_phosphor-libs_FILE "phosphor-libs-c5d6ee8a24f803607b403f90b8625b94b8a25110.tar.gz")
+set(PLASMAZONES_DEP_phosphor-libs_SHA256 "f072437c31f9b96e5ed43c32e55bc0e6e8c7ac7323262dbeaf871008c670e8e6")
 
 # The suite's branding release (CC-BY-SA-4.0, phosphor-works/branding): the app
 # icons, installed from it with its cmake/PhosphorBranding.cmake. No app keeps
