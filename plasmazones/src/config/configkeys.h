@@ -671,7 +671,7 @@ public:
         // config namespace.
         //
         // Bounded by the protocol constant the daemon validates against
-        // (layoutadaptor.cpp) rather than a hardcoded 9, so raising the slot
+        // (layoutservice.cpp) rather than a hardcoded 9, so raising the slot
         // count cannot leave this guard rejecting keys the rest of the tree
         // considers legal.
         if (n < 1 || n > PhosphorProtocol::Service::QuickLayoutSlotCount) {

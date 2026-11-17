@@ -15,7 +15,7 @@
 #include "daemon/controllers/shortcutmanager.h"
 #include "daemon/controllers/unifiedlayoutcontroller.h"
 #include "daemon/overlayservice.h"
-#include "dbus/snapadaptor/snapadaptor.h"
+#include "runtime/services/snapservice/snapservice.h"
 #include "runtime/windowtracker/windowtracker.h"
 
 #include <PhosphorContext/ContextResolver.h>
@@ -486,7 +486,7 @@ void Daemon::toggleScreenMode(const QString& screenId, bool snappingAutotilePair
             // (snapping layout, scrolling template) survive the flip:
             // carryOverNonAssignmentActions excludes SetScrollingTemplate, so a
             // fresh entry would drop the template outright. Same seeding shape
-            // LayoutAdaptor::setAssignmentEntry uses. The entry stays "bare"
+            // LayoutService::setAssignmentEntry uses. The entry stays "bare"
             // regardless — this arm is only reached when the resolved algorithm
             // is empty, so the seeded tilingAlgorithm is empty too.
             PhosphorZones::AssignmentEntry entry = m_layoutManager->exactContextEntry(screenId, desktop, activity);
@@ -529,7 +529,7 @@ void Daemon::toggleScreenMode(const QString& screenId, bool snappingAutotilePair
         // template lives in a slot this arm never names, and
         // carryOverNonAssignmentActions excludes SetScrollingTemplate, so a
         // fresh entry would wipe the template on the way INTO the mode that
-        // consumes it. Same seeding shape LayoutAdaptor::setAssignmentEntry
+        // consumes it. Same seeding shape LayoutService::setAssignmentEntry
         // uses. The two sibling slots below are still re-resolved because their
         // resolvers widen past the exact context (empty-activity fallback).
         PhosphorZones::AssignmentEntry entry = m_layoutManager->exactContextEntry(screenId, desktop, activity);
@@ -633,7 +633,7 @@ void Daemon::toggleScreenMode(const QString& screenId, bool snappingAutotilePair
             // else arm CLEARS them, so moving a failed apply across that
             // boundary would discard the float half instead of replaying it.
             if (applied && m_layoutManager->resolveLayoutForScreen(screenId) && m_windowTracker
-                && m_windowTracker->service() && m_snapAdaptor) {
+                && m_windowTracker->service() && m_snapService) {
                 QSet<QString> engineManagedScreens;
                 if (m_screenModeRouter && m_screenManager) {
                     const auto parts = m_screenModeRouter->partitionByMode(m_screenManager->effectiveScreenIds());

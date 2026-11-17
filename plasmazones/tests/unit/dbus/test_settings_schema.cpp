@@ -3,10 +3,10 @@
 
 /**
  * @file test_settings_schema.cpp
- * @brief Unit tests for SettingsAdaptor schema introspection methods:
+ * @brief Unit tests for SettingsService schema introspection methods:
  *        getSettingSchema, getAllSettingSchemas.
  *
- * The SettingsAdaptor is constructed with a StubSettings (ISettings*) so the
+ * The SettingsService is constructed with a StubSettings (ISettings*) so the
  * registry macros (REGISTER_BOOL_SETTING, etc.) populate m_schemas via the
  * ISettings pointer. Concrete-only entries require a real Settings object and
  * will not be present, but all ISettings-backed entries are testable.
@@ -18,7 +18,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 
-#include "dbus/settingsadaptor/settingsadaptor.h"
+#include "runtime/services/settingsservice/settingsservice.h"
 #include "helpers/StubSettings.h"
 #include "helpers/IsolatedConfigGuard.h"
 
@@ -38,9 +38,9 @@ private Q_SLOTS:
     {
         m_guard = std::make_unique<IsolatedConfigGuard>();
         m_settings = new StubSettings(nullptr);
-        // SettingsAdaptor is a QDBusAbstractAdaptor and needs a parent
+        // SettingsService is a QDBusAbstractAdaptor and needs a parent
         m_parent = new QObject(nullptr);
-        m_adaptor = new SettingsAdaptor(m_settings, /*profileRegistry=*/nullptr, m_parent);
+        m_adaptor = new SettingsService(m_settings, /*profileRegistry=*/nullptr, m_parent);
     }
 
     void cleanup()
@@ -160,7 +160,7 @@ private:
     std::unique_ptr<IsolatedConfigGuard> m_guard;
     StubSettings* m_settings = nullptr;
     QObject* m_parent = nullptr;
-    SettingsAdaptor* m_adaptor = nullptr;
+    SettingsService* m_adaptor = nullptr;
 };
 
 QTEST_MAIN(TestSettingsSchema)

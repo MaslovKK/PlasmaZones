@@ -546,7 +546,7 @@ void EditorController::refreshGlobalGapOverlaySettings()
     // Fetches every gap and overlay key the editor cares about (innerGap, the
     // outerGap cluster and overlayDisplayMode) in a single daemon round-trip
     // instead of one blocking getSetting() call per key, each of which built
-    // a fresh QDBusInterface. SettingsAdaptor::getSettings reads straight from
+    // a fresh QDBusInterface. SettingsService::getSettings reads straight from
     // the in-memory registry, so the daemon-side cost is unchanged and the
     // editor startup hot path saves the extra IPC round-trips.
     // Spelled in full rather than through a namespace alias: the settings-registry

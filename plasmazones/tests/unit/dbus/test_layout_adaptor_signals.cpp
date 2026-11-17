@@ -3,7 +3,8 @@
 
 /**
  * @file test_layout_adaptor_signals.cpp
- * @brief LayoutAdaptor signal emission contract tests.
+ * @brief LayoutService signal emission contract tests (layoutPropertyChanged through
+ *        its LayoutAdaptor binding, which carries the value as a QDBusVariant).
  *
  * Pins the rule: property mutations (setLayoutHidden, setLayoutAutoAssign,
  * setLayoutAspectRatioClass) emit the compact `layoutPropertyChanged` and
@@ -35,7 +36,8 @@
 
 #include <limits>
 
-#include "dbus/layoutadaptor/layoutadaptor.h"
+#include "dbus/layoutadaptor.h"
+#include "runtime/services/layoutservice/layoutservice.h"
 #include <PhosphorScreens/ScreenIdentity.h>
 #include <PhosphorZones/AssignmentEntry.h>
 #include <PhosphorZones/Layout.h>
@@ -121,7 +123,9 @@ private Q_SLOTS:
         }
         m_layoutManager->addLayout(layout);
         m_layoutId = layout->id().toString();
-        m_adaptor = new LayoutAdaptor(m_layoutManager, m_parent);
+        m_adaptor = new LayoutService(m_layoutManager, m_parent);
+        // The bus surface, whose layoutPropertyChanged carries a QDBusVariant.
+        m_binding = new LayoutAdaptor(m_adaptor, m_parent);
     }
 
     void cleanup()
@@ -130,6 +134,7 @@ private Q_SLOTS:
         m_parent = nullptr;
         m_layoutManager = nullptr;
         m_adaptor = nullptr;
+        m_binding = nullptr;
         m_guard.reset();
     }
 
@@ -140,7 +145,7 @@ private Q_SLOTS:
         screens.start();
         QCOMPARE(screens.effectiveScreenIds().size(), 2);
         QObject owner;
-        LayoutAdaptor adaptor(m_layoutManager, nullptr, &screens, &owner);
+        LayoutService adaptor(m_layoutManager, nullptr, &screens, &owner);
         bool supportsLayouts = false;
         QStringList queriedScreens;
         adaptor.setLayoutsAvailableResolver([&](const QString& screenId) {
@@ -166,9 +171,9 @@ private Q_SLOTS:
     // ─────────────────────────────────────────────────────────────────
     void testSetLayoutHidden_emitsCompactPropertySignalOnly()
     {
-        QSignalSpy changed(m_adaptor, &LayoutAdaptor::layoutChanged);
-        QSignalSpy listChanged(m_adaptor, &LayoutAdaptor::layoutListChanged);
-        QSignalSpy propertyChanged(m_adaptor, &LayoutAdaptor::layoutPropertyChanged);
+        QSignalSpy changed(m_adaptor, &LayoutService::layoutChanged);
+        QSignalSpy listChanged(m_adaptor, &LayoutService::layoutListChanged);
+        QSignalSpy propertyChanged(m_binding, &LayoutAdaptor::layoutPropertyChanged);
 
         m_adaptor->setLayoutHidden(m_layoutId, true);
 
@@ -188,9 +193,9 @@ private Q_SLOTS:
 
     void testSetLayoutAutoAssign_emitsCompactPropertySignalOnly()
     {
-        QSignalSpy changed(m_adaptor, &LayoutAdaptor::layoutChanged);
-        QSignalSpy listChanged(m_adaptor, &LayoutAdaptor::layoutListChanged);
-        QSignalSpy propertyChanged(m_adaptor, &LayoutAdaptor::layoutPropertyChanged);
+        QSignalSpy changed(m_adaptor, &LayoutService::layoutChanged);
+        QSignalSpy listChanged(m_adaptor, &LayoutService::layoutListChanged);
+        QSignalSpy propertyChanged(m_binding, &LayoutAdaptor::layoutPropertyChanged);
 
         m_adaptor->setLayoutAutoAssign(m_layoutId, true);
 
@@ -204,9 +209,9 @@ private Q_SLOTS:
 
     void testSetLayoutAspectRatioClass_emitsCompactPropertySignalOnly()
     {
-        QSignalSpy changed(m_adaptor, &LayoutAdaptor::layoutChanged);
-        QSignalSpy listChanged(m_adaptor, &LayoutAdaptor::layoutListChanged);
-        QSignalSpy propertyChanged(m_adaptor, &LayoutAdaptor::layoutPropertyChanged);
+        QSignalSpy changed(m_adaptor, &LayoutService::layoutChanged);
+        QSignalSpy listChanged(m_adaptor, &LayoutService::layoutListChanged);
+        QSignalSpy propertyChanged(m_binding, &LayoutAdaptor::layoutPropertyChanged);
 
         m_adaptor->setLayoutAspectRatioClass(m_layoutId, 2);
 
@@ -226,7 +231,7 @@ private Q_SLOTS:
     // ─────────────────────────────────────────────────────────────────
     void testNotifyLayoutListChanged_emitsListChanged()
     {
-        QSignalSpy listChanged(m_adaptor, &LayoutAdaptor::layoutListChanged);
+        QSignalSpy listChanged(m_adaptor, &LayoutService::layoutListChanged);
 
         m_adaptor->notifyLayoutListChanged();
 
@@ -307,7 +312,7 @@ private Q_SLOTS:
     // ─────────────────────────────────────────────────────────────────
     // Value-equality guard: calling setLayoutHidden/AutoAssign/AspectRatioClass
     // with the currently-stored value must short-circuit — no signal
-    // emission, no cache invalidation. Mirrors SettingsAdaptor::setSetting's
+    // emission, no cache invalidation. Mirrors SettingsService::setSetting's
     // Phase 1.1 guard so settled checkboxes don't spam subscribers with
     // no-op reloads.
     // ─────────────────────────────────────────────────────────────────
@@ -318,7 +323,7 @@ private Q_SLOTS:
         // produce exactly one propertyChanged signal between them.
         m_adaptor->setLayoutHidden(m_layoutId, true);
 
-        QSignalSpy propertyChanged(m_adaptor, &LayoutAdaptor::layoutPropertyChanged);
+        QSignalSpy propertyChanged(m_binding, &LayoutAdaptor::layoutPropertyChanged);
         m_adaptor->setLayoutHidden(m_layoutId, true);
         QCOMPARE(propertyChanged.count(), 0);
     }
@@ -327,7 +332,7 @@ private Q_SLOTS:
     {
         m_adaptor->setLayoutAutoAssign(m_layoutId, true);
 
-        QSignalSpy propertyChanged(m_adaptor, &LayoutAdaptor::layoutPropertyChanged);
+        QSignalSpy propertyChanged(m_binding, &LayoutAdaptor::layoutPropertyChanged);
         m_adaptor->setLayoutAutoAssign(m_layoutId, true);
         QCOMPARE(propertyChanged.count(), 0);
     }
@@ -336,7 +341,7 @@ private Q_SLOTS:
     {
         m_adaptor->setLayoutAspectRatioClass(m_layoutId, 2);
 
-        QSignalSpy propertyChanged(m_adaptor, &LayoutAdaptor::layoutPropertyChanged);
+        QSignalSpy propertyChanged(m_binding, &LayoutAdaptor::layoutPropertyChanged);
         m_adaptor->setLayoutAspectRatioClass(m_layoutId, 2);
         QCOMPARE(propertyChanged.count(), 0);
     }
@@ -357,7 +362,7 @@ private Q_SLOTS:
         m_adaptor->setAlgorithmRegistry(&registry);
         // Detach on EVERY exit path, not just the success one. The adaptor is owned
         // by m_parent and lives until cleanup(), while this registry dies at the end
-        // of the method, and layoutadaptor.h documents the pointer as "Borrowed;
+        // of the method, and layoutservice.h documents the pointer as "Borrowed;
         // outlives adaptor". Any QVERIFY2 below returns early, so a bare clear at the
         // bottom would leave the adaptor holding a destroyed registry through
         // teardown — turning one failing assertion into a crash that loses the rest
@@ -487,7 +492,7 @@ private Q_SLOTS:
     // ─────────────────────────────────────────────────────────────────
     void testPublishActiveAssignments_broadcastsOnlyChangedScreens()
     {
-        QSignalSpy spy(m_adaptor, &LayoutAdaptor::activeLayoutForScreenChanged);
+        QSignalSpy spy(m_adaptor, &LayoutService::activeLayoutForScreenChanged);
 
         const QHash<QString, QString> snapshot{{QStringLiteral("DP-1"), m_layoutId},
                                                {QStringLiteral("DP-2"), QStringLiteral("autotile:bsp")}};
@@ -511,7 +516,7 @@ private Q_SLOTS:
     {
         m_adaptor->publishActiveAssignments({{QStringLiteral("DP-1"), m_layoutId}}, {QStringLiteral("DP-1")});
 
-        QSignalSpy spy(m_adaptor, &LayoutAdaptor::activeLayoutForScreenChanged);
+        QSignalSpy spy(m_adaptor, &LayoutService::activeLayoutForScreenChanged);
         QVERIFY(spy.isValid());
         // DP-1 unplugged: it drops out of the snapshot entirely.
         m_adaptor->publishActiveAssignments({}, {QStringLiteral("DP-1")});
@@ -551,7 +556,7 @@ private Q_SLOTS:
     {
         m_adaptor->publishActiveAssignments({{QStringLiteral("DP-1"), m_layoutId}}, {QStringLiteral("DP-1")});
 
-        QSignalSpy spy(m_adaptor, &LayoutAdaptor::activeLayoutForScreenChanged);
+        QSignalSpy spy(m_adaptor, &LayoutService::activeLayoutForScreenChanged);
         QVERIFY(spy.isValid());
         // A recompute republishes with an empty changed set. The readback must
         // still be refreshed, but the bus must stay quiet — the effect pairs every
@@ -585,7 +590,7 @@ private Q_SLOTS:
         // soon as the observed publish is done, BEFORE any assertion that could
         // return early, so no later emit can write through dangling references.
         const QMetaObject::Connection conn =
-            connect(m_adaptor, &LayoutAdaptor::activeLayoutForScreenChanged, this,
+            connect(m_adaptor, &LayoutService::activeLayoutForScreenChanged, this,
                     [this, &seenAtSignalTime, &signalCount](const QString&, const QString&) {
                         seenAtSignalTime = m_adaptor->getActiveLayoutsForScreens();
                         ++signalCount;
@@ -668,7 +673,7 @@ private Q_SLOTS:
         m_layoutManager->addLayout(second);
 
         QStringList order;
-        connect(m_adaptor, &LayoutAdaptor::assignmentChangesApplied, this, [&order]() {
+        connect(m_adaptor, &LayoutService::assignmentChangesApplied, this, [&order]() {
             order.append(QStringLiteral("applied"));
         });
         connect(m_layoutManager, &PhosphorZones::LayoutRegistry::activeLayoutChanged, this, [&order]() {
@@ -694,7 +699,8 @@ private:
     std::unique_ptr<IsolatedConfigGuard> m_guard;
     QObject* m_parent = nullptr;
     PhosphorZones::LayoutRegistry* m_layoutManager = nullptr;
-    LayoutAdaptor* m_adaptor = nullptr;
+    LayoutService* m_adaptor = nullptr;
+    LayoutAdaptor* m_binding = nullptr;
     QString m_layoutId;
 };
 

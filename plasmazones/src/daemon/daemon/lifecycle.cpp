@@ -21,20 +21,21 @@
 #include "core/resolve/screenmoderouter.h"
 #include "core/utils/geometryutils.h"
 #include "core/utils/utils.h"
-#include "dbus/layoutadaptor/layoutadaptor.h"
-#include "dbus/settingsadaptor/settingsadaptor.h"
+#include "runtime/services/layoutservice/layoutservice.h"
+#include "runtime/services/settingsservice/settingsservice.h"
 #include "dbus/overlayadaptor.h"
 #include "dbus/zonedetectionadaptor.h"
 #include "runtime/windowtracker/windowtracker.h"
 #include "dbus/windowtrackingadaptor.h"
 #include "runtime/dragresolver/dragresolver.h"
 #include "runtime/services/autotileservice/autotileservice.h"
-#include "dbus/tilingadaptor/tilingadaptor.h"
-#include "dbus/scrollingadaptor/scrollingadaptor.h"
-#include "dbus/snapadaptor/snapadaptor.h"
+#include "runtime/services/tilingservice/tilingservice.h"
+#include "runtime/services/scrollingservice/scrollingservice.h"
+#include "runtime/services/snapservice/snapservice.h"
 #include "runtime/services/shaderservice.h"
 #include "dbus/compositorbridgeadaptor.h"
 #include "dbus/controladaptor.h"
+#include "runtime/services/controlservice.h"
 #include "runtime/services/ruleservice.h"
 
 #include <PhosphorServiceIdle/IdleService.h>
@@ -396,10 +397,10 @@ void Daemon::stop()
     // they borrow. ~QObject destroys these adaptors AFTER all unique_ptr
     // members have already run their destructors, so without detach the
     // adaptors would see dangling pointers during the destruction window —
-    // and the SettingsAdaptor dtor's save-on-teardown would deref a freed
+    // and the SettingsService dtor's save-on-teardown would deref a freed
     // Settings object. Each adaptor's detach() is null-safe + idempotent.
     //
-    // WHY ONLY THESE: SettingsAdaptor has the confirmed dtor-UAF
+    // WHY ONLY THESE: SettingsService has the confirmed dtor-UAF
     // (debounced save timer flush). ShaderAdaptor + ControlAdaptor have
     // non-trivial signal wiring + cached state that benefits from
     // explicit teardown for the same "queued D-Bus call lands during
@@ -411,10 +412,10 @@ void Daemon::stop()
     // raw-Qt-parented RuleAdaptor only runs its own destructor
     // *after* that, as part of QObject child cleanup.
     //
-    // The other raw-Qt-parented adaptors (LayoutAdaptor,
+    // The other raw-Qt-parented adaptors (LayoutService,
     // OverlayAdaptor, ZoneDetectionAdaptor, WindowTracker,
     // DBusScreenAdaptor, DragResolver, CompositorBridgeAdaptor,
-    // SnapAdaptor, TilingAdaptor, AutotileAdaptor, ScrollingAdaptor) all
+    // SnapService, TilingService, AutotileAdaptor, ScrollingService) all
     // ship destructors that don't
     // deref any borrowed pointer — they are `= default` or empty-body
     // (no member access); DBusScreenAdaptor's out-of-line body does
@@ -423,16 +424,19 @@ void Daemon::stop()
     // destructors" — confirmed by inspecting each header + cpp pair,
     // not header alone. Their borrowed pointers are still severed below
     // (the engine adaptors' clearEngine, and the WTA's, WDA's,
-    // TilingAdaptor's and SnapAdaptor's late-bound borrows), with the bus
+    // TilingService's and SnapService's late-bound borrows), with the bus
     // already unregistered above; none of them needs a detach() for its
     // DESTRUCTOR. If a future adaptor grows a dtor body that
     // derefs a borrowed member, add detach() to it AND wire the call here
     // — same pattern as these four.
-    if (m_settingsAdaptor) {
-        m_settingsAdaptor->detach();
+    if (m_settingsService) {
+        m_settingsService->detach();
     }
     if (m_shaderService) {
         m_shaderService->detach();
+    }
+    if (m_controlService) {
+        m_controlService->detach();
     }
     if (m_controlAdaptor) {
         m_controlAdaptor->detach();
@@ -545,29 +549,29 @@ void Daemon::stop()
     // The layout adaptor's twin of the registry's tiled-count provider
     // (getScreenStates' tiledWindowCount) captures `this` and reads the
     // engines the same way, and the adaptor is a Qt child that outlives them.
-    if (m_layoutAdaptor) {
-        m_layoutAdaptor->setTiledWindowCountProvider({});
+    if (m_layoutService) {
+        m_layoutService->setTiledWindowCountProvider({});
         // A screen-states comparison queued before stop() would run after it
         // and announce a teardown's half-state. m_shuttingDown keeps any new
         // one from being queued.
-        m_layoutAdaptor->cancelScreenStatesCheck();
+        m_layoutService->cancelScreenStatesCheck();
     }
 
     // Clear adaptor engine pointers BEFORE destroying the engines. Adaptors are Qt
     // children of the daemon (destroyed later); a D-Bus call arriving between engine
     // destruction and adaptor destruction would otherwise access freed memory. After
     // clearing, ensureEngine() returns false.
-    if (m_tilingAdaptor) {
-        m_tilingAdaptor->clearEngine();
+    if (m_tilingService) {
+        m_tilingService->clearEngine();
     }
     if (m_autotileService) {
         m_autotileService->clearEngine();
     }
-    if (m_scrollingAdaptor) {
-        m_scrollingAdaptor->clearEngine();
+    if (m_scrollingService) {
+        m_scrollingService->clearEngine();
     }
-    if (m_snapAdaptor) {
-        m_snapAdaptor->clearEngine();
+    if (m_snapService) {
+        m_snapService->clearEngine();
     }
 
     // Null the WindowTracker's engine borrows for the same reason, and
@@ -623,13 +627,13 @@ void Daemon::stop()
     }
 
     // Drop the D-Bus borrowers' non-owning resolver / router / WTA pointers.
-    // Explicit symmetric clear across all three borrowers — SnapAdaptor's
+    // Explicit symmetric clear across all three borrowers — SnapService's
     // resolver is also nulled defensively by clearEngine() above, but doing
     // it here too keeps the teardown contract grep-discoverable and survives
     // a future refactor of clearEngine() that might stop touching the
     // resolver pointer.
-    if (m_snapAdaptor) {
-        m_snapAdaptor->setContextResolver(nullptr);
+    if (m_snapService) {
+        m_snapService->setContextResolver(nullptr);
     }
     if (m_dragResolver) {
         m_dragResolver->setContextResolver(nullptr);
@@ -639,20 +643,20 @@ void Daemon::stop()
         // m_screenModeRouter is destroyed on the running path below; null its
         // WTA borrow before that reset so nothing later in this teardown
         // derefs a freed router (the bus is already unregistered above).
-        // SnapAdaptor holds no router.
+        // SnapService holds no router.
         m_windowTracker->setScreenModeRouter(nullptr);
     }
-    if (m_tilingAdaptor) {
+    if (m_tilingService) {
         // Sever the tiling adaptor's post-construction borrow of the WTA (wired
         // in init() so the tiling open path can resolve RouteToScreen /
         // RouteToDesktop rules). The tiling open path no-ops on a null WTA, so
         // a D-Bus open landing in the teardown gap can't drive routing against
         // half-torn-down state. Symmetric with the resolver / router clears above
         // and honours the shutdown-nullptr contract documented in tilingadaptor.h.
-        m_tilingAdaptor->setWindowTrackingAdaptor(nullptr);
+        m_tilingService->setWindowTrackingAdaptor(nullptr);
         // Same contract for the registry subscription: a metadata push landing
         // in the teardown gap must not walk engines that are being reset.
-        m_tilingAdaptor->setWindowRegistry(nullptr);
+        m_tilingService->setWindowRegistry(nullptr);
     }
 
     // Sever SnapEngine's borrow of m_excludeRuleSet (a daemon-owned value
@@ -704,7 +708,7 @@ void Daemon::stop()
     // currentActivity, and runningModeForContext). No live deref
     // can occur today — m_autotileEngine is destroyed on the running path below
     // while `this` is still alive — but clearing it keeps the engine-side clears
-    // complete and grep-discoverable (ScrollingAdaptor's step and gate providers
+    // complete and grep-discoverable (ScrollingService's step and gate providers
     // stay installed on purpose: its scroll slots refuse once clearEngine nulls
     // the engine), exactly like the SnapEngine exclude-rule borrow above.
     // `m_autotileEngine` is base-typed `PlacementEngineBase*`;

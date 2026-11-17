@@ -3,7 +3,7 @@
 
 /**
  * @file test_scrolling_adaptor_verbs.cpp
- * @brief The wire VERBS of ScrollingAdaptor: the wheel pair and the absolute
+ * @brief The wire VERBS of ScrollingService: the wheel pair and the absolute
  *        width/height setters.
  *
  * Split out of test_scrolling_adaptor.cpp once that file passed the size
@@ -50,7 +50,7 @@
 #include <PhosphorScrollEngine/ScrollEngine.h>
 #include <PhosphorScrollEngine/ScrollState.h>
 
-#include "dbus/scrollingadaptor/scrollingadaptor.h"
+#include "runtime/services/scrollingservice/scrollingservice.h"
 #include "scrollingadaptortestfixture.h"
 
 using namespace PlasmaZones;

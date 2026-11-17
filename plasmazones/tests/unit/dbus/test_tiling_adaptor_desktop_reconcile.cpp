@@ -6,7 +6,7 @@
  *
  * Pins the daemon-side desktop-membership reconcile (#1076 and its family):
  * when the compositor reports a window's virtual-desktop set changed, the
- * TilingAdaptor releases the window from any engine state keyed by a
+ * TilingService releases the window from any engine state keyed by a
  * desktop the window no longer belongs to, whatever desktop the screen is
  * showing at the time. The effect used to own that decision from proxies of
  * the desktop in view, and every (moved window, desktop in view, mode per
@@ -30,7 +30,7 @@
 #include <PhosphorTileEngine/AutotileEngine.h>
 #include <PhosphorTiles/TilingState.h>
 
-#include "dbus/tilingadaptor/tilingadaptor.h"
+#include "runtime/services/tilingservice/tilingservice.h"
 #include "runtime/windowtracker/internal.h"
 #include "helpers/AutotileTestHelpers.h"
 
@@ -69,7 +69,7 @@ struct AutotileFixture
     PhosphorEngine::WindowRegistry registry;
     PhosphorTileEngine::AutotileEngine engine{nullptr, nullptr, nullptr, TestHelpers::testRegistry()};
     QObject adaptorParent;
-    TilingAdaptor adaptor{nullptr, &adaptorParent};
+    TilingService adaptor{nullptr, &adaptorParent};
 
     AutotileFixture()
     {
@@ -103,7 +103,7 @@ struct ScrollFixture
     PhosphorEngine::WindowRegistry registry;
     PhosphorScrollEngine::ScrollEngine engine{nullptr, nullptr};
     QObject adaptorParent;
-    TilingAdaptor adaptor{nullptr, &adaptorParent};
+    TilingService adaptor{nullptr, &adaptorParent};
 
     ScrollFixture()
     {
@@ -396,7 +396,7 @@ private Q_SLOTS:
                 return QRect(0, 0, 1200, 800);
             });
         QObject adaptorParent;
-        TilingAdaptor adaptor(nullptr, &adaptorParent);
+        TilingService adaptor(nullptr, &adaptorParent);
         adaptor.setLifecycleEngines({&autotile, &scroll});
         adaptor.setWindowRegistry(&registry);
 
@@ -618,7 +618,7 @@ private Q_SLOTS:
         PhosphorSnapEngine::SnapEngine snap(nullptr, nullptr, nullptr, nullptr);
         snap.setWindowRegistry(&registry);
         QObject adaptorParent;
-        TilingAdaptor adaptor(nullptr, &adaptorParent);
+        TilingService adaptor(nullptr, &adaptorParent);
         // Deliberately NOT a lifecycle engine — that list drives dispatch.
         adaptor.setLifecycleEngines({});
         adaptor.setMembershipEngines({&snap});

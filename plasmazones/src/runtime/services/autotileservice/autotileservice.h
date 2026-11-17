@@ -31,7 +31,7 @@ namespace PlasmaZones {
  * focus cycling, and the autotile config properties. Window lifecycle and
  * tile-request traffic for autotile screens deliberately stays on
  * org.phosphor_works.Placement.Tiling — the effect keeps ONE engine-managed screen set
- * and one geometry pipeline for the whole tiling family, and TilingAdaptor
+ * and one geometry pipeline for the whole tiling family, and TilingService
  * routes per screen through IPlacementEngine.
  */
 class PLASMAZONES_EXPORT AutotileService : public QObject
