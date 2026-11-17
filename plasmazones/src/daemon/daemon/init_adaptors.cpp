@@ -31,6 +31,7 @@
 #include "dbus/layoutadaptor/layoutadaptor.h"
 #include "dbus/settingsadaptor/settingsadaptor.h"
 #include "dbus/overlayadaptor.h"
+#include "runtime/services/overlaycontrolservice.h"
 #include "dbus/zonedetectionadaptor.h"
 #include "runtime/services/zonequeryservice.h"
 #include "runtime/windowtracker/windowtracker.h"
@@ -117,6 +118,8 @@ void Daemon::initCoreAdaptors()
     m_zoneQueryService = nullptr;
     delete m_overlayAdaptor;
     m_overlayAdaptor = nullptr;
+    delete m_overlayControlService;
+    m_overlayControlService = nullptr;
     delete m_compositorBridge;
     m_compositorBridge = nullptr;
     delete m_ruleAdaptor;
@@ -201,9 +204,12 @@ void Daemon::initCoreAdaptors()
     // state to a freshly (re)started effect, since the signal is edge-triggered).
     setupIdleService();
 
-    // Overlay adaptor - overlay visibility and highlighting
-    m_overlayAdaptor = new OverlayAdaptor(m_overlayService.get(), m_zoneDetector.get(), m_layoutManager.get(),
-                                          m_screenManager.get(), m_settings.get(), this);
+    // Overlay control - overlay visibility and highlighting, and its D-Bus
+    // binding, which also carries the KWin effect's thumbnail ingest
+    m_overlayControlService =
+        new OverlayControlService(m_overlayService.get(), m_zoneDetector.get(), m_layoutManager.get(),
+                                  m_screenManager.get(), m_settings.get(), this);
+    m_overlayAdaptor = new OverlayAdaptor(m_overlayControlService, m_overlayService.get(), this);
     // A bridge registers only from the compositor's own process, the one the
     // thumbnail entries are held to, so no other peer can take the
     // registration first and keep KWin out (#1155). Both adaptors are

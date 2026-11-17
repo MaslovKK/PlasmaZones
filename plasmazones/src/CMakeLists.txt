@@ -178,6 +178,8 @@ set(plasmazones_core_SRCS
     runtime/services/controlservice.h
     dbus/overlayadaptor.cpp
     dbus/overlayadaptor.h
+    runtime/services/overlaycontrolservice.cpp
+    runtime/services/overlaycontrolservice.h
     dbus/zonedetectionadaptor.cpp
     dbus/zonedetectionadaptor.h
     runtime/services/zonequeryservice.cpp

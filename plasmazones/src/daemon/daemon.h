@@ -1371,7 +1371,8 @@ private:
     // So we use raw pointers; Qt parent-child system manages their lifetime
     LayoutAdaptor* m_layoutAdaptor = nullptr;
     SettingsAdaptor* m_settingsAdaptor = nullptr;
-    OverlayAdaptor* m_overlayAdaptor = nullptr; // Overlay visibility only
+    OverlayControlService* m_overlayControlService = nullptr; // Overlay visibility only
+    OverlayAdaptor* m_overlayAdaptor = nullptr; // D-Bus binding of m_overlayControlService, deleted before it
     // Zone detection queries. A plain QObject child; its bus surface is
     // m_zoneDetectionAdaptor, which is deleted before it.
     ZoneQueryService* m_zoneQueryService = nullptr;
