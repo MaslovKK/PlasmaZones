@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 fuddlesworth
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#include "layoutadaptor.h"
+#include "layoutservice.h"
 #include <PhosphorZones/Layout.h>
 #include <PhosphorZones/LayoutRegistry.h>
 #include <PhosphorZones/ScrollingTemplateStore.h>
@@ -37,7 +37,7 @@ bool validDesktopArg(int virtualDesktop, const char* method)
 }
 } // namespace
 
-QJsonObject LayoutAdaptor::buildActivityInfoJson(const QString& activityId) const
+QJsonObject LayoutService::buildActivityInfoJson(const QString& activityId) const
 {
     QJsonObject info;
     info[QLatin1String("id")] = activityId;
@@ -49,7 +49,7 @@ QJsonObject LayoutAdaptor::buildActivityInfoJson(const QString& activityId) cons
 }
 
 // Virtual Desktop Query
-int LayoutAdaptor::getCurrentVirtualDesktop()
+int LayoutService::getCurrentVirtualDesktop()
 {
     return m_virtualDesktopManager ? m_virtualDesktopManager->currentDesktop() : 0;
 }
@@ -58,7 +58,7 @@ int LayoutAdaptor::getCurrentVirtualDesktop()
 // NOTE: Individual assignment methods do not call saveAssignments() directly.
 // PhosphorZones::LayoutRegistry auto-persists in assignLayout(), assignLayoutById(),
 // clearAssignment(), setAssignmentEntryDirect(), and the batch setAll*() methods.
-QString LayoutAdaptor::getLayoutForScreen(const QString& screenId)
+QString LayoutService::getLayoutForScreen(const QString& screenId)
 {
     QString resolvedId = PhosphorScreens::ScreenIdentity::idForName(screenId);
     // Per-output virtual desktops (#648): resolve the queried screen's own
@@ -80,7 +80,7 @@ QString LayoutAdaptor::getLayoutForScreen(const QString& screenId)
     return layout ? layout->id().toString() : QString();
 }
 
-QString LayoutAdaptor::getAssignedLayoutForScreen(const QString& screenId)
+QString LayoutService::getAssignedLayoutForScreen(const QString& screenId)
 {
     QString resolvedId = PhosphorScreens::ScreenIdentity::idForName(screenId);
     // Same context resolution as getLayoutForScreen: the queried screen's own
@@ -95,7 +95,7 @@ QString LayoutAdaptor::getAssignedLayoutForScreen(const QString& screenId)
     return m_layoutManager->storedAssignmentIdForScreen(resolvedId, desktop, activity);
 }
 
-void LayoutAdaptor::assignLayoutToScreen(const QString& screenId, const QString& layoutId)
+void LayoutService::assignLayoutToScreen(const QString& screenId, const QString& layoutId)
 {
     if (!validateNonEmpty(screenId, QStringLiteral("screen name"), QStringLiteral("assign layout"))) {
         return;
@@ -136,7 +136,7 @@ void LayoutAdaptor::assignLayoutToScreen(const QString& screenId, const QString&
     qCInfo(lcDbusLayout) << "Assigned layout" << layoutId << "to screen" << screenId << "(id:" << resolvedId << ")";
 }
 
-void LayoutAdaptor::clearAssignment(const QString& screenId)
+void LayoutService::clearAssignment(const QString& screenId)
 {
     // Bus boundary: guard the screen name like every assignLayout* sibling does.
     // ScreenIdentity::idForName("") returns "" unchanged, so without this an empty
@@ -150,12 +150,12 @@ void LayoutAdaptor::clearAssignment(const QString& screenId)
     stageOrApply(resolvedId);
 }
 
-QStringList LayoutAdaptor::getAvailableScreenIds()
+QStringList LayoutService::getAvailableScreenIds()
 {
     return m_screenManager ? m_screenManager->effectiveScreenIds() : QStringList();
 }
 
-QString LayoutAdaptor::getAllScreenAssignments()
+QString LayoutService::getAllScreenAssignments()
 {
     QJsonObject root;
     const int desktopCount = getVirtualDesktopCount();
@@ -270,7 +270,7 @@ QString LayoutAdaptor::getAllScreenAssignments()
 }
 
 // Per-Virtual-Desktop Assignments
-QString LayoutAdaptor::getLayoutForScreenDesktop(const QString& screenId, int virtualDesktop)
+QString LayoutService::getLayoutForScreenDesktop(const QString& screenId, int virtualDesktop)
 {
     if (!validDesktopArg(virtualDesktop, "getLayoutForScreenDesktop")) {
         return QString();
@@ -287,7 +287,7 @@ QString LayoutAdaptor::getLayoutForScreenDesktop(const QString& screenId, int vi
     return layout ? layout->id().toString() : QString();
 }
 
-void LayoutAdaptor::assignLayoutToScreenDesktop(const QString& screenId, int virtualDesktop, const QString& layoutId)
+void LayoutService::assignLayoutToScreenDesktop(const QString& screenId, int virtualDesktop, const QString& layoutId)
 {
     if (!validDesktopArg(virtualDesktop, "assignLayoutToScreenDesktop")) {
         return;
@@ -321,7 +321,7 @@ void LayoutAdaptor::assignLayoutToScreenDesktop(const QString& screenId, int vir
     // → daemon's syncModeFromAssignments(). No direct updateActiveLayout() needed.
 }
 
-void LayoutAdaptor::clearAssignmentForScreenDesktop(const QString& screenId, int virtualDesktop)
+void LayoutService::clearAssignmentForScreenDesktop(const QString& screenId, int virtualDesktop)
 {
     if (!validateNonEmpty(screenId, QStringLiteral("screen name"), QStringLiteral("clear assignment"))) {
         return;
@@ -335,7 +335,7 @@ void LayoutAdaptor::clearAssignmentForScreenDesktop(const QString& screenId, int
     qCInfo(lcDbusLayout) << "Cleared assignment for screen" << screenId << "on desktop" << virtualDesktop;
 }
 
-bool LayoutAdaptor::hasExplicitAssignmentForScreenDesktop(const QString& screenId, int virtualDesktop)
+bool LayoutService::hasExplicitAssignmentForScreenDesktop(const QString& screenId, int virtualDesktop)
 {
     if (!validDesktopArg(virtualDesktop, "hasExplicitAssignmentForScreenDesktop")) {
         return false;
@@ -344,7 +344,7 @@ bool LayoutAdaptor::hasExplicitAssignmentForScreenDesktop(const QString& screenI
                                                   QString());
 }
 
-int LayoutAdaptor::getModeForScreenDesktop(const QString& screenId, int virtualDesktop)
+int LayoutService::getModeForScreenDesktop(const QString& screenId, int virtualDesktop)
 {
     if (!validDesktopArg(virtualDesktop, "getModeForScreenDesktop")) {
         return static_cast<int>(PhosphorZones::AssignmentEntry::Snapping);
@@ -353,7 +353,7 @@ int LayoutAdaptor::getModeForScreenDesktop(const QString& screenId, int virtualD
                                                            virtualDesktop, QString()));
 }
 
-QString LayoutAdaptor::getSnappingLayoutForScreenDesktop(const QString& screenId, int virtualDesktop)
+QString LayoutService::getSnappingLayoutForScreenDesktop(const QString& screenId, int virtualDesktop)
 {
     if (!validDesktopArg(virtualDesktop, "getSnappingLayoutForScreenDesktop")) {
         return QString();
@@ -362,7 +362,7 @@ QString LayoutAdaptor::getSnappingLayoutForScreenDesktop(const QString& screenId
                                                     virtualDesktop, QString());
 }
 
-QString LayoutAdaptor::getTilingAlgorithmForScreenDesktop(const QString& screenId, int virtualDesktop)
+QString LayoutService::getTilingAlgorithmForScreenDesktop(const QString& screenId, int virtualDesktop)
 {
     if (!validDesktopArg(virtualDesktop, "getTilingAlgorithmForScreenDesktop")) {
         return QString();
@@ -371,7 +371,7 @@ QString LayoutAdaptor::getTilingAlgorithmForScreenDesktop(const QString& screenI
                                                      virtualDesktop, QString());
 }
 
-QString LayoutAdaptor::getScreenStates()
+QString LayoutService::getScreenStates()
 {
     // No m_layoutManager guard: both constructors qFatal on a null manager,
     // and every other slot in this file dereferences it unguarded.
@@ -517,7 +517,7 @@ QString LayoutAdaptor::getScreenStates()
     return QString::fromUtf8(QJsonDocument(result).toJson(QJsonDocument::Compact));
 }
 
-QVariantMap LayoutAdaptor::getActiveLayoutsForScreens()
+QVariantMap LayoutService::getActiveLayoutsForScreens()
 {
     QVariantMap result;
     for (auto it = m_activeAssignmentByScreen.constBegin(); it != m_activeAssignmentByScreen.constEnd(); ++it) {
@@ -541,7 +541,7 @@ QVariantMap LayoutAdaptor::getActiveLayoutsForScreens()
     return result;
 }
 
-void LayoutAdaptor::publishActiveAssignments(const QHash<QString, QString>& activeByScreen,
+void LayoutService::publishActiveAssignments(const QHash<QString, QString>& activeByScreen,
                                              const QSet<QString>& changedScreenIds)
 {
     // Capture the values to broadcast BEFORE the snapshot is replaced, so the
@@ -574,7 +574,7 @@ void LayoutAdaptor::publishActiveAssignments(const QHash<QString, QString>& acti
     }
 }
 
-QVariantMap LayoutAdaptor::getAllDesktopAssignments()
+QVariantMap LayoutService::getAllDesktopAssignments()
 {
     QVariantMap result;
 
@@ -591,7 +591,7 @@ QVariantMap LayoutAdaptor::getAllDesktopAssignments()
     return result;
 }
 
-QVariantMap LayoutAdaptor::getAllActivityAssignments()
+QVariantMap LayoutService::getAllActivityAssignments()
 {
     QVariantMap result;
 
@@ -606,7 +606,7 @@ QVariantMap LayoutAdaptor::getAllActivityAssignments()
 }
 
 // KDE Activities Support
-void LayoutAdaptor::setActivityManager(PhosphorWorkspaces::ActivityManager* am)
+void LayoutService::setActivityManager(PhosphorWorkspaces::ActivityManager* am)
 {
     if (m_activityManager) {
         disconnect(m_activityManager, nullptr, this, nullptr);
@@ -616,32 +616,32 @@ void LayoutAdaptor::setActivityManager(PhosphorWorkspaces::ActivityManager* am)
     connectActivitySignals();
 }
 
-void LayoutAdaptor::connectActivitySignals()
+void LayoutService::connectActivitySignals()
 {
     if (m_activityManager) {
         connect(m_activityManager, &PhosphorWorkspaces::ActivityManager::currentActivityChanged, this,
-                &LayoutAdaptor::currentActivityChanged);
+                &LayoutService::currentActivityChanged);
         connect(m_activityManager, &PhosphorWorkspaces::ActivityManager::activitiesChanged, this,
-                &LayoutAdaptor::activitiesChanged);
+                &LayoutService::activitiesChanged);
     }
 }
 
-bool LayoutAdaptor::isActivitiesAvailable()
+bool LayoutService::isActivitiesAvailable()
 {
     return PhosphorWorkspaces::ActivityManager::isAvailable();
 }
 
-QStringList LayoutAdaptor::getActivities()
+QStringList LayoutService::getActivities()
 {
     return m_activityManager ? m_activityManager->activities() : QStringList{};
 }
 
-QString LayoutAdaptor::getCurrentActivity()
+QString LayoutService::getCurrentActivity()
 {
     return m_activityManager ? m_activityManager->currentActivity() : QString();
 }
 
-QString LayoutAdaptor::getActivityInfo(const QString& activityId)
+QString LayoutService::getActivityInfo(const QString& activityId)
 {
     if (!m_activityManager || activityId.isEmpty()) {
         return QStringLiteral("{}");
@@ -650,7 +650,7 @@ QString LayoutAdaptor::getActivityInfo(const QString& activityId)
     return QString::fromUtf8(QJsonDocument(buildActivityInfoJson(activityId)).toJson(QJsonDocument::Compact));
 }
 
-QString LayoutAdaptor::getAllActivitiesInfo()
+QString LayoutService::getAllActivitiesInfo()
 {
     QJsonArray array;
 
@@ -665,7 +665,7 @@ QString LayoutAdaptor::getAllActivitiesInfo()
 }
 
 // Per-Activity Assignments
-QString LayoutAdaptor::getLayoutForScreenActivity(const QString& screenId, const QString& activityId)
+QString LayoutService::getLayoutForScreenActivity(const QString& screenId, const QString& activityId)
 {
     QString resolvedId = PhosphorScreens::ScreenIdentity::idForName(screenId);
     QString assignmentId = m_layoutManager->assignmentIdForScreen(resolvedId, 0, activityId);
@@ -679,7 +679,7 @@ QString LayoutAdaptor::getLayoutForScreenActivity(const QString& screenId, const
     return layout ? layout->id().toString() : QString();
 }
 
-void LayoutAdaptor::assignLayoutToScreenActivity(const QString& screenId, const QString& activityId,
+void LayoutService::assignLayoutToScreenActivity(const QString& screenId, const QString& activityId,
                                                  const QString& layoutId)
 {
     if (!validateNonEmpty(screenId, QStringLiteral("screen name"), QStringLiteral("assign layout to activity"))) {
@@ -711,7 +711,7 @@ void LayoutAdaptor::assignLayoutToScreenActivity(const QString& screenId, const 
     // → daemon's syncModeFromAssignments(). No direct updateActiveLayout() needed.
 }
 
-void LayoutAdaptor::clearAssignmentForScreenActivity(const QString& screenId, const QString& activityId)
+void LayoutService::clearAssignmentForScreenActivity(const QString& screenId, const QString& activityId)
 {
     if (!validateNonEmpty(screenId, QStringLiteral("screen name"), QStringLiteral("clear assignment"))) {
         return;
@@ -728,12 +728,12 @@ void LayoutAdaptor::clearAssignmentForScreenActivity(const QString& screenId, co
     qCInfo(lcDbusLayout) << "Cleared assignment for screen" << screenId << "activity" << activityId;
 }
 
-bool LayoutAdaptor::hasExplicitAssignmentForScreenActivity(const QString& screenId, const QString& activityId)
+bool LayoutService::hasExplicitAssignmentForScreenActivity(const QString& screenId, const QString& activityId)
 {
     return m_layoutManager->hasExplicitAssignment(PhosphorScreens::ScreenIdentity::idForName(screenId), 0, activityId);
 }
 
-QVariantMap LayoutAdaptor::getAllCombinedAssignments()
+QVariantMap LayoutService::getAllCombinedAssignments()
 {
     QVariantMap result;
     const auto assignments = m_layoutManager->combinedAssignments();
@@ -757,7 +757,7 @@ QVariantMap LayoutAdaptor::getAllCombinedAssignments()
 }
 
 // Full Assignments (Screen + Desktop + Activity)
-QString LayoutAdaptor::getLayoutForScreenDesktopActivity(const QString& screenId, int virtualDesktop,
+QString LayoutService::getLayoutForScreenDesktopActivity(const QString& screenId, int virtualDesktop,
                                                          const QString& activityId)
 {
     if (!validDesktopArg(virtualDesktop, "getLayoutForScreenDesktopActivity")) {
@@ -775,7 +775,7 @@ QString LayoutAdaptor::getLayoutForScreenDesktopActivity(const QString& screenId
     return layout ? layout->id().toString() : QString();
 }
 
-void LayoutAdaptor::assignLayoutToScreenDesktopActivity(const QString& screenId, int virtualDesktop,
+void LayoutService::assignLayoutToScreenDesktopActivity(const QString& screenId, int virtualDesktop,
                                                         const QString& activityId, const QString& layoutId)
 {
     if (!validDesktopArg(virtualDesktop, "assignLayoutToScreenDesktopActivity")) {
@@ -818,7 +818,7 @@ void LayoutAdaptor::assignLayoutToScreenDesktopActivity(const QString& screenId,
     // → daemon's syncModeFromAssignments(). No direct updateActiveLayout() needed.
 }
 
-void LayoutAdaptor::clearAssignmentForScreenDesktopActivity(const QString& screenId, int virtualDesktop,
+void LayoutService::clearAssignmentForScreenDesktopActivity(const QString& screenId, int virtualDesktop,
                                                             const QString& activityId)
 {
     if (!validateNonEmpty(screenId, QStringLiteral("screen name"), QStringLiteral("clear assignment"))) {
@@ -839,7 +839,7 @@ void LayoutAdaptor::clearAssignmentForScreenDesktopActivity(const QString& scree
                          << activityId;
 }
 
-void LayoutAdaptor::setScrollingTemplateLayout(const QString& screenId, int virtualDesktop, const QString& activityId,
+void LayoutService::setScrollingTemplateLayout(const QString& screenId, int virtualDesktop, const QString& activityId,
                                                const QString& layoutId)
 {
     // idForName passthrough: a connector name that matches no known screen
@@ -898,7 +898,7 @@ void LayoutAdaptor::setScrollingTemplateLayout(const QString& screenId, int virt
                          << "for screen" << screenId << "desktop" << virtualDesktop << "activity" << activityId;
 }
 
-QString LayoutAdaptor::getScrollingTemplateLayout(const QString& screenId, int virtualDesktop,
+QString LayoutService::getScrollingTemplateLayout(const QString& screenId, int virtualDesktop,
                                                   const QString& activityId)
 {
     const QString resolvedId = PhosphorScreens::ScreenIdentity::idForName(screenId);
@@ -914,7 +914,7 @@ QString LayoutAdaptor::getScrollingTemplateLayout(const QString& screenId, int v
     return templ.isValid() ? templ.id.toString() : QString();
 }
 
-QString LayoutAdaptor::getScrollingTemplates()
+QString LayoutService::getScrollingTemplates()
 {
     const PhosphorZones::ScrollingTemplateStore* store = m_layoutManager->scrollingTemplateStore();
     if (!store) {
@@ -933,7 +933,7 @@ QString LayoutAdaptor::getScrollingTemplates()
     return QString::fromUtf8(QJsonDocument(array).toJson(QJsonDocument::Compact));
 }
 
-QString LayoutAdaptor::saveScrollingTemplate(const QString& templateJson)
+QString LayoutService::saveScrollingTemplate(const QString& templateJson)
 {
     PhosphorZones::ScrollingTemplateStore* store = m_layoutManager->scrollingTemplateStore();
     if (!store) {
@@ -971,7 +971,7 @@ QString LayoutAdaptor::saveScrollingTemplate(const QString& templateJson)
     return id.toString();
 }
 
-bool LayoutAdaptor::deleteScrollingTemplate(const QString& id)
+bool LayoutService::deleteScrollingTemplate(const QString& id)
 {
     PhosphorZones::ScrollingTemplateStore* store = m_layoutManager->scrollingTemplateStore();
     const QUuid parsed = QUuid::fromString(id);
@@ -1004,7 +1004,7 @@ bool LayoutAdaptor::deleteScrollingTemplate(const QString& id)
     return true;
 }
 
-QString LayoutAdaptor::duplicateScrollingTemplate(const QString& id)
+QString LayoutService::duplicateScrollingTemplate(const QString& id)
 {
     PhosphorZones::ScrollingTemplateStore* store = m_layoutManager->scrollingTemplateStore();
     const QUuid parsed = QUuid::fromString(id);
@@ -1034,7 +1034,7 @@ QString LayoutAdaptor::duplicateScrollingTemplate(const QString& id)
     return copyId.toString();
 }
 
-void LayoutAdaptor::setAssignmentEntry(const QString& screenId, int virtualDesktop, const QString& activity, int mode,
+void LayoutService::setAssignmentEntry(const QString& screenId, int virtualDesktop, const QString& activity, int mode,
                                        const QString& snappingLayout, const QString& tilingAlgorithm)
 {
     QString resolvedId = PhosphorScreens::ScreenIdentity::idForName(screenId);

@@ -22,7 +22,7 @@
 #include "core/resolve/animationbootstrap.h"
 #include "core/resolve/screenmoderouter.h"
 #include "core/utils/geometryutils.h"
-#include "dbus/layoutadaptor/layoutadaptor.h"
+#include "runtime/services/layoutservice/layoutservice.h"
 #include "runtime/services/settingsservice/settingsservice.h"
 #include "runtime/windowtracker/windowtracker.h"
 #include "runtime/dragresolver/dragresolver.h"
@@ -858,8 +858,8 @@ void Daemon::initEnginesAndWiring()
         // assignment reaches no diff (diffActiveAssignments queues the check
         // for every other field). Not once stop() has begun, which cancels a
         // queued one.
-        if (m_layoutAdaptor && !m_shuttingDown) {
-            m_layoutAdaptor->scheduleScreenStatesCheck();
+        if (m_layoutService && !m_shuttingDown) {
+            m_layoutService->scheduleScreenStatesCheck();
         }
         updateEngineScreens();
         // A count rule that swaps the screen out of tiling releases its
@@ -1257,11 +1257,11 @@ void Daemon::initEnginesAndWiring()
     // handler body lives in init_assignment_apply.cpp.
     //
     // No disconnect-first here: initCoreAdaptors deletes and re-news
-    // m_layoutAdaptor in the same preamble that clears the engine adaptors
+    // m_layoutService in the same preamble that clears the engine adaptors
     // (init_adaptors.cpp), and it always runs immediately before this
     // function, so a stop() -> init() cycle hands us a freshly constructed
     // adaptor that carries no connections to sweep.
-    connect(m_layoutAdaptor, &LayoutAdaptor::assignmentChangesApplied, this, &Daemon::handleAssignmentChangesApplied);
+    connect(m_layoutService, &LayoutService::assignmentChangesApplied, this, &Daemon::handleAssignmentChangesApplied);
 }
 
 } // namespace PlasmaZones

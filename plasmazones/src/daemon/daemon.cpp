@@ -71,7 +71,7 @@
 #include <PhosphorScreens/PlasmaPanelSource.h>
 #include "core/interfaces/shaderregistry.h"
 #include "config/settings.h"
-#include "dbus/layoutadaptor/layoutadaptor.h"
+#include "runtime/services/layoutservice/layoutservice.h"
 #include "runtime/services/settingsservice/settingsservice.h"
 #include "dbus/overlayadaptor.h"
 #include "dbus/zonedetectionadaptor.h"
@@ -279,7 +279,7 @@ Daemon::Daemon(QObject* parent)
     buildStandardLayoutSourceBundle(m_layoutSources, m_layoutManager.get(), m_algorithmRegistry.get(),
                                     m_scrollingTemplateStore.get());
     // Cache the bundle's autotile source once so the three wiring sites that
-    // need it (LayoutAdaptor, OverlayService, UnifiedLayoutController) don't
+    // need it (LayoutService, OverlayService, UnifiedLayoutController) don't
     // each re-call source(QStringLiteral("autotile"))
     // (one literal typo away from silently breaking preview-cache reuse).
     m_autotileLayoutSource = m_layoutSources.source(PhosphorTiles::autotileLayoutSourceName());

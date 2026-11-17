@@ -9,7 +9,7 @@
 #include "core/types/constants.h"
 #include "daemon/controllers/unifiedlayoutcontroller.h"
 #include "daemon/overlayservice.h"
-#include "dbus/layoutadaptor/layoutadaptor.h"
+#include "runtime/services/layoutservice/layoutservice.h"
 #include "runtime/services/settingsservice/settingsservice.h"
 // Complete types needed for the WindowLifecycleRelay PMF connects below
 // (TilingService::onTrackedWindowDestroyed / pruneStaleFloatBroadcasts) —
@@ -170,8 +170,8 @@ void Daemon::connectLayoutSignals()
                                                   diffActiveAssignments();
                                                   // Relay to the D-Bus surface so the settings app
                                                   // refreshes its template views on store CRUD.
-                                                  if (m_layoutAdaptor) {
-                                                      Q_EMIT m_layoutAdaptor->scrollingTemplatesChanged();
+                                                  if (m_layoutService) {
+                                                      Q_EMIT m_layoutService->scrollingTemplatesChanged();
                                                   }
                                               });
     }
@@ -530,8 +530,8 @@ void Daemon::finalizeStartup()
     // store is wired (F236).
 
     // Signal that daemon is fully initialized and ready for queries
-    if (m_layoutAdaptor) {
-        Q_EMIT m_layoutAdaptor->daemonReady();
+    if (m_layoutService) {
+        Q_EMIT m_layoutService->daemonReady();
     }
 
     // Explicitly broadcast settingsChanged so the KWin effect re-fetches all

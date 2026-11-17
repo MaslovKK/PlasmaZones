@@ -35,7 +35,8 @@
 
 #include "dbus/settingsadaptor.h"
 #include "runtime/services/settingsservice/settingsservice.h"
-#include "dbus/layoutadaptor/layoutadaptor.h"
+#include "dbus/layoutadaptor.h"
+#include "runtime/services/layoutservice/layoutservice.h"
 #include <PhosphorProtocol/ServiceConstants.h>
 #include <PhosphorZones/Layout.h>
 #include <PhosphorZones/LayoutRegistry.h>
@@ -75,7 +76,7 @@ private Q_SLOTS:
         }
         m_layoutManager->addLayout(layout);
         m_benchLayoutId = layout->id().toString();
-        m_layoutAdaptor = new LayoutAdaptor(m_layoutManager, m_parent);
+        m_layoutAdaptor = new LayoutAdaptor(new LayoutService(m_layoutManager, m_parent), m_parent);
     }
 
     void cleanup()

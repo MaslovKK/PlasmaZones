@@ -6,8 +6,7 @@
 #include "plasmazones_export.h"
 #include <QObject>
 #include <QPointer>
-#include <QDBusAbstractAdaptor>
-#include <QDBusVariant>
+#include <QVariant>
 #include <QJsonObject>
 #include <QSet>
 #include <QString>
@@ -50,21 +49,22 @@ namespace PlasmaZones {
 class ISettings;
 
 /**
- * @brief D-Bus adaptor for layout management operations
+ * @brief Layout management: the service behind
+ *        org.phosphor_works.Placement.LayoutRegistry
  *
- * Provides D-Bus interface: org.phosphor_works.Placement.LayoutRegistry
- *  PhosphorZones::Layout CRUD and assignment operations
+ * PhosphorZones::Layout CRUD and assignment operations. Bound to D-Bus by
+ * LayoutAdaptor (dbus/layoutadaptor.h), which wraps layoutPropertyChanged's
+ * value in a QDBusVariant for the bus.
  */
-class PLASMAZONES_EXPORT LayoutAdaptor : public QDBusAbstractAdaptor
+class PLASMAZONES_EXPORT LayoutService : public QObject
 {
     Q_OBJECT
-    Q_CLASSINFO("D-Bus Interface", "org.phosphor_works.Placement.LayoutRegistry")
 
 public:
-    explicit LayoutAdaptor(PhosphorZones::LayoutRegistry* manager, QObject* parent = nullptr);
-    explicit LayoutAdaptor(PhosphorZones::LayoutRegistry* manager, PhosphorWorkspaces::VirtualDesktopManager* vdm,
+    explicit LayoutService(PhosphorZones::LayoutRegistry* manager, QObject* parent = nullptr);
+    explicit LayoutService(PhosphorZones::LayoutRegistry* manager, PhosphorWorkspaces::VirtualDesktopManager* vdm,
                            PhosphorScreens::ScreenManager* screenManager = nullptr, QObject* parent = nullptr);
-    ~LayoutAdaptor() override = default;
+    ~LayoutService() override = default;
 
     void setVirtualDesktopManager(PhosphorWorkspaces::VirtualDesktopManager* vdm);
     void setActivityManager(PhosphorWorkspaces::ActivityManager* am);
@@ -435,10 +435,11 @@ Q_SIGNALS:
      *
      * @param layoutId The layout whose property changed
      * @param property Property name: "hidden", "autoAssign", or "aspectRatioClass"
-     * @param value    New value as a QDBusVariant (bool for hidden/autoAssign,
-     *                 int for aspectRatioClass)
+     * @param value    New value (bool for hidden/autoAssign, int for
+     *                 aspectRatioClass). LayoutService sends it on the bus
+     *                 as a QDBusVariant.
      */
-    void layoutPropertyChanged(const QString& layoutId, const QString& property, const QDBusVariant& value);
+    void layoutPropertyChanged(const QString& layoutId, const QString& property, const QVariant& value);
 
     void layoutListChanged();
 
@@ -679,7 +680,7 @@ private:
      * Configures @c m_layoutSourceCoalesce (single-shot, 200 ms interval)
      * and wires its @c timeout into a single @c layoutListChanged emission.
      * Called from every public constructor so the init lives in exactly
-     * one place — see constructor bodies in layoutadaptor.cpp.
+     * one place — see constructor bodies in layoutservice.cpp.
      */
     void initCoalesceTimer();
     /// The comparison @ref scheduleScreenStatesCheck queues. Private and not a

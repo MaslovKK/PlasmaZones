@@ -59,7 +59,7 @@
 #include "dbus/scrollingadaptor.h"
 #include "dbus/compositorbridgeadaptor.h"
 #include "dbus/controladaptor.h"
-#include "dbus/layoutadaptor/layoutadaptor.h"
+#include "dbus/layoutadaptor.h"
 #include "dbus/overlayadaptor.h"
 #include "dbus/settingsadaptor.h"
 #include "dbus/shaderadaptor.h"
