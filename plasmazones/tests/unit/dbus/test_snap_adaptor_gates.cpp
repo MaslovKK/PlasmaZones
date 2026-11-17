@@ -16,7 +16,7 @@
 
 #include "wta_float_back_fixture.h"
 #include "helpers/VirtualScreenTestHelpers.h"
-#include "dbus/controladaptor.h"
+#include "runtime/services/controlservice.h"
 #include "runtime/services/snapservice/snapservice.h"
 #include "dbus/snapadaptor.h"
 #include "helpers/BusPeer.h"
@@ -73,9 +73,9 @@ struct GateFixture : FloatBackFixture
                                       : PhosphorZones::AssignmentEntry::Mode::Snapping;
         });
     }
-    ControlAdaptor* control()
+    ControlService* control()
     {
-        return new ControlAdaptor(wta, adaptor, layouts, nullptr, nullptr, nullptr, nullptr, nullptr, &parent);
+        return new ControlService(wta, adaptor, layouts, nullptr, &parent);
     }
 
     SnapService* adaptor = nullptr; // parent-owned
@@ -888,7 +888,7 @@ private Q_SLOTS:
         QVERIFY(f.screenMgr->setVirtualScreenConfig(kRight, TestHelpers::makeSplitConfig(kRight)));
         const QString vs1 = QStringLiteral("DP-2/vs:1");
         f.wta->cursorScreenChanged(vs1);
-        ControlAdaptor* control = f.control();
+        ControlService* control = f.control();
         QStringList toggled;
         control->setModeToggleHandler([&toggled](const QString& screenId) {
             toggled.append(screenId);
@@ -900,7 +900,7 @@ private Q_SLOTS:
     void controlToggleRefusesAnUnknownScreen()
     {
         GateFixture f;
-        ControlAdaptor* control = f.control();
+        ControlService* control = f.control();
         QStringList toggled;
         control->setModeToggleHandler([&toggled](const QString& screenId) {
             toggled.append(screenId);

@@ -153,18 +153,22 @@ set(plasmazones_core_SRCS
     dbus/dbushelpers.cpp
     runtime/common/lookups.cpp
     runtime/common/lookups.h
-    dbus/layoutadaptor/layoutadaptor.cpp
-    dbus/layoutadaptor/assignment.cpp
-    dbus/layoutadaptor/assignment_batch.cpp
-    dbus/layoutadaptor/editor.cpp
-    dbus/layoutadaptor/layoutadaptor.h
-    dbus/settingsadaptor/settingsadaptor.cpp
-    dbus/settingsadaptor/settingsadaptor_batch.cpp
-    dbus/settingsadaptor/settingsadaptor_registry.cpp
-    dbus/settingsadaptor/settingsadaptor_registry_snapping.cpp
-    dbus/settingsadaptor/settingsadaptor_registry_autotile.cpp
-    dbus/settingsadaptor/settingsadaptor_registry_scrolling.cpp
-    dbus/settingsadaptor/settingsadaptor.h
+    dbus/layoutadaptor.cpp
+    dbus/layoutadaptor.h
+    runtime/services/layoutservice/layoutservice.cpp
+    runtime/services/layoutservice/assignment.cpp
+    runtime/services/layoutservice/assignment_batch.cpp
+    runtime/services/layoutservice/editor.cpp
+    runtime/services/layoutservice/layoutservice.h
+    dbus/settingsadaptor.cpp
+    dbus/settingsadaptor.h
+    runtime/services/settingsservice/settingsservice.cpp
+    runtime/services/settingsservice/settingsservice_batch.cpp
+    runtime/services/settingsservice/settingsservice_registry.cpp
+    runtime/services/settingsservice/settingsservice_registry_snapping.cpp
+    runtime/services/settingsservice/settingsservice_registry_autotile.cpp
+    runtime/services/settingsservice/settingsservice_registry_scrolling.cpp
+    runtime/services/settingsservice/settingsservice.h
     dbus/shaderadaptor.cpp
     dbus/shaderadaptor.h
     runtime/services/shaderservice.cpp
@@ -172,10 +176,14 @@ set(plasmazones_core_SRCS
     dbus/compositorbridgeadaptor.cpp
     dbus/compositorbridgeadaptor.h
     dbus/controladaptor.cpp
-    dbus/controladaptor_shortcuts.cpp
     dbus/controladaptor.h
+    runtime/services/controlservice.cpp
+    runtime/services/controlservice_shortcuts.cpp
+    runtime/services/controlservice.h
     dbus/overlayadaptor.cpp
     dbus/overlayadaptor.h
+    runtime/services/overlaycontrolservice.cpp
+    runtime/services/overlaycontrolservice.h
     dbus/zonedetectionadaptor.cpp
     dbus/zonedetectionadaptor.h
     runtime/services/zonequeryservice.cpp

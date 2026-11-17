@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 fuddlesworth
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#include "layoutadaptor.h"
+#include "layoutservice.h"
 #include "runtime/common/lookups.h"
 #include "phosphor_i18n.h"
 #include "core/interfaces/interfaces.h"
@@ -117,8 +117,8 @@ QJsonObject autotilePreviewToLayoutJson(const PhosphorLayout::LayoutPreview& pre
 // Constructor and Signal Setup
 // ═══════════════════════════════════════════════════════════════════════════════
 
-LayoutAdaptor::LayoutAdaptor(PhosphorZones::LayoutRegistry* manager, QObject* parent)
-    : QDBusAbstractAdaptor(parent)
+LayoutService::LayoutService(PhosphorZones::LayoutRegistry* manager, QObject* parent)
+    : QObject(parent)
     , m_layoutManager(manager)
 {
     if (!m_layoutManager) {
@@ -129,23 +129,23 @@ LayoutAdaptor::LayoutAdaptor(PhosphorZones::LayoutRegistry* manager, QObject* pa
         // uses qFatal for the same class of misconfiguration; mirror it so debug
         // AND release both halt loudly at the point of the mistake.
         qFatal(
-            "LayoutAdaptor: constructed with a null PhosphorZones::LayoutRegistry — "
+            "LayoutService: constructed with a null PhosphorZones::LayoutRegistry — "
             "every D-Bus slot would dereference it");
     }
     connectLayoutManagerSignals();
     initCoalesceTimer();
 }
 
-LayoutAdaptor::LayoutAdaptor(PhosphorZones::LayoutRegistry* manager, PhosphorWorkspaces::VirtualDesktopManager* vdm,
+LayoutService::LayoutService(PhosphorZones::LayoutRegistry* manager, PhosphorWorkspaces::VirtualDesktopManager* vdm,
                              PhosphorScreens::ScreenManager* screenManager, QObject* parent)
-    : QDBusAbstractAdaptor(parent)
+    : QObject(parent)
     , m_layoutManager(manager)
     , m_virtualDesktopManager(vdm)
     , m_screenManager(screenManager)
 {
     if (!m_layoutManager) {
         qFatal(
-            "LayoutAdaptor: constructed with a null PhosphorZones::LayoutRegistry — "
+            "LayoutService: constructed with a null PhosphorZones::LayoutRegistry — "
             "every D-Bus slot would dereference it");
     }
     connectLayoutManagerSignals();
@@ -153,7 +153,7 @@ LayoutAdaptor::LayoutAdaptor(PhosphorZones::LayoutRegistry* manager, PhosphorWor
     initCoalesceTimer();
 }
 
-void LayoutAdaptor::initCoalesceTimer()
+void LayoutService::initCoalesceTimer()
 {
     m_layoutSourceCoalesce.setSingleShot(true);
     m_layoutSourceCoalesce.setInterval(200);
@@ -163,18 +163,18 @@ void LayoutAdaptor::initCoalesceTimer()
     // The next event-loop pass: compresses a burst of checks in one turn.
     m_screenStatesCheck.setSingleShot(true);
     m_screenStatesCheck.setInterval(0);
-    connect(&m_screenStatesCheck, &QTimer::timeout, this, &LayoutAdaptor::checkScreenStates);
+    connect(&m_screenStatesCheck, &QTimer::timeout, this, &LayoutService::checkScreenStates);
 }
 
-void LayoutAdaptor::connectLayoutManagerSignals()
+void LayoutService::connectLayoutManagerSignals()
 {
     connect(m_layoutManager, &PhosphorZones::LayoutRegistry::activeLayoutChanged, this,
-            &LayoutAdaptor::onActiveLayoutChanged);
-    connect(m_layoutManager, &PhosphorZones::LayoutRegistry::layoutsChanged, this, &LayoutAdaptor::onLayoutsChanged);
-    connect(m_layoutManager, &PhosphorZones::LayoutRegistry::layoutAssigned, this, &LayoutAdaptor::onLayoutAssigned);
+            &LayoutService::onActiveLayoutChanged);
+    connect(m_layoutManager, &PhosphorZones::LayoutRegistry::layoutsChanged, this, &LayoutService::onLayoutsChanged);
+    connect(m_layoutManager, &PhosphorZones::LayoutRegistry::layoutAssigned, this, &LayoutService::onLayoutAssigned);
 }
 
-void LayoutAdaptor::onActiveLayoutChanged(PhosphorZones::Layout* layout)
+void LayoutService::onActiveLayoutChanged(PhosphorZones::Layout* layout)
 {
     m_cachedActiveLayoutId = QUuid();
     m_cachedActiveLayoutJson.clear();
@@ -195,13 +195,13 @@ void LayoutAdaptor::onActiveLayoutChanged(PhosphorZones::Layout* layout)
     }
 }
 
-void LayoutAdaptor::onLayoutsChanged()
+void LayoutService::onLayoutsChanged()
 {
     invalidateCache();
     Q_EMIT layoutListChanged();
 }
 
-void LayoutAdaptor::onLayoutAssigned(const QString& screen, int virtualDesktop, PhosphorZones::Layout* layout)
+void LayoutService::onLayoutAssigned(const QString& screen, int virtualDesktop, PhosphorZones::Layout* layout)
 {
     // Don't echo back to the KCM during setAssignmentEntry — the KCM initiated the
     // change and will reload from KConfig. The daemon's internal layoutAssigned signal
@@ -225,7 +225,7 @@ void LayoutAdaptor::onLayoutAssigned(const QString& screen, int virtualDesktop, 
     }
 }
 
-void LayoutAdaptor::setVirtualDesktopManager(PhosphorWorkspaces::VirtualDesktopManager* vdm)
+void LayoutService::setVirtualDesktopManager(PhosphorWorkspaces::VirtualDesktopManager* vdm)
 {
     if (m_virtualDesktopManager) {
         disconnect(m_virtualDesktopManager, nullptr, this, nullptr);
@@ -235,11 +235,11 @@ void LayoutAdaptor::setVirtualDesktopManager(PhosphorWorkspaces::VirtualDesktopM
     connectVirtualDesktopSignals();
 }
 
-void LayoutAdaptor::connectVirtualDesktopSignals()
+void LayoutService::connectVirtualDesktopSignals()
 {
     if (m_virtualDesktopManager) {
         connect(m_virtualDesktopManager, &PhosphorWorkspaces::VirtualDesktopManager::desktopCountChanged, this,
-                &LayoutAdaptor::virtualDesktopCountChanged);
+                &LayoutService::virtualDesktopCountChanged);
         // The count and the names normally commit together at KWin's count
         // change, but in the manager's fallback (KWin's desktop signals not
         // adding up to a list) a growing count can still go out before the
@@ -256,14 +256,14 @@ void LayoutAdaptor::connectVirtualDesktopSignals()
     }
 }
 
-void LayoutAdaptor::invalidateCache()
+void LayoutService::invalidateCache()
 {
     m_cachedActiveLayoutJson.clear();
     m_cachedActiveLayoutId = QUuid();
     m_cachedLayoutJson.clear();
 }
 
-void LayoutAdaptor::notifyLayoutListChanged()
+void LayoutService::notifyLayoutListChanged()
 {
     invalidateCache();
     Q_EMIT layoutListChanged();
@@ -273,18 +273,18 @@ void LayoutAdaptor::notifyLayoutListChanged()
 // Helper Methods
 // ═══════════════════════════════════════════════════════════════════════════════
 
-std::optional<QUuid> LayoutAdaptor::parseAndValidateUuid(const QString& id, const QString& operation) const
+std::optional<QUuid> LayoutService::parseAndValidateUuid(const QString& id, const QString& operation) const
 {
     return Lookups::parseAndValidateUuid(id, operation, lcDbusLayout);
 }
 
-bool LayoutAdaptor::requiresManualLayoutValidation(const QString& layoutId)
+bool LayoutService::requiresManualLayoutValidation(const QString& layoutId)
 {
     return !PhosphorLayout::LayoutId::isAutotile(layoutId) && !PhosphorLayout::LayoutId::isScrolling(layoutId)
         && layoutId != PhosphorZones::NoSnappingLayout;
 }
 
-PhosphorZones::Layout* LayoutAdaptor::getValidatedLayout(const QString& id, const QString& operation)
+PhosphorZones::Layout* LayoutService::getValidatedLayout(const QString& id, const QString& operation)
 {
     auto uuidOpt = parseAndValidateUuid(id, operation);
     if (!uuidOpt) {
@@ -300,17 +300,17 @@ PhosphorZones::Layout* LayoutAdaptor::getValidatedLayout(const QString& id, cons
     return layout;
 }
 
-bool LayoutAdaptor::validateNonEmpty(const QString& value, const QString& paramName, const QString& operation) const
+bool LayoutService::validateNonEmpty(const QString& value, const QString& paramName, const QString& operation) const
 {
     return Lookups::validateNonEmpty(value, paramName, operation, lcDbusLayout);
 }
 
-bool LayoutAdaptor::validateDesktopNumber(int virtualDesktop, const QString& operation, bool allowZero) const
+bool LayoutService::validateDesktopNumber(int virtualDesktop, const QString& operation, bool allowZero) const
 {
     return Lookups::validateDesktopNumber(virtualDesktop, operation, lcDbusLayout, allowZero);
 }
 
-std::optional<QJsonObject> LayoutAdaptor::parseJsonObject(const QString& jsonString, const QString& operation) const
+std::optional<QJsonObject> LayoutService::parseJsonObject(const QString& jsonString, const QString& operation) const
 {
     QJsonParseError parseError;
     QJsonDocument doc = QJsonDocument::fromJson(jsonString.toUtf8(), &parseError);
@@ -332,7 +332,7 @@ std::optional<QJsonObject> LayoutAdaptor::parseJsonObject(const QString& jsonStr
 // PhosphorZones::Layout Queries
 // ═══════════════════════════════════════════════════════════════════════════════
 
-QString LayoutAdaptor::getActiveLayout()
+QString LayoutService::getActiveLayout()
 {
     // Return the default layout (settings-based fallback) rather than
     // the transient internal active layout, so KCM and other D-Bus
@@ -351,7 +351,7 @@ QString LayoutAdaptor::getActiveLayout()
     return m_cachedActiveLayoutJson;
 }
 
-QStringList LayoutAdaptor::getLayoutList()
+QStringList LayoutService::getLayoutList()
 {
     // Sort order is pull-model: this re-sorts from the current ordering
     // settings on every call, and no layoutListChanged is wired to an
@@ -413,7 +413,7 @@ QStringList LayoutAdaptor::getLayoutList()
     return result;
 }
 
-QString LayoutAdaptor::getLayout(const QString& id)
+QString LayoutService::getLayout(const QString& id)
 {
     // Handle autotile algorithm preview layouts
     if (PhosphorLayout::LayoutId::isAutotile(id)) {
@@ -464,7 +464,7 @@ QString LayoutAdaptor::getLayout(const QString& id)
 // Visibility Filtering
 // ═══════════════════════════════════════════════════════════════════════════════
 
-void LayoutAdaptor::invalidateLayoutJsonCacheFor(const QUuid& uuid)
+void LayoutService::invalidateLayoutJsonCacheFor(const QUuid& uuid)
 {
     m_cachedLayoutJson.remove(uuid);
     if (m_cachedActiveLayoutId == uuid) {
@@ -484,7 +484,7 @@ const QString kPropAutoAssign = QStringLiteral("autoAssign");
 const QString kPropAspectRatioClass = QStringLiteral("aspectRatioClass");
 } // namespace
 
-void LayoutAdaptor::setLayoutHidden(const QString& layoutId, bool hidden)
+void LayoutService::setLayoutHidden(const QString& layoutId, bool hidden)
 {
     // Autotile algorithms have no backing Layout object — their per-id settings
     // (here, hiddenFromSelector for the curated picker) live in the unified
@@ -512,7 +512,7 @@ void LayoutAdaptor::setLayoutHidden(const QString& layoutId, bool hidden)
         }
         m_layoutManager->saveAutotileOverrides(algoId, overrides);
         qCInfo(lcDbusLayout) << "Set autotile" << layoutId << "hidden:" << hidden;
-        Q_EMIT layoutPropertyChanged(layoutId, kPropHidden, QDBusVariant(hidden));
+        Q_EMIT layoutPropertyChanged(layoutId, kPropHidden, QVariant(hidden));
         return;
     }
 
@@ -523,7 +523,7 @@ void LayoutAdaptor::setLayoutHidden(const QString& layoutId, bool hidden)
 
     // Value-equality guard: skip the mutation + cache invalidation +
     // signal fan-out when the incoming value already matches the current
-    // one. Mirrors the Phase 1.1 guard in SettingsAdaptor::setSetting so
+    // one. Mirrors the Phase 1.1 guard in SettingsService::setSetting so
     // a settled checkbox cannot spam subscribers with no-op reloads.
     if (layout->hiddenFromSelector() == hidden) {
         return;
@@ -543,10 +543,10 @@ void LayoutAdaptor::setLayoutHidden(const QString& layoutId, bool hidden)
     // signal (3 strings + 1 bool over the wire) instead of layoutChanged
     // with the full 5–20 KB JSON payload. layoutListChanged is likewise
     // not emitted — the list didn't change.
-    Q_EMIT layoutPropertyChanged(layoutId, kPropHidden, QDBusVariant(hidden));
+    Q_EMIT layoutPropertyChanged(layoutId, kPropHidden, QVariant(hidden));
 }
 
-void LayoutAdaptor::setLayoutAutoAssign(const QString& layoutId, bool enabled)
+void LayoutService::setLayoutAutoAssign(const QString& layoutId, bool enabled)
 {
     auto* layout = getValidatedLayout(layoutId, QStringLiteral("set layout auto-assign"));
     if (!layout) {
@@ -563,10 +563,10 @@ void LayoutAdaptor::setLayoutAutoAssign(const QString& layoutId, bool enabled)
     invalidateLayoutJsonCacheFor(layout->id());
 
     qCInfo(lcDbusLayout) << "Set layout" << layoutId << "autoAssign:" << enabled;
-    Q_EMIT layoutPropertyChanged(layoutId, kPropAutoAssign, QDBusVariant(enabled));
+    Q_EMIT layoutPropertyChanged(layoutId, kPropAutoAssign, QVariant(enabled));
 }
 
-void LayoutAdaptor::setLayoutAspectRatioClass(const QString& layoutId, int aspectRatioClass)
+void LayoutService::setLayoutAspectRatioClass(const QString& layoutId, int aspectRatioClass)
 {
     auto* layout = getValidatedLayout(layoutId, QStringLiteral("set layout aspect ratio"));
     if (!layout) {
@@ -591,14 +591,14 @@ void LayoutAdaptor::setLayoutAspectRatioClass(const QString& layoutId, int aspec
     invalidateLayoutJsonCacheFor(layout->id());
 
     qCInfo(lcDbusLayout) << "Set layout" << layoutId << "aspectRatioClass:" << normalized;
-    Q_EMIT layoutPropertyChanged(layoutId, kPropAspectRatioClass, QDBusVariant(normalized));
+    Q_EMIT layoutPropertyChanged(layoutId, kPropAspectRatioClass, QVariant(normalized));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // PhosphorZones::Layout Management
 // ═══════════════════════════════════════════════════════════════════════════════
 
-void LayoutAdaptor::setActiveLayout(const QString& id)
+void LayoutService::setActiveLayout(const QString& id)
 {
     auto* layout = getValidatedLayout(id, QStringLiteral("set active layout"));
     if (!layout) {
@@ -608,7 +608,7 @@ void LayoutAdaptor::setActiveLayout(const QString& id)
     m_layoutManager->setActiveLayoutById(layout->id());
 }
 
-void LayoutAdaptor::applyQuickLayout(int mode, int number, const QString& screenId)
+void LayoutService::applyQuickLayout(int mode, int number, const QString& screenId)
 {
     // Same range refusal as the get/set/batch slot verbs. The registry treats
     // an out-of-range number as an unset slot and no-ops silently, so without
@@ -633,7 +633,7 @@ void LayoutAdaptor::applyQuickLayout(int mode, int number, const QString& screen
     m_layoutManager->applyQuickLayout(*slotMode, number, PhosphorScreens::ScreenIdentity::idForName(screenId));
 }
 
-QString LayoutAdaptor::createLayout(const QString& name, const QString& type)
+QString LayoutService::createLayout(const QString& name, const QString& type)
 {
     if (!validateNonEmpty(name, QStringLiteral("name"), QStringLiteral("create layout"))) {
         return QString();
@@ -670,7 +670,7 @@ QString LayoutAdaptor::createLayout(const QString& name, const QString& type)
     return newId;
 }
 
-void LayoutAdaptor::deleteLayout(const QString& id)
+void LayoutService::deleteLayout(const QString& id)
 {
     auto* layout = getValidatedLayout(id, QStringLiteral("delete layout"));
     if (!layout) {
@@ -712,7 +712,7 @@ void LayoutAdaptor::deleteLayout(const QString& id)
     Q_EMIT layoutDeleted(deletedId);
 }
 
-QString LayoutAdaptor::duplicateLayout(const QString& id)
+QString LayoutService::duplicateLayout(const QString& id)
 {
     auto* source = getValidatedLayout(id, QStringLiteral("duplicate layout"));
     if (!source) {
@@ -752,7 +752,7 @@ QString LayoutAdaptor::duplicateLayout(const QString& id)
 // Quick PhosphorZones::Layout Slots
 // ═══════════════════════════════════════════════════════════════════════════════
 
-QString LayoutAdaptor::getQuickLayoutSlot(int mode, int slotNumber)
+QString LayoutService::getQuickLayoutSlot(int mode, int slotNumber)
 {
     if (slotNumber < 1 || slotNumber > PhosphorProtocol::Service::QuickLayoutSlotCount) {
         qCWarning(lcDbusLayout)
@@ -771,7 +771,7 @@ QString LayoutAdaptor::getQuickLayoutSlot(int mode, int slotNumber)
     return slots.value(slotNumber);
 }
 
-void LayoutAdaptor::setQuickLayoutSlot(int mode, int slotNumber, const QString& layoutId)
+void LayoutService::setQuickLayoutSlot(int mode, int slotNumber, const QString& layoutId)
 {
     if (slotNumber < 1 || slotNumber > PhosphorProtocol::Service::QuickLayoutSlotCount) {
         qCWarning(lcDbusLayout)
@@ -801,7 +801,7 @@ void LayoutAdaptor::setQuickLayoutSlot(int mode, int slotNumber, const QString& 
     Q_EMIT quickLayoutSlotsChanged();
 }
 
-void LayoutAdaptor::setAllQuickLayoutSlots(int mode, const QVariantMap& slots)
+void LayoutService::setAllQuickLayoutSlots(int mode, const QVariantMap& slots)
 {
     QHash<int, QString> parsedSlots;
 
@@ -835,7 +835,7 @@ void LayoutAdaptor::setAllQuickLayoutSlots(int mode, const QVariantMap& slots)
     Q_EMIT quickLayoutSlotsChanged();
 }
 
-QVariantMap LayoutAdaptor::getAllQuickLayoutSlots(int mode)
+QVariantMap LayoutService::getAllQuickLayoutSlots(int mode)
 {
     QVariantMap result;
     const auto slotMode = quickSlotMode(mode);
@@ -854,17 +854,17 @@ QVariantMap LayoutAdaptor::getAllQuickLayoutSlots(int mode)
 // Virtual Desktop Info
 // ═══════════════════════════════════════════════════════════════════════════════
 
-int LayoutAdaptor::getVirtualDesktopCount()
+int LayoutService::getVirtualDesktopCount()
 {
     return m_virtualDesktopManager ? m_virtualDesktopManager->desktopCount() : 1;
 }
 
-QStringList LayoutAdaptor::getVirtualDesktopNames()
+QStringList LayoutService::getVirtualDesktopNames()
 {
     return displayDesktopNames();
 }
 
-QStringList LayoutAdaptor::displayDesktopNames() const
+QStringList LayoutService::displayDesktopNames() const
 {
     const auto fallback = [](int position) {
         return PhosphorI18n::tr("Desktop %1").arg(position);
@@ -888,27 +888,27 @@ QStringList LayoutAdaptor::displayDesktopNames() const
 // Settings Access
 // ═══════════════════════════════════════════════════════════════════════════════
 
-void LayoutAdaptor::setSettings(ISettings* settings)
+void LayoutService::setSettings(ISettings* settings)
 {
     m_settings = settings;
 }
 
-void LayoutAdaptor::setAlgorithmRegistry(PhosphorTiles::ITileAlgorithmRegistry* registry)
+void LayoutService::setAlgorithmRegistry(PhosphorTiles::ITileAlgorithmRegistry* registry)
 {
     m_algorithmRegistry = registry;
 }
 
-void LayoutAdaptor::setAutotileLayoutSource(PhosphorLayout::ILayoutSource* source)
+void LayoutService::setAutotileLayoutSource(PhosphorLayout::ILayoutSource* source)
 {
     m_autotileLayoutSource = source;
 }
 
-void LayoutAdaptor::setTiledWindowCountProvider(std::function<std::optional<int>(const QString& screenId)> provider)
+void LayoutService::setTiledWindowCountProvider(std::function<std::optional<int>(const QString& screenId)> provider)
 {
     m_tiledWindowCountProvider = std::move(provider);
 }
 
-void LayoutAdaptor::scheduleScreenStatesCheck()
+void LayoutService::scheduleScreenStatesCheck()
 {
     // Already queued for this pass: the one comparison covers this call too.
     if (!m_screenStatesCheck.isActive()) {
@@ -916,12 +916,12 @@ void LayoutAdaptor::scheduleScreenStatesCheck()
     }
 }
 
-void LayoutAdaptor::cancelScreenStatesCheck()
+void LayoutService::cancelScreenStatesCheck()
 {
     m_screenStatesCheck.stop();
 }
 
-void LayoutAdaptor::checkScreenStates()
+void LayoutService::checkScreenStates()
 {
     // The whole answer, so a field added to getScreenStates later is covered
     // without touching this. A handful of screens, once per turn at most.
@@ -933,7 +933,7 @@ void LayoutAdaptor::checkScreenStates()
     Q_EMIT screenStatesChanged();
 }
 
-void LayoutAdaptor::setLayoutSource(PhosphorLayout::ILayoutSource* source)
+void LayoutService::setLayoutSource(PhosphorLayout::ILayoutSource* source)
 {
     // The adaptor is a QDBusAbstractAdaptor child of the service-owning
     // QObject — signal plumbing and the coalesce QTimer live on this
@@ -950,7 +950,7 @@ void LayoutAdaptor::setLayoutSource(PhosphorLayout::ILayoutSource* source)
     // catch the dev-time programmer error; release degrades to single-
     // source-wins rather than a hard crash so a misconfigured
     // composition root stays observable instead of unkillable.
-    Q_ASSERT_X(!m_layoutSource || m_layoutSource == source, "LayoutAdaptor::setLayoutSource",
+    Q_ASSERT_X(!m_layoutSource || m_layoutSource == source, "LayoutService::setLayoutSource",
                "rebinding to a different ILayoutSource is a programmer error — debug asserts; release silently "
                "swaps to the new source (old source's coalesce-timer connection is dropped first)");
 
@@ -995,7 +995,7 @@ void LayoutAdaptor::setLayoutSource(PhosphorLayout::ILayoutSource* source)
 // Source-agnostic PhosphorZones::Layout Preview (PhosphorLayout::ILayoutSource bridge)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-QString LayoutAdaptor::getLayoutPreviewList()
+QString LayoutService::getLayoutPreviewList()
 {
     if (!m_layoutSource) {
         return QStringLiteral("[]");
@@ -1008,7 +1008,7 @@ QString LayoutAdaptor::getLayoutPreviewList()
     return QString::fromUtf8(QJsonDocument(array).toJson(QJsonDocument::Compact));
 }
 
-QString LayoutAdaptor::getLayoutPreview(const QString& id, int windowCount)
+QString LayoutService::getLayoutPreview(const QString& id, int windowCount)
 {
     if (!m_layoutSource || id.isEmpty()) {
         return QStringLiteral("{}");

@@ -22,8 +22,8 @@
 #include "core/resolve/animationbootstrap.h"
 #include "core/resolve/screenmoderouter.h"
 #include "core/utils/geometryutils.h"
-#include "dbus/layoutadaptor/layoutadaptor.h"
-#include "dbus/settingsadaptor/settingsadaptor.h"
+#include "runtime/services/layoutservice/layoutservice.h"
+#include "runtime/services/settingsservice/settingsservice.h"
 #include "runtime/windowtracker/windowtracker.h"
 #include "runtime/dragresolver/dragresolver.h"
 #include "dbus/autotileadaptor.h"
@@ -35,6 +35,7 @@
 #include "dbus/tilingadaptor.h"
 #include "runtime/services/snapservice/snapservice.h"
 #include "dbus/controladaptor.h"
+#include "runtime/services/controlservice.h"
 #include "runtime/services/ruleservice.h"
 
 #include <PhosphorIdentity/WindowId.h>
@@ -857,8 +858,8 @@ void Daemon::initEnginesAndWiring()
         // assignment reaches no diff (diffActiveAssignments queues the check
         // for every other field). Not once stop() has begun, which cancels a
         // queued one.
-        if (m_layoutAdaptor && !m_shuttingDown) {
-            m_layoutAdaptor->scheduleScreenStatesCheck();
+        if (m_layoutService && !m_shuttingDown) {
+            m_layoutService->scheduleScreenStatesCheck();
         }
         updateEngineScreens();
         // A count rule that swaps the screen out of tiling releases its
@@ -1230,21 +1231,24 @@ void Daemon::initEnginesAndWiring()
                 });
     }
 
-    // Control adaptor (the convenience API for third-party integrations): a member
-    // so stop() can detach() it before the unique_ptr members it borrows are destroyed.
+    // Control service (the convenience API for third-party integrations) and its
+    // D-Bus binding, which also carries the support report and quit: members
+    // so stop() can detach() both before the unique_ptr members they borrow
+    // are destroyed.
+    m_controlService = new ControlService(m_windowTracker, m_snapService, m_layoutManager.get(), autotileEngine, this);
     m_controlAdaptor =
-        new ControlAdaptor(m_windowTracker, m_snapService, m_layoutManager.get(), autotileEngine, m_screenManager.get(),
+        new ControlAdaptor(m_controlService, m_layoutManager.get(), autotileEngine, m_screenManager.get(),
                            m_compositorBridge, m_scrollEngine.get(), m_screenModeRouter.get(), this);
     // Control.toggleAutotileForScreen runs the mode-toggle shortcut's switch.
-    m_controlAdaptor->setModeToggleHandler([this](const QString& screenId) {
+    m_controlService->setModeToggleHandler([this](const QString& screenId) {
         toggleScreenMode(screenId, true);
     });
     // Control.getShortcutsJson's catalog, read through the member (it outlives adaptor rebuilds).
-    m_controlAdaptor->setShortcutCatalogProvider([this]() -> QVariantList {
+    m_controlService->setShortcutCatalogProvider([this]() -> QVariantList {
         return m_shortcutManager ? m_shortcutManager->shortcutCatalog() : QVariantList();
     });
-    connect(m_shortcutManager.get(), &ShortcutManager::cheatsheetModelChanged, m_controlAdaptor,
-            &ControlAdaptor::notifyShortcutsChanged);
+    connect(m_shortcutManager.get(), &ShortcutManager::cheatsheetModelChanged, m_controlService,
+            &ControlService::notifyShortcutsChanged);
 
     // Handle KCM assignment change resnap/OSD. This runs AFTER the KCM's batch
     // save completes (all setAssignmentEntry + notifyReload finished), so all
@@ -1253,11 +1257,11 @@ void Daemon::initEnginesAndWiring()
     // handler body lives in init_assignment_apply.cpp.
     //
     // No disconnect-first here: initCoreAdaptors deletes and re-news
-    // m_layoutAdaptor in the same preamble that clears the engine adaptors
+    // m_layoutService in the same preamble that clears the engine adaptors
     // (init_adaptors.cpp), and it always runs immediately before this
     // function, so a stop() -> init() cycle hands us a freshly constructed
     // adaptor that carries no connections to sweep.
-    connect(m_layoutAdaptor, &LayoutAdaptor::assignmentChangesApplied, this, &Daemon::handleAssignmentChangesApplied);
+    connect(m_layoutService, &LayoutService::assignmentChangesApplied, this, &Daemon::handleAssignmentChangesApplied);
 }
 
 } // namespace PlasmaZones

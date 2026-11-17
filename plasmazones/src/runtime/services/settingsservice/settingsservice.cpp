@@ -2,13 +2,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 // NOTE: multi-TU class. initializeRegistry() lives in
-// settingsadaptor_registry.cpp; the batch getSettings/setSettings surface
-// lives in settingsadaptor_batch.cpp (same class, no API change).
+// settingsservice_registry.cpp; the batch getSettings/setSettings surface
+// lives in settingsservice_batch.cpp (same class, no API change).
 
-#include "settingsadaptor.h"
-#include "dbus/dbushelpers.h"
+#include "settingsservice.h"
 #include "core/interfaces/interfaces.h"
-#include "core/utils/dbusvariantutils.h"
 #include <PhosphorAnimation/PhosphorProfileRegistry.h>
 #include <PhosphorProtocol/ServiceConstants.h>
 #include <PhosphorRules/ActionParams.h>
@@ -18,16 +16,15 @@
 #include <QJsonObject>
 #include <QJsonParseError>
 #include <QSignalBlocker>
-#include <QDBusVariant>
 #include <algorithm>
 #include <functional>
 #include <optional>
 
 namespace PlasmaZones {
 
-SettingsAdaptor::SettingsAdaptor(ISettings* settings, PhosphorAnimation::PhosphorProfileRegistry* profileRegistry,
+SettingsService::SettingsService(ISettings* settings, PhosphorAnimation::PhosphorProfileRegistry* profileRegistry,
                                  QObject* parent)
-    : QDBusAbstractAdaptor(parent)
+    : QObject(parent)
     , m_settings(settings)
     , m_profileRegistry(profileRegistry)
     , m_saveTimer(new QTimer(this))
@@ -41,7 +38,7 @@ SettingsAdaptor::SettingsAdaptor(ISettings* settings, PhosphorAnimation::Phospho
     // an adaptor with no settings behind it answers nothing, which beats answering wrongly.
     Q_ASSERT(settings);
     if (!settings) {
-        qCCritical(lcDbusSettings) << "SettingsAdaptor constructed with no settings — the D-Bus settings surface will "
+        qCCritical(lcDbusSettings) << "SettingsService constructed with no settings — the D-Bus settings surface will "
                                       "not answer";
         return;
     }
@@ -58,15 +55,15 @@ SettingsAdaptor::SettingsAdaptor(ISettings* settings, PhosphorAnimation::Phospho
     // Configure the debounced motion-profile-tree notifier (see member doc).
     m_motionTreeNotifyTimer->setSingleShot(true);
     m_motionTreeNotifyTimer->setInterval(MotionTreeNotifyDebounceMs);
-    connect(m_motionTreeNotifyTimer, &QTimer::timeout, this, &SettingsAdaptor::motionProfileTreeChanged);
+    connect(m_motionTreeNotifyTimer, &QTimer::timeout, this, &SettingsService::motionProfileTreeChanged);
 
     // Connect to interface signals (DIP)
-    connect(m_settings, &ISettings::settingsChanged, this, &SettingsAdaptor::settingsChanged);
+    connect(m_settings, &ISettings::settingsChanged, this, &SettingsService::settingsChanged);
     // A direct relay, unlike the debounced motion-tree notifier: the
     // settings app tells the daemon's echo of its own Save apart from an
     // external change by when it arrives (queued ahead of the reply to its
     // blocking reloadSettings call), and a timer would deliver it later.
-    connect(m_settings, &ISettings::editorSettingsChanged, this, &SettingsAdaptor::editorSettingsChanged);
+    connect(m_settings, &ISettings::editorSettingsChanged, this, &SettingsService::editorSettingsChanged);
 
     // The per-event motion-profile registry is a second source of
     // settings-shaped state: editing a `window.open` duration writes the
@@ -99,7 +96,7 @@ SettingsAdaptor::SettingsAdaptor(ISettings* settings, PhosphorAnimation::Phospho
     }
 }
 
-SettingsAdaptor::~SettingsAdaptor()
+SettingsService::~SettingsService()
 {
     // Flush any pending debounced saves before destruction so config
     // changes aren't lost on shutdown. Skipped when m_settings has already
@@ -116,7 +113,7 @@ SettingsAdaptor::~SettingsAdaptor()
     }
 }
 
-void SettingsAdaptor::detach()
+void SettingsService::detach()
 {
     // Flush once here — Daemon::stop() also calls m_settings->save()
     // explicitly, so the pending-write isn't really at risk, but keeping
@@ -158,14 +155,14 @@ void SettingsAdaptor::detach()
     m_profileRegistry = nullptr;
 }
 
-void SettingsAdaptor::scheduleSave()
+void SettingsService::scheduleSave()
 {
     // Restart the timer on each setting change (debouncing)
     // This batches multiple rapid changes into a single save
     m_saveTimer->start();
 }
 
-void SettingsAdaptor::reloadSettings()
+void SettingsService::reloadSettings()
 {
     if (!m_settings) {
         return;
@@ -173,7 +170,7 @@ void SettingsAdaptor::reloadSettings()
     m_settings->load();
 }
 
-void SettingsAdaptor::saveSettings()
+void SettingsService::saveSettings()
 {
     if (!m_settings) {
         return;
@@ -181,7 +178,7 @@ void SettingsAdaptor::saveSettings()
     m_settings->save();
 }
 
-void SettingsAdaptor::resetToDefaults()
+void SettingsService::resetToDefaults()
 {
     if (!m_settings) {
         return;
@@ -195,7 +192,7 @@ void SettingsAdaptor::resetToDefaults()
     }
 }
 
-QString SettingsAdaptor::getAllSettings()
+QString SettingsService::getAllSettings()
 {
     QJsonObject settings;
     for (auto it = m_getters.constBegin(); it != m_getters.constEnd(); ++it) {
@@ -204,7 +201,7 @@ QString SettingsAdaptor::getAllSettings()
     return QString::fromUtf8(QJsonDocument(settings).toJson());
 }
 
-QDBusVariant SettingsAdaptor::getSetting(const QString& key)
+std::optional<QVariant> SettingsService::getSetting(const QString& key, QString* error)
 {
     // An empty key is a caller bug in exactly the way an unknown one is, so it gets
     // exactly the same answer (see the long note below). Handing back a valid empty
@@ -212,8 +209,10 @@ QDBusVariant SettingsAdaptor::getSetting(const QString& key)
     // failing silently and the other loudly, which is how the silent one survives.
     if (key.isEmpty()) {
         qCDebug(lcDbusSettings) << "getSetting: empty key";
-        DbusHelpers::sendBusError(this, QDBusError::InvalidArgs, QStringLiteral("Empty setting key"));
-        return QDBusVariant(QVariant());
+        if (error) {
+            *error = QStringLiteral("Empty setting key");
+        }
+        return std::nullopt;
     }
 
     auto it = m_getters.find(key);
@@ -225,9 +224,9 @@ QDBusVariant SettingsAdaptor::getSetting(const QString& key)
         // marshallable; the warning is what surfaces the getter.
         if (!value.isValid()) {
             qCWarning(lcDbusSettings) << "Setting" << key << "returned invalid variant, using empty string";
-            return QDBusVariant(QVariant(QString()));
+            return QVariant(QString());
         }
-        return QDBusVariant(value);
+        return value;
     }
 
     // An unknown key is an ERROR, not an empty value.
@@ -247,13 +246,14 @@ QDBusVariant SettingsAdaptor::getSetting(const QString& key)
     // is the real signal; logging it at warning level let any process on the session bus
     // fill the daemon's log with content of its own choosing, one key at a time.
     qCDebug(lcDbusSettings) << "getSetting: unknown key" << key;
-    DbusHelpers::sendBusError(this, QDBusError::InvalidArgs, QStringLiteral("Unknown setting key: %1").arg(key));
-    // The return value is discarded once the error reply has gone out; it matters only
-    // for a direct (non-D-Bus) call, where an invalid variant is the honest answer.
-    return QDBusVariant(QVariant());
+    // SettingsService answers the bus caller with that error.
+    if (error) {
+        *error = QStringLiteral("Unknown setting key: %1").arg(key);
+    }
+    return std::nullopt;
 }
 
-bool SettingsAdaptor::setSetting(const QString& key, const QDBusVariant& value)
+bool SettingsService::setSetting(const QString& key, const QVariant& value)
 {
     // DEBUG, not warning, and the same reasoning as getSetting's unknown-key path: the key
     // comes from whoever is on the session bus, the caller is already told `false`, and a
@@ -269,7 +269,8 @@ bool SettingsAdaptor::setSetting(const QString& key, const QDBusVariant& value)
         return false;
     }
 
-    const QVariant converted = DBusVariantUtils::convertDbusArgument(value.variant());
+    // Plain Qt types: SettingsService unwraps a QDBusArgument from the wire.
+    const QVariant& converted = value;
 
     // Value-equality guard: if the incoming value already matches the
     // currently stored value, skip the setter invocation and the debounced
@@ -333,12 +334,12 @@ bool SettingsAdaptor::setSetting(const QString& key, const QDBusVariant& value)
     return result;
 }
 
-QStringList SettingsAdaptor::getSettingKeys()
+QStringList SettingsService::getSettingKeys()
 {
     return m_getters.keys();
 }
 
-QString SettingsAdaptor::getSettingSchema(const QString& key)
+QString SettingsService::getSettingSchema(const QString& key)
 {
     QJsonObject result;
 
@@ -358,7 +359,7 @@ QString SettingsAdaptor::getSettingSchema(const QString& key)
     return QString::fromUtf8(QJsonDocument(result).toJson(QJsonDocument::Compact));
 }
 
-QString SettingsAdaptor::getAllSettingSchemas()
+QString SettingsService::getAllSettingSchemas()
 {
     QJsonObject result;
 
@@ -495,83 +496,82 @@ bool isPlausibleSettingKey(const QString& key)
 
 } // namespace
 
-void SettingsAdaptor::setPerScreenSetting(const QString& screenId, const QString& category, const QString& key,
-                                          const QDBusVariant& value)
+bool SettingsService::setPerScreenSetting(const QString& screenId, const QString& category, const QString& key,
+                                          const QVariant& value, QString* rejection)
 {
     // Both this slot and clearPerScreenSettings are declared void, so a
     // rejection has no return value to carry. Raise a D-Bus error on every
     // rejection path instead: without one the caller cannot tell a dropped
     // write from an applied one, and the batch twin (setPerScreenSettings)
-    // already reports failure through its bool. A plain C++ call, as the
-    // tests make, gets no reply (DbusHelpers::sendBusError).
-    const auto reject = [this](const QString& reason) {
+    // already reports failure through its bool. The reason goes back in
+    // @p rejection, and SettingsService raises it as the D-Bus error.
+    const auto reject = [rejection](const QString& reason) {
         qCDebug(lcDbusSettings) << "setPerScreenSetting:" << reason;
-        DbusHelpers::sendBusError(this, QDBusError::InvalidArgs, reason);
+        if (rejection) {
+            *rejection = reason;
+        }
+        return false;
     };
     if (!m_settings) {
-        reject(QStringLiteral("no settings backend is attached"));
-        return;
+        return reject(QStringLiteral("no settings backend is attached"));
     }
     if (!isPlausibleScreenId(screenId)) {
-        reject(QStringLiteral("implausible screen id (rejected at the D-Bus boundary)"));
-        return;
+        return reject(QStringLiteral("implausible screen id (rejected at the D-Bus boundary)"));
     }
     if (!isPlausibleSettingKey(key)) {
-        reject(QStringLiteral("implausible setting key (rejected at the D-Bus boundary)"));
-        return;
+        return reject(QStringLiteral("implausible setting key (rejected at the D-Bus boundary)"));
     }
 
     auto dispatch = dispatchFor(category);
     if (!dispatch) {
-        reject(QStringLiteral("unknown category %1").arg(category));
-        return;
+        return reject(QStringLiteral("unknown category %1").arg(category));
     }
     if (!dispatch->writable) {
-        reject(QStringLiteral("category %1 is read-only (a projection of config per-monitor gaps) — write via the "
-                              "autotile per-screen category")
-                   .arg(category));
-        return;
+        return reject(
+            QStringLiteral("category %1 is read-only (a projection of config per-monitor gaps) — write via the "
+                           "autotile per-screen category")
+                .arg(category));
     }
-    // Normalize exactly as the batch twin does. Per-screen values are scalars,
-    // which demarshal to plain QVariants, so this is a no-op for every payload
-    // the settings pages send — but it keeps the two write paths honouring one
-    // conversion policy instead of relying on that invariant holding forever.
-    (m_settings->*dispatch->set)(screenId, key, DBusVariantUtils::convertDbusArgument(value.variant()));
+    // SettingsService normalizes a wire value exactly as the batch twin's,
+    // so both write paths honour one conversion policy.
+    (m_settings->*dispatch->set)(screenId, key, value);
     scheduleSave();
+    return true;
 }
 
-void SettingsAdaptor::clearPerScreenSettings(const QString& screenId, const QString& category)
+bool SettingsService::clearPerScreenSettings(const QString& screenId, const QString& category, QString* rejection)
 {
-    // Void slot, same reject-loudly contract as setPerScreenSetting above.
-    const auto reject = [this](const QString& reason) {
+    // Same reject-loudly contract as setPerScreenSetting above.
+    const auto reject = [rejection](const QString& reason) {
         qCDebug(lcDbusSettings) << "clearPerScreenSettings:" << reason;
-        DbusHelpers::sendBusError(this, QDBusError::InvalidArgs, reason);
+        if (rejection) {
+            *rejection = reason;
+        }
+        return false;
     };
     if (!m_settings) {
-        reject(QStringLiteral("no settings backend is attached"));
-        return;
+        return reject(QStringLiteral("no settings backend is attached"));
     }
     if (!isPlausibleScreenId(screenId)) {
-        reject(QStringLiteral("implausible screen id (rejected at the D-Bus boundary)"));
-        return;
+        return reject(QStringLiteral("implausible screen id (rejected at the D-Bus boundary)"));
     }
 
     auto dispatch = dispatchFor(category);
     if (!dispatch) {
-        reject(QStringLiteral("unknown category %1").arg(category));
-        return;
+        return reject(QStringLiteral("unknown category %1").arg(category));
     }
     if (!dispatch->writable) {
-        reject(QStringLiteral("category %1 is read-only (a projection of config per-monitor gaps) — clear via the "
-                              "autotile per-screen category")
-                   .arg(category));
-        return;
+        return reject(
+            QStringLiteral("category %1 is read-only (a projection of config per-monitor gaps) — clear via the "
+                           "autotile per-screen category")
+                .arg(category));
     }
     (m_settings->*dispatch->clear)(screenId);
     scheduleSave();
+    return true;
 }
 
-QVariantMap SettingsAdaptor::getPerScreenSettings(const QString& screenId, const QString& category)
+QVariantMap SettingsService::getPerScreenSettings(const QString& screenId, const QString& category)
 {
     if (!m_settings) {
         return {};
@@ -591,7 +591,7 @@ QVariantMap SettingsAdaptor::getPerScreenSettings(const QString& screenId, const
     return (m_settings->*dispatch->get)(screenId);
 }
 
-bool SettingsAdaptor::setPerScreenSettings(const QString& screenId, const QString& category, const QVariantMap& values)
+bool SettingsService::setPerScreenSettings(const QString& screenId, const QString& category, const QVariantMap& values)
 {
     if (!m_settings) {
         return false;
@@ -629,9 +629,9 @@ bool SettingsAdaptor::setPerScreenSettings(const QString& screenId, const QStrin
                 << "setPerScreenSettings: implausible setting key (rejected at the D-Bus boundary), skipping";
             continue;
         }
-        // Values arriving over the wire can be QDBusArgument-wrapped when
-        // they contain lists or maps; normalize to plain Qt types first.
-        const QVariant converted = DBusVariantUtils::convertDbusArgument(it.value());
+        // Plain Qt types: SettingsService unwraps QDBusArgument-wrapped
+        // values from the wire before they get here.
+        const QVariant& converted = it.value();
         (m_settings->*dispatch->set)(screenId, it.key(), converted);
     }
 
@@ -650,7 +650,7 @@ bool SettingsAdaptor::setPerScreenSettings(const QString& screenId, const QStrin
 // Window Picker D-Bus Methods
 // ═══════════════════════════════════════════════════════════════════════════════
 
-void SettingsAdaptor::requestRunningWindows()
+void SettingsService::requestRunningWindows()
 {
     // Fire-and-forget. Callers receive the reply asynchronously via the
     // runningWindowsAvailable signal (emitted from provideRunningWindows).
@@ -660,11 +660,8 @@ void SettingsAdaptor::requestRunningWindows()
     Q_EMIT runningWindowsRequested();
 }
 
-void SettingsAdaptor::provideRunningWindows(const QString& json)
+void SettingsService::provideRunningWindows(const QString& json)
 {
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return;
-    }
     // The payload fans out to every subscriber, where it becomes the
     // rule-authoring window picker's list. Only the registered compositor
     // bridge passes the gate above, and its shape is still checked before
