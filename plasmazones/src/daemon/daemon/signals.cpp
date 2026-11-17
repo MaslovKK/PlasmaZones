@@ -10,7 +10,7 @@
 #include "daemon/controllers/unifiedlayoutcontroller.h"
 #include "daemon/overlayservice.h"
 #include "dbus/layoutadaptor/layoutadaptor.h"
-#include "dbus/settingsadaptor/settingsadaptor.h"
+#include "runtime/services/settingsservice/settingsservice.h"
 // Complete types needed for the WindowLifecycleRelay PMF connects below
 // (TilingService::onTrackedWindowDestroyed / pruneStaleFloatBroadcasts) —
 // daemon.h forward declares TilingService only.
@@ -538,8 +538,8 @@ void Daemon::finalizeStartup()
     // settings (including activation triggers) after daemonReady.  The effect's
     // initial async getSetting() calls can race with daemon construction and
     // return stale/empty values; this second broadcast guarantees a clean load.
-    if (m_settingsAdaptor)
-        Q_EMIT m_settingsAdaptor->settingsChanged();
+    if (m_settingsService)
+        Q_EMIT m_settingsService->settingsChanged();
 
     // Show the layout OSD on ALL screens so the user sees what's assigned everywhere.
     // The layoutApplied signal only fires for the focused screen; this covers the rest.

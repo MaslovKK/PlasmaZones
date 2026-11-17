@@ -22,7 +22,7 @@
 #include "core/utils/geometryutils.h"
 #include "core/utils/utils.h"
 #include "dbus/layoutadaptor/layoutadaptor.h"
-#include "dbus/settingsadaptor/settingsadaptor.h"
+#include "runtime/services/settingsservice/settingsservice.h"
 #include "dbus/overlayadaptor.h"
 #include "dbus/zonedetectionadaptor.h"
 #include "runtime/windowtracker/windowtracker.h"
@@ -397,10 +397,10 @@ void Daemon::stop()
     // they borrow. ~QObject destroys these adaptors AFTER all unique_ptr
     // members have already run their destructors, so without detach the
     // adaptors would see dangling pointers during the destruction window —
-    // and the SettingsAdaptor dtor's save-on-teardown would deref a freed
+    // and the SettingsService dtor's save-on-teardown would deref a freed
     // Settings object. Each adaptor's detach() is null-safe + idempotent.
     //
-    // WHY ONLY THESE: SettingsAdaptor has the confirmed dtor-UAF
+    // WHY ONLY THESE: SettingsService has the confirmed dtor-UAF
     // (debounced save timer flush). ShaderAdaptor + ControlAdaptor have
     // non-trivial signal wiring + cached state that benefits from
     // explicit teardown for the same "queued D-Bus call lands during
@@ -429,8 +429,8 @@ void Daemon::stop()
     // DESTRUCTOR. If a future adaptor grows a dtor body that
     // derefs a borrowed member, add detach() to it AND wire the call here
     // — same pattern as these four.
-    if (m_settingsAdaptor) {
-        m_settingsAdaptor->detach();
+    if (m_settingsService) {
+        m_settingsService->detach();
     }
     if (m_shaderService) {
         m_shaderService->detach();

@@ -61,7 +61,7 @@
 #include "dbus/controladaptor.h"
 #include "dbus/layoutadaptor/layoutadaptor.h"
 #include "dbus/overlayadaptor.h"
-#include "dbus/settingsadaptor/settingsadaptor.h"
+#include "dbus/settingsadaptor.h"
 #include "dbus/shaderadaptor.h"
 #include "dbus/snapadaptor.h"
 #include "dbus/windowdragadaptor.h"

@@ -1274,7 +1274,7 @@ private:
     /// borrowed pointer to it; reverse-order destruction tears the service
     /// down before the registry, guaranteeing no UAF on shadersChanged
     /// disconnect during shutdown. Also declared before the D-Bus adaptors
-    /// (ShaderAdaptor, SettingsAdaptor) that borrow it.
+    /// (ShaderAdaptor, SettingsService) that borrow it.
     std::unique_ptr<ShaderRegistry> m_shaderRegistry;
     /// OverlayService takes ScreenManager* via constructor injection — must
     /// be declared AFTER m_screenManager so the initializer-list construction
@@ -1287,7 +1287,7 @@ private:
     /// inside the compositor, which SERVES that protocol rather than consuming it,
     /// so it cannot watch for its own session going idle. The daemon is already a
     /// Wayland client, so it watches and pushes the resolved boolean to the effect
-    /// over D-Bus (SettingsAdaptor::sessionIdleChanged).
+    /// over D-Bus (SettingsService::sessionIdleChanged).
     ///
     /// The effect pauses decoration-chain animation while idle, the only lever
     /// that lets the GPU leave its top performance state. An animated pack
@@ -1370,7 +1370,8 @@ private:
     // D-Bus adaptors need a parent (the adapted object); Qt requires it.
     // So we use raw pointers; Qt parent-child system manages their lifetime
     LayoutAdaptor* m_layoutAdaptor = nullptr;
-    SettingsAdaptor* m_settingsAdaptor = nullptr;
+    SettingsService* m_settingsService = nullptr;
+    SettingsAdaptor* m_settingsAdaptor = nullptr; // D-Bus binding of m_settingsService, deleted before it
     OverlayControlService* m_overlayControlService = nullptr; // Overlay visibility only
     OverlayAdaptor* m_overlayAdaptor = nullptr; // D-Bus binding of m_overlayControlService, deleted before it
     // Zone detection queries. A plain QObject child; its bus surface is

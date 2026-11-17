@@ -523,7 +523,7 @@ void LayoutAdaptor::setLayoutHidden(const QString& layoutId, bool hidden)
 
     // Value-equality guard: skip the mutation + cache invalidation +
     // signal fan-out when the incoming value already matches the current
-    // one. Mirrors the Phase 1.1 guard in SettingsAdaptor::setSetting so
+    // one. Mirrors the Phase 1.1 guard in SettingsService::setSetting so
     // a settled checkbox cannot spam subscribers with no-op reloads.
     if (layout->hiddenFromSelector() == hidden) {
         return;

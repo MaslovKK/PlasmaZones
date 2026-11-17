@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 fuddlesworth
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-// Getter/setter/schema registry population for SettingsAdaptor:
+// Getter/setter/schema registry population for SettingsService:
 //   * initializeRegistry — registers the mode-neutral half of the generic
 //     getSetting/setSetting D-Bus surface (REGISTER_* macro block,
 //     enum-validated custom setters, JSON profile-tree blob round-trips) and
@@ -11,10 +11,10 @@
 //
 // The registry is split across FOUR TUs, one per family, all filling the same
 // m_getters / m_setters / m_schemas maps:
-//   * settingsadaptor_registry.cpp (this file) — core / shared
-//   * settingsadaptor_registry_snapping.cpp — initializeRegistrySnapping()
-//   * settingsadaptor_registry_autotile.cpp — initializeRegistryAutotile()
-//   * settingsadaptor_registry_scrolling.cpp — initializeRegistryScrolling()
+//   * settingsservice_registry.cpp (this file) — core / shared
+//   * settingsservice_registry_snapping.cpp — initializeRegistrySnapping()
+//   * settingsservice_registry_autotile.cpp — initializeRegistryAutotile()
+//   * settingsservice_registry_scrolling.cpp — initializeRegistryScrolling()
 //
 // BOUNDARY RULE: a key belongs to a mode TU when its name carries that mode's
 // prefix or the zone family prefix — snap* / snapping* / zone* to snapping,
@@ -24,12 +24,12 @@
 // profile trees, cava, gpu, and the per-mode disable lists, which are one
 // shared three-mode mechanism rather than three per-mode settings.
 //
-// Same class as settingsadaptor.cpp, split into separate TUs without changing
+// Same class as settingsservice.cpp, split into separate TUs without changing
 // the adaptor's public interface (mirrors the SettingsController multi-TU
 // split, e.g. settingscontroller_pagestate.cpp). The registry contents are
 // otherwise unchanged by the split itself.
 
-#include "settingsadaptor.h"
+#include "settingsservice.h"
 #include "core/interfaces/interfaces.h"
 #include "config/settings.h" // For concrete Settings type
 #include "config/configdefaults.h" // ConfigDefaults range bounds + normalizeGpuDevice
@@ -90,7 +90,7 @@ bool validProfileTreeBlob(const QVariant& v, QJsonDocument* outDoc)
 
 // Note: Macros are defined in initializeRegistry() to avoid namespace pollution
 
-void SettingsAdaptor::initializeRegistry()
+void SettingsService::initializeRegistry()
 {
 // Register getters and setters for all settings
 // This registry pattern allows adding new settings without modifying setSetting()
@@ -794,9 +794,9 @@ void SettingsAdaptor::initializeRegistry()
     m_schemas[QString(PhosphorProtocol::Service::SettingProperty::OverlayShaderTree)] = QStringLiteral("string");
     REGISTER_STRINGLIST_SETTING("lockedScreens", lockedScreens, setLockedScreens)
 
-    // Per-mode families, one TU each: settingsadaptor_registry_snapping.cpp,
-    // settingsadaptor_registry_autotile.cpp and
-    // settingsadaptor_registry_scrolling.cpp. Split out of this file when it
+    // Per-mode families, one TU each: settingsservice_registry_snapping.cpp,
+    // settingsservice_registry_autotile.cpp and
+    // settingsservice_registry_scrolling.cpp. Split out of this file when it
     // crossed the size ceiling; the maps and the keys are the same, and
     // intra-family order is preserved. See the boundary rule in each file's
     // banner for which keys live where. Each callee re-derives `concrete`

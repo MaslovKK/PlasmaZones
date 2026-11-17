@@ -158,13 +158,15 @@ set(plasmazones_core_SRCS
     dbus/layoutadaptor/assignment_batch.cpp
     dbus/layoutadaptor/editor.cpp
     dbus/layoutadaptor/layoutadaptor.h
-    dbus/settingsadaptor/settingsadaptor.cpp
-    dbus/settingsadaptor/settingsadaptor_batch.cpp
-    dbus/settingsadaptor/settingsadaptor_registry.cpp
-    dbus/settingsadaptor/settingsadaptor_registry_snapping.cpp
-    dbus/settingsadaptor/settingsadaptor_registry_autotile.cpp
-    dbus/settingsadaptor/settingsadaptor_registry_scrolling.cpp
-    dbus/settingsadaptor/settingsadaptor.h
+    dbus/settingsadaptor.cpp
+    dbus/settingsadaptor.h
+    runtime/services/settingsservice/settingsservice.cpp
+    runtime/services/settingsservice/settingsservice_batch.cpp
+    runtime/services/settingsservice/settingsservice_registry.cpp
+    runtime/services/settingsservice/settingsservice_registry_snapping.cpp
+    runtime/services/settingsservice/settingsservice_registry_autotile.cpp
+    runtime/services/settingsservice/settingsservice_registry_scrolling.cpp
+    runtime/services/settingsservice/settingsservice.h
     dbus/shaderadaptor.cpp
     dbus/shaderadaptor.h
     runtime/services/shaderservice.cpp

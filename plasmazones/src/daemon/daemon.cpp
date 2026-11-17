@@ -72,7 +72,7 @@
 #include "core/interfaces/shaderregistry.h"
 #include "config/settings.h"
 #include "dbus/layoutadaptor/layoutadaptor.h"
-#include "dbus/settingsadaptor/settingsadaptor.h"
+#include "runtime/services/settingsservice/settingsservice.h"
 #include "dbus/overlayadaptor.h"
 #include "dbus/zonedetectionadaptor.h"
 #include "runtime/windowtracker/windowtracker.h"

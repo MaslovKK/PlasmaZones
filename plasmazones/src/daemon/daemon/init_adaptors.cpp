@@ -29,7 +29,8 @@
 #include "core/interfaces/shaderregistry.h"
 #include "dbus/dbushelpers.h"
 #include "dbus/layoutadaptor/layoutadaptor.h"
-#include "dbus/settingsadaptor/settingsadaptor.h"
+#include "runtime/services/settingsservice/settingsservice.h"
+#include "dbus/settingsadaptor.h"
 #include "dbus/overlayadaptor.h"
 #include "runtime/services/overlaycontrolservice.h"
 #include "dbus/zonedetectionadaptor.h"
@@ -132,6 +133,8 @@ void Daemon::initCoreAdaptors()
     m_shaderService = nullptr;
     delete m_settingsAdaptor;
     m_settingsAdaptor = nullptr;
+    delete m_settingsService;
+    m_settingsService = nullptr;
     delete m_layoutAdaptor;
     m_layoutAdaptor = nullptr;
     // DBusScreenAdaptor is in this set for the same reason as the Tiling and
@@ -169,7 +172,8 @@ void Daemon::initCoreAdaptors()
     });
     // Invalidate D-Bus getActiveLayout() cache when the default layout changes in settings
     connect(m_settings.get(), &Settings::defaultLayoutIdChanged, m_layoutAdaptor, &LayoutAdaptor::invalidateCache);
-    m_settingsAdaptor = new SettingsAdaptor(m_settings.get(), &m_profileRegistry, this);
+    m_settingsService = new SettingsService(m_settings.get(), &m_profileRegistry, this);
+    m_settingsAdaptor = new SettingsAdaptor(m_settingsService, this);
 
     // Shader service - shader discovery, compilation lifecycle, file monitoring,
     // and its D-Bus binding. Held as a member so stop() can detach() it before
@@ -199,7 +203,7 @@ void Daemon::initCoreAdaptors()
     // and it is the existence of per-frame work — not how cheap that work is — that
     // keeps the card pinned in its top performance state.
     //
-    // Constructed AFTER m_settingsAdaptor (it emits through it) and AFTER
+    // Constructed AFTER m_settingsService (it emits through it) and AFTER
     // m_compositorBridge (it subscribes to bridgeRegistered to push the current idle
     // state to a freshly (re)started effect, since the signal is edge-triggered).
     setupIdleService();

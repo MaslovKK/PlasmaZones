@@ -16,7 +16,7 @@
 #include "daemon/daemon/helpers.h"
 #include "daemon/overlayservice.h"
 #include "dbus/layoutadaptor/layoutadaptor.h"
-#include "dbus/settingsadaptor/settingsadaptor.h"
+#include "runtime/services/settingsservice/settingsservice.h"
 #include "runtime/dragresolver/dragresolver.h"
 #include "runtime/windowtracker/windowtracker.h"
 #include "core/types/constants.h"
@@ -541,8 +541,8 @@ void Daemon::connectShortcutSignals()
         }
         m_settings->save();
         // Now that the file is written, notify external consumers
-        if (m_settingsAdaptor) {
-            Q_EMIT m_settingsAdaptor->settingsChanged();
+        if (m_settingsService) {
+            Q_EMIT m_settingsService->settingsChanged();
         }
 
         // Templates screens resolve their native TEMPLATE for the unlock

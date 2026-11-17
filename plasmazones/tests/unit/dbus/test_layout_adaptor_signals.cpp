@@ -307,7 +307,7 @@ private Q_SLOTS:
     // ─────────────────────────────────────────────────────────────────
     // Value-equality guard: calling setLayoutHidden/AutoAssign/AspectRatioClass
     // with the currently-stored value must short-circuit — no signal
-    // emission, no cache invalidation. Mirrors SettingsAdaptor::setSetting's
+    // emission, no cache invalidation. Mirrors SettingsService::setSetting's
     // Phase 1.1 guard so settled checkboxes don't spam subscribers with
     // no-op reloads.
     // ─────────────────────────────────────────────────────────────────

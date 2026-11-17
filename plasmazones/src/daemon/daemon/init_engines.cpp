@@ -23,7 +23,7 @@
 #include "core/resolve/screenmoderouter.h"
 #include "core/utils/geometryutils.h"
 #include "dbus/layoutadaptor/layoutadaptor.h"
-#include "dbus/settingsadaptor/settingsadaptor.h"
+#include "runtime/services/settingsservice/settingsservice.h"
 #include "runtime/windowtracker/windowtracker.h"
 #include "runtime/dragresolver/dragresolver.h"
 #include "dbus/autotileadaptor.h"
