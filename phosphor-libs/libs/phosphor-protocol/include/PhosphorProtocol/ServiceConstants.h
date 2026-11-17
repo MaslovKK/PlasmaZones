@@ -390,6 +390,9 @@ inline constexpr QLatin1String Interface("org.phosphor_works.PlasmaZones.Editor"
 /// The KWin effect's shell-overview object, which the shell's placement map and
 /// dashboard stage drive. The effect registers it on KWin's own connection, so
 /// the bus name is KWin's and only the path and interface are PlasmaZones'.
+/// Both callers treat a failed call as the object being absent: the placement
+/// map keeps the cells it parsed from the placement daemon, and the desktop
+/// stage stays inactive and shows its static fallback.
 /// ShellOverview's Q_CLASSINFO repeats Interface as a literal, because moc needs
 /// one there; a static_assert beside it holds the two together.
 namespace ShellOverview {

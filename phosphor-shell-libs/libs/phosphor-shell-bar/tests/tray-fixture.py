@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-FileCopyrightText: 2026 fuddlesworth
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: LGPL-2.1-or-later
 """Real SNI/dbusmenu apps for an isolated session bus, with simulated actions.
 
 Source the nested session's env.sh, then run tray-fixture.py [scenario].
