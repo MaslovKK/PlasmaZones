@@ -21,7 +21,7 @@
 #include "core/resolve/screenmoderouter.h"
 #include "core/utils/geometryutils.h"
 #include "core/utils/utils.h"
-#include "dbus/layoutadaptor/layoutadaptor.h"
+#include "runtime/services/layoutservice/layoutservice.h"
 #include "runtime/services/settingsservice/settingsservice.h"
 #include "dbus/overlayadaptor.h"
 #include "dbus/zonedetectionadaptor.h"
@@ -412,7 +412,7 @@ void Daemon::stop()
     // raw-Qt-parented RuleAdaptor only runs its own destructor
     // *after* that, as part of QObject child cleanup.
     //
-    // The other raw-Qt-parented adaptors (LayoutAdaptor,
+    // The other raw-Qt-parented adaptors (LayoutService,
     // OverlayAdaptor, ZoneDetectionAdaptor, WindowTracker,
     // DBusScreenAdaptor, DragResolver, CompositorBridgeAdaptor,
     // SnapService, TilingService, AutotileAdaptor, ScrollingService) all
@@ -549,12 +549,12 @@ void Daemon::stop()
     // The layout adaptor's twin of the registry's tiled-count provider
     // (getScreenStates' tiledWindowCount) captures `this` and reads the
     // engines the same way, and the adaptor is a Qt child that outlives them.
-    if (m_layoutAdaptor) {
-        m_layoutAdaptor->setTiledWindowCountProvider({});
+    if (m_layoutService) {
+        m_layoutService->setTiledWindowCountProvider({});
         // A screen-states comparison queued before stop() would run after it
         // and announce a teardown's half-state. m_shuttingDown keeps any new
         // one from being queued.
-        m_layoutAdaptor->cancelScreenStatesCheck();
+        m_layoutService->cancelScreenStatesCheck();
     }
 
     // Clear adaptor engine pointers BEFORE destroying the engines. Adaptors are Qt

@@ -15,7 +15,7 @@
 #include "daemon/controllers/unifiedlayoutcontroller.h"
 #include "daemon/daemon/helpers.h"
 #include "daemon/overlayservice.h"
-#include "dbus/layoutadaptor/layoutadaptor.h"
+#include "runtime/services/layoutservice/layoutservice.h"
 #include "runtime/services/settingsservice/settingsservice.h"
 #include "runtime/dragresolver/dragresolver.h"
 #include "runtime/windowtracker/windowtracker.h"
@@ -77,9 +77,9 @@ void Daemon::connectShortcutSignals()
         if (!screenId.isEmpty()) {
             // Pass the effective screen ID directly — the editor handles both
             // physical and virtual screen IDs (VS-aware since v2.9).
-            m_layoutAdaptor->openEditorForScreen(screenId);
+            m_layoutService->openEditorForScreen(screenId);
         } else {
-            m_layoutAdaptor->openEditor();
+            m_layoutService->openEditor();
         }
     });
     // Quick layout shortcuts (Meta+Alt+1-9). Quick slots are per slot ARRAY:

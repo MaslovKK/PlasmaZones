@@ -153,11 +153,13 @@ set(plasmazones_core_SRCS
     dbus/dbushelpers.cpp
     runtime/common/lookups.cpp
     runtime/common/lookups.h
-    dbus/layoutadaptor/layoutadaptor.cpp
-    dbus/layoutadaptor/assignment.cpp
-    dbus/layoutadaptor/assignment_batch.cpp
-    dbus/layoutadaptor/editor.cpp
-    dbus/layoutadaptor/layoutadaptor.h
+    dbus/layoutadaptor.cpp
+    dbus/layoutadaptor.h
+    runtime/services/layoutservice/layoutservice.cpp
+    runtime/services/layoutservice/assignment.cpp
+    runtime/services/layoutservice/assignment_batch.cpp
+    runtime/services/layoutservice/editor.cpp
+    runtime/services/layoutservice/layoutservice.h
     dbus/settingsadaptor.cpp
     dbus/settingsadaptor.h
     runtime/services/settingsservice/settingsservice.cpp

@@ -11,13 +11,13 @@
 //
 // Consumers:
 //   * SettingsController — localLayoutPreviews(): QML
-//   * LayoutAdaptor — getLayoutList / getLayoutPreviewList: D-Bus JSON
+//   * LayoutService — getLayoutList / getLayoutPreviewList: D-Bus JSON
 //
-// One caller adds keys ON TOP of this projection. LayoutAdaptor::getLayoutList
+// One caller adds keys ON TOP of this projection. LayoutService::getLayoutList
 // enriches each entry with Layout state that LayoutPreview does not carry, so
 // the shape observable on THAT method is a strict superset of the canonical one
 // below — same projection plus an enrichment layer, not a separate projection.
-// The enrichment (LayoutAdaptor::getLayoutList, the authoritative list):
+// The enrichment (LayoutService::getLayoutList, the authoritative list):
 //   * manual entries — hasSystemOrigin, hiddenFromSelector, defaultOrder (only
 //     when set), allowedScreens / allowedDesktops / allowedActivities (each
 //     only when non-empty)
