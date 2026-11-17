@@ -680,21 +680,24 @@ jobs:
         uses: actions/checkout@v7
 
       # The Luau pin and the pluau prelude both live in the phosphor-libs tree,
-      # at the commit cmake/PlasmaZonesDependencies.cmake pins. The fetch script
-      # downloads every archive the build needs, that tree's included, and
-      # checks each hash, so this analyzes the same source the runtime links.
-      - name: Fetch the pinned archives
+      # at the commit cmake/PlasmaZonesDependencies.cmake pins. Fetched with
+      # curl and checked against the pin's SHA-256, because this step runs
+      # before "Sync packages" and the fallback image has no cmake yet.
+      - name: Fetch the pinned phosphor-libs tree
         id: libs
         run: |
           set -euo pipefail
-          cmake -DPHOSPHOR_DEPS_FETCH=deps -P cmake/PlasmaZonesDependencies.cmake
-          libs_file=$(sed -n 's/^set(PLASMAZONES_DEP_phosphor-libs_FILE "\(.*\)")$/\1/p' cmake/PlasmaZonesDependencies.cmake)
-          if [ -z "$libs_file" ]; then
-            echo "::error::no PLASMAZONES_DEP_phosphor-libs_FILE pin found in cmake/PlasmaZonesDependencies.cmake"
+          pins=cmake/PlasmaZonesDependencies.cmake
+          pin() { sed -n "s/^set(PLASMAZONES_DEP_phosphor-libs_$1 \"\(.*\)\")\$/\1/p" "$pins"; }
+          url=$(pin URL); sha=$(pin SHA256)
+          if [ -z "$url" ] || [ -z "$sha" ]; then
+            echo "::error::no phosphor-libs URL or SHA256 pin found in $pins"
             exit 1
           fi
+          curl -fsSL --retry 3 -o phosphor-libs.tar.gz "$url"
+          echo "$sha  phosphor-libs.tar.gz" | sha256sum -c -
           mkdir -p phosphor-libs-src
-          tar xzf "deps/$libs_file" -C phosphor-libs-src --strip-components=1
+          tar xzf phosphor-libs.tar.gz -C phosphor-libs-src --strip-components=1
           echo "tree=$PWD/phosphor-libs-src" >> "$GITHUB_OUTPUT"
 
       # The analyzer only changes when the Luau pin does, so it is built once
@@ -730,9 +733,12 @@ jobs:
         if: steps.luau-cache.outputs.cache-hit != 'true'
         run: |
           set -euo pipefail
-          # deps/ holds the archive the fetch step checked against its pin.
-          luau_file=$(sed -n 's/^set(PHOSPHOR_DEP_luau_FILE "\(.*\)")$/\1/p' \
-            "${{ steps.libs.outputs.tree }}/cmake/PhosphorDependencies.cmake")
+          # The library tree's fetch script downloads every archive it pins and
+          # checks its hash, so this builds from the same source the runtime
+          # links.
+          pins="${{ steps.libs.outputs.tree }}/cmake/PhosphorDependencies.cmake"
+          cmake -DPHOSPHOR_DEPS_FETCH=deps -P "$pins"
+          luau_file=$(sed -n 's/^set(PHOSPHOR_DEP_luau_FILE "\(.*\)")$/\1/p' "$pins")
           mkdir -p luau-src
           tar xzf "deps/$luau_file" -C luau-src --strip-components=1
           cmake -S luau-src -B luau-cli -G Ninja \
