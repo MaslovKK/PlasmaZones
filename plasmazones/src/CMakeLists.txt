@@ -151,6 +151,8 @@ set(plasmazones_core_SRCS
     config/configmigration_v8.cpp
     config/configmigration_v8overlay.cpp
     dbus/dbushelpers.cpp
+    runtime/common/lookups.cpp
+    runtime/common/lookups.h
     dbus/layoutadaptor/layoutadaptor.cpp
     dbus/layoutadaptor/assignment.cpp
     dbus/layoutadaptor/assignment_batch.cpp

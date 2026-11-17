@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #include "layoutadaptor.h"
-#include "dbus/dbushelpers.h"
+#include "runtime/common/lookups.h"
 #include "phosphor_i18n.h"
 #include "core/interfaces/interfaces.h"
 #include <PhosphorZones/Layout.h>
@@ -275,7 +275,7 @@ void LayoutAdaptor::notifyLayoutListChanged()
 
 std::optional<QUuid> LayoutAdaptor::parseAndValidateUuid(const QString& id, const QString& operation) const
 {
-    return DbusHelpers::parseAndValidateUuid(id, operation, lcDbusLayout);
+    return Lookups::parseAndValidateUuid(id, operation, lcDbusLayout);
 }
 
 bool LayoutAdaptor::requiresManualLayoutValidation(const QString& layoutId)
@@ -302,12 +302,12 @@ PhosphorZones::Layout* LayoutAdaptor::getValidatedLayout(const QString& id, cons
 
 bool LayoutAdaptor::validateNonEmpty(const QString& value, const QString& paramName, const QString& operation) const
 {
-    return DbusHelpers::validateNonEmpty(value, paramName, operation, lcDbusLayout);
+    return Lookups::validateNonEmpty(value, paramName, operation, lcDbusLayout);
 }
 
 bool LayoutAdaptor::validateDesktopNumber(int virtualDesktop, const QString& operation, bool allowZero) const
 {
-    return DbusHelpers::validateDesktopNumber(virtualDesktop, operation, lcDbusLayout, allowZero);
+    return Lookups::validateDesktopNumber(virtualDesktop, operation, lcDbusLayout, allowZero);
 }
 
 std::optional<QJsonObject> LayoutAdaptor::parseJsonObject(const QString& jsonString, const QString& operation) const

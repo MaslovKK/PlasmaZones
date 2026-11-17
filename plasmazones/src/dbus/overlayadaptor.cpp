@@ -3,6 +3,7 @@
 
 #include "overlayadaptor.h"
 #include "dbushelpers.h"
+#include "runtime/common/lookups.h"
 #include "core/interfaces/interfaces.h"
 #include "core/types/dmabufthumbnail.h"
 #include "core/interfaces/ioverlayservice.h"
@@ -190,7 +191,7 @@ void OverlayAdaptor::highlightZone(const QString& zoneId)
         qCWarning(lcDbus) << "highlightZone: overlay service or zone detector not wired";
         return;
     }
-    auto* zone = DbusHelpers::getZoneFromActiveLayout(m_layoutRegistry, zoneId, QStringLiteral("highlight zone"));
+    auto* zone = Lookups::getZoneFromActiveLayout(m_layoutRegistry, zoneId, QStringLiteral("highlight zone"));
     if (!zone) {
         return;
     }
