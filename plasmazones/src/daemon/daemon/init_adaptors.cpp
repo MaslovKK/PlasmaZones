@@ -32,6 +32,7 @@
 #include "dbus/settingsadaptor/settingsadaptor.h"
 #include "dbus/overlayadaptor.h"
 #include "dbus/zonedetectionadaptor.h"
+#include "runtime/services/zonequeryservice.h"
 #include "runtime/windowtracker/windowtracker.h"
 #include "dbus/windowtrackingadaptor.h"
 #include "runtime/dragresolver/dragresolver.h"
@@ -92,8 +93,11 @@ void Daemon::initCoreAdaptors()
     m_windowTrackingAdaptor = nullptr;
     delete m_windowTracker;
     m_windowTracker = nullptr;
+    // The binding before the service it forwards to.
     delete m_zoneDetectionAdaptor;
     m_zoneDetectionAdaptor = nullptr;
+    delete m_zoneQueryService;
+    m_zoneQueryService = nullptr;
     delete m_overlayAdaptor;
     m_overlayAdaptor = nullptr;
     delete m_compositorBridge;
@@ -185,15 +189,16 @@ void Daemon::initCoreAdaptors()
         return overlay->isCompositorPeer(busName);
     });
 
-    // PhosphorZones::Zone detection adaptor - zone detection queries
-    m_zoneDetectionAdaptor = new ZoneDetectionAdaptor(m_zoneDetector.get(), m_layoutManager.get(),
-                                                      m_screenManager.get(), m_settings.get(), this);
+    // Zone detection queries, and their D-Bus binding
+    m_zoneQueryService = new ZoneQueryService(m_zoneDetector.get(), m_layoutManager.get(), m_screenManager.get(),
+                                              m_settings.get(), this);
+    m_zoneDetectionAdaptor = new ZoneDetectionAdaptor(m_zoneQueryService, this);
 
     // Window tracking - window-zone assignments, and its D-Bus binding
     m_windowTracker = new WindowTracker(m_layoutManager.get(), m_zoneDetector.get(), m_screenManager.get(),
                                         m_settings.get(), m_virtualDesktopManager.get(), m_activityManager.get(), this);
     m_windowTrackingAdaptor = new WindowTrackingAdaptor(m_windowTracker, this);
-    m_windowTracker->setZoneAdjacencyResolver(m_zoneDetectionAdaptor);
+    m_windowTracker->setZoneAdjacencyResolver(m_zoneQueryService);
     m_windowTracker->setWindowRegistry(m_windowRegistry.get());
     // Full rule set for per-window RestorePosition evaluation (overrides the
     // per-engine *RestoreFloatedWindowsOnLogin settings for matched windows).

@@ -1372,7 +1372,10 @@ private:
     LayoutAdaptor* m_layoutAdaptor = nullptr;
     SettingsAdaptor* m_settingsAdaptor = nullptr;
     OverlayAdaptor* m_overlayAdaptor = nullptr; // Overlay visibility only
-    ZoneDetectionAdaptor* m_zoneDetectionAdaptor = nullptr; // PhosphorZones::Zone detection queries
+    // Zone detection queries. A plain QObject child; its bus surface is
+    // m_zoneDetectionAdaptor, which is deleted before it.
+    ZoneQueryService* m_zoneQueryService = nullptr;
+    ZoneDetectionAdaptor* m_zoneDetectionAdaptor = nullptr; // D-Bus binding of m_zoneQueryService
     // Window-zone tracking. A plain QObject child, not an adaptor: its bus
     // surface is m_windowTrackingAdaptor, which is deleted before it.
     WindowTracker* m_windowTracker = nullptr;

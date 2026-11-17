@@ -176,6 +176,8 @@ set(plasmazones_core_SRCS
     dbus/overlayadaptor.h
     dbus/zonedetectionadaptor.cpp
     dbus/zonedetectionadaptor.h
+    runtime/services/zonequeryservice.cpp
+    runtime/services/zonequeryservice.h
     dbus/ruleadaptor.cpp
     dbus/ruleadaptor.h
     # snapnavigationtargets moved to phosphor-libs/libs/phosphor-snap-engine/

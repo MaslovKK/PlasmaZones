@@ -91,6 +91,7 @@ class ControlAdaptor;
 class CompositorBridgeAdaptor;
 class OverlayAdaptor;
 class ZoneDetectionAdaptor;
+class ZoneQueryService;
 class WindowTracker;
 class WindowTrackingAdaptor;
 class DragResolver;
