@@ -4,7 +4,7 @@
 /**
  * @file test_tiling_adaptor_active_layouts.cpp
  *
- * Pins the setActiveLayouts contract on TilingAdaptor: the daemon pushes the
+ * Pins the setActiveLayouts contract on TilingService: the daemon pushes the
  * per-screen rules-visible active layout map unconditionally from every
  * updateEngineScreens pass, and the adaptor's emit-on-change gate must
  * collapse identical pushes to zero broadcasts while a changed map reaches
@@ -21,7 +21,7 @@
 #include <QSignalSpy>
 #include <QObject>
 
-#include "dbus/tilingadaptor/tilingadaptor.h"
+#include "runtime/services/tilingservice/tilingservice.h"
 
 using namespace PlasmaZones;
 
@@ -34,8 +34,8 @@ private Q_SLOTS:
     void testChangeGateAndReadback()
     {
         QObject adaptorParent;
-        TilingAdaptor adaptor(nullptr, &adaptorParent);
-        QSignalSpy spy(&adaptor, &TilingAdaptor::activeLayoutsChanged);
+        TilingService adaptor(nullptr, &adaptorParent);
+        QSignalSpy spy(&adaptor, &TilingService::activeLayoutsChanged);
         QVERIFY(spy.isValid());
 
         // Starts empty: no push has happened.
@@ -67,8 +67,8 @@ private Q_SLOTS:
     void testEmptyMapIsAChange()
     {
         QObject adaptorParent;
-        TilingAdaptor adaptor(nullptr, &adaptorParent);
-        QSignalSpy spy(&adaptor, &TilingAdaptor::activeLayoutsChanged);
+        TilingService adaptor(nullptr, &adaptorParent);
+        QSignalSpy spy(&adaptor, &TilingService::activeLayoutsChanged);
         QVERIFY(spy.isValid());
 
         QVariantMap map;

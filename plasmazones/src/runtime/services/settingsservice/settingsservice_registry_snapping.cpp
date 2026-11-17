@@ -1,24 +1,24 @@
 // SPDX-FileCopyrightText: 2026 fuddlesworth
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-// The Snapping-family slice of SettingsAdaptor's getSetting/setSetting
+// The Snapping-family slice of SettingsService's getSetting/setSetting
 // registry: zone span, zone geometry thresholds, snapping behavior, snap
 // assist, default layout / layout filtering, the zone selector, and the
 // snap-to-zone-by-number shortcuts. Split out of
-// settingsadaptor_registry.cpp alongside the autotile and scrolling slices;
+// settingsservice_registry.cpp alongside the autotile and scrolling slices;
 // initializeRegistry() calls initializeRegistrySnapping() so the same keys
 // land in the same maps.
 //
 // BOUNDARY RULE for the four registry TUs: a key belongs to a mode TU when
 // its name carries that mode's prefix or the zone family prefix — snap* /
-// snapping* / zone* here, autotile* in settingsadaptor_registry_autotile.cpp,
-// scrolling* in settingsadaptor_registry_scrolling.cpp. Mode-neutral keys
+// snapping* / zone* here, autotile* in settingsservice_registry_autotile.cpp,
+// scrolling* in settingsservice_registry_scrolling.cpp. Mode-neutral keys
 // (drag activation, navigation / swap / span / quickLayout / cycle / rotate /
 // global shortcuts, display, appearance, filtering, animation and profile
 // trees, cava, gpu, and the per-mode disable lists, which are one shared
-// three-mode mechanism) stay in settingsadaptor_registry.cpp.
+// three-mode mechanism) stay in settingsservice_registry.cpp.
 //
-// The REGISTER_* macros are duplicated from settingsadaptor_registry.cpp on
+// The REGISTER_* macros are duplicated from settingsservice_registry.cpp on
 // purpose: every registry TU defines them inside its registration function and
 // #undefs them at the end, which keeps them out of every other TU in a unity
 // batch — a shared macro header with an include guard would define them only
@@ -28,13 +28,13 @@
 // boilerplate; a change to one spelling must land in every TU that carries
 // that form, in the same commit).
 
-#include "settingsadaptor.h"
+#include "settingsservice.h"
 #include "core/interfaces/interfaces.h"
 #include "config/settings.h" // For concrete Settings type
 
 namespace PlasmaZones {
 
-void SettingsAdaptor::initializeRegistrySnapping()
+void SettingsService::initializeRegistrySnapping()
 {
 #define REGISTER_STRING_SETTING(name, getter, setter)                                                                  \
     m_getters[QStringLiteral(name)] = [this]() {                                                                       \
@@ -112,7 +112,7 @@ void SettingsAdaptor::initializeRegistrySnapping()
     REGISTER_BOOL_SETTING("snappingEnabled", snappingEnabled, setSnappingEnabled)
 
     // Zone settings. The shared inner/outer gaps are mode-neutral and are
-    // registered in settingsadaptor_registry.cpp.
+    // registered in settingsservice_registry.cpp.
     REGISTER_INT_SETTING("adjacentThreshold", adjacentThreshold, setAdjacentThreshold)
     REGISTER_INT_SETTING("pollIntervalMs", pollIntervalMs, setPollIntervalMs)
     REGISTER_INT_SETTING("minimumZoneSizePx", minimumZoneSizePx, setMinimumZoneSizePx)

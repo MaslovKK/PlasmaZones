@@ -1,15 +1,14 @@
 // SPDX-FileCopyrightText: 2026 fuddlesworth
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#include "tilingadaptor.h"
+#include "tilingservice.h"
 
 #include "core/platform/logging.h"
-#include "dbus/dbushelpers.h"
 #include "runtime/windowtracker/windowtracker.h"
 
 #include <PhosphorEngine/IPlacementEngine.h>
 #include <PhosphorIdentity/WindowId.h>
-#include <PhosphorProtocol/WindowMarshalling.h>
+#include <PhosphorProtocol/WindowTypes.h>
 #include <PhosphorScreens/Manager.h>
 #include <PhosphorScreens/ScreenIdentity.h>
 
@@ -20,8 +19,8 @@
 
 namespace PlasmaZones {
 
-TilingAdaptor::TilingAdaptor(PhosphorScreens::ScreenManager* screenManager, QObject* parent)
-    : QDBusAbstractAdaptor(parent)
+TilingService::TilingService(PhosphorScreens::ScreenManager* screenManager, QObject* parent)
+    : QObject(parent)
     , m_screenManager(screenManager)
 {
     // Engine-agnostic by construction: the adaptor holds no engine until the
@@ -38,17 +37,17 @@ TilingAdaptor::TilingAdaptor(PhosphorScreens::ScreenManager* screenManager, QObj
     // forward of activateWindowRequested, the engine-driven focus that runs
     // ahead of the compositor's answering focus report. Neither hook decides
     // anything: refreshFocusedWindow re-reads the engine and emits on change.
-    connect(this, &TilingAdaptor::tilingChanged, this, &TilingAdaptor::refreshFocusedWindow);
-    connect(this, &TilingAdaptor::focusWindowRequested, this, [this](const QString& windowId) {
+    connect(this, &TilingService::tilingChanged, this, &TilingService::refreshFocusedWindow);
+    connect(this, &TilingService::focusWindowRequested, this, [this](const QString& windowId) {
         const QString screenId = trackedScreenForWindow(windowId);
         if (!screenId.isEmpty()) {
             refreshFocusedWindow(screenId);
         }
     });
-    qCDebug(lcDbusTiling) << "TilingAdaptor initialized";
+    qCDebug(lcDbusTiling) << "TilingService initialized";
 }
 
-void TilingAdaptor::setLifecycleEngines(const QVector<PhosphorEngine::IPlacementEngine*>& engines)
+void TilingService::setLifecycleEngines(const QVector<PhosphorEngine::IPlacementEngine*>& engines)
 {
     // Interface-only borrows: the adaptor dispatches inbound lifecycle
     // calls through the list but makes no signal connections (the
@@ -77,7 +76,7 @@ void TilingAdaptor::setLifecycleEngines(const QVector<PhosphorEngine::IPlacement
     }
 }
 
-void TilingAdaptor::setMembershipEngines(const QVector<PhosphorEngine::IPlacementEngine*>& engines)
+void TilingService::setMembershipEngines(const QVector<PhosphorEngine::IPlacementEngine*>& engines)
 {
     m_membershipEngines = engines;
     m_membershipEngines.removeAll(nullptr);
@@ -89,7 +88,7 @@ void TilingAdaptor::setMembershipEngines(const QVector<PhosphorEngine::IPlacemen
     }
 }
 
-bool TilingAdaptor::ensurePipeline(const char* methodName) const
+bool TilingService::ensurePipeline(const char* methodName) const
 {
     if (m_lifecycleEngines.isEmpty()) {
         qCWarning(lcDbusTiling) << "Cannot" << methodName << "- no pipeline engines available";
@@ -98,7 +97,7 @@ bool TilingAdaptor::ensurePipeline(const char* methodName) const
     return true;
 }
 
-PhosphorEngine::IPlacementEngine* TilingAdaptor::engineOwningScreen(const QString& screenId) const
+PhosphorEngine::IPlacementEngine* TilingService::engineOwningScreen(const QString& screenId) const
 {
     for (PhosphorEngine::IPlacementEngine* engine : m_lifecycleEngines) {
         if (engine->isActiveOnScreen(screenId)) {
@@ -123,7 +122,7 @@ PhosphorEngine::IPlacementEngine* TilingAdaptor::engineOwningScreen(const QStrin
     return m_lifecycleEngines.isEmpty() ? nullptr : m_lifecycleEngines.first();
 }
 
-QVector<PhosphorEngine::IPlacementEngine*> TilingAdaptor::enginesTrackingWindow(const QString& windowId) const
+QVector<PhosphorEngine::IPlacementEngine*> TilingService::enginesTrackingWindow(const QString& windowId) const
 {
     QVector<PhosphorEngine::IPlacementEngine*> engines;
     for (PhosphorEngine::IPlacementEngine* engine : m_lifecycleEngines) {
@@ -134,7 +133,7 @@ QVector<PhosphorEngine::IPlacementEngine*> TilingAdaptor::enginesTrackingWindow(
     return engines;
 }
 
-void TilingAdaptor::setActiveLayouts(const QVariantMap& activeLayouts)
+void TilingService::setActiveLayouts(const QVariantMap& activeLayouts)
 {
     // Change gate: the daemon pushes unconditionally from every
     // updateEngineScreens pass (see the header doc); only an actual map
@@ -147,7 +146,7 @@ void TilingAdaptor::setActiveLayouts(const QVariantMap& activeLayouts)
     Q_EMIT activeLayoutsChanged(activeLayouts);
 }
 
-void TilingAdaptor::relayScrollTabStrips(const QString& screenId, const QString& stripsJson)
+void TilingService::relayScrollTabStrips(const QString& screenId, const QString& stripsJson)
 {
     if (screenId.isEmpty()) {
         qCWarning(lcDbusTiling) << "relayScrollTabStrips: empty screen id, dropping payload";
@@ -174,7 +173,7 @@ void TilingAdaptor::relayScrollTabStrips(const QString& screenId, const QString&
     Q_EMIT scrollTabStripsChanged(screenId, retracts ? QStringLiteral("[]") : stripsJson);
 }
 
-void TilingAdaptor::setScrollTabPaintOverrides(const QString& screenId, const QVariantMap& overrides)
+void TilingService::setScrollTabPaintOverrides(const QString& screenId, const QVariantMap& overrides)
 {
     if (screenId.isEmpty()) {
         qCWarning(lcDbusTiling) << "setScrollTabPaintOverrides: empty screen id, dropping overrides";
@@ -196,7 +195,7 @@ void TilingAdaptor::setScrollTabPaintOverrides(const QString& screenId, const QV
     Q_EMIT scrollTabPaintOverridesChanged(screenId, overrides);
 }
 
-QVariantMap TilingAdaptor::scrollTabPaintOverrides() const
+QVariantMap TilingService::scrollTabPaintOverrides() const
 {
     QVariantMap out;
     for (auto it = m_scrollTabPaintOverrides.constBegin(); it != m_scrollTabPaintOverrides.constEnd(); ++it) {
@@ -205,7 +204,7 @@ QVariantMap TilingAdaptor::scrollTabPaintOverrides() const
     return out;
 }
 
-void TilingAdaptor::clearScrollTabPaintOverridesWhere(const std::function<bool(const QString&)>& pred)
+void TilingService::clearScrollTabPaintOverridesWhere(const std::function<bool(const QString&)>& pred)
 {
     // Load-bearing copy of the keys: setScrollTabPaintOverrides mutates the
     // map being walked (it removes the entry for an empty map).
@@ -217,7 +216,7 @@ void TilingAdaptor::clearScrollTabPaintOverridesWhere(const std::function<bool(c
     }
 }
 
-void TilingAdaptor::relayScrollTabColorsChanged()
+void TilingService::relayScrollTabColorsChanged()
 {
     // The broadcast makes the effect re-query every window it paints, so
     // its verdicts move without any targeted relay passing through here.
@@ -227,7 +226,7 @@ void TilingAdaptor::relayScrollTabColorsChanged()
     Q_EMIT scrollTabColorsChanged(QString(), QVariantMap());
 }
 
-void TilingAdaptor::relayScrollTabColorsForWindow(const QString& windowId)
+void TilingService::relayScrollTabColorsForWindow(const QString& windowId)
 {
     if (windowId.isEmpty() || !m_windowTracker) {
         return;
@@ -284,7 +283,7 @@ void TilingAdaptor::relayScrollTabColorsForWindow(const QString& windowId)
     Q_EMIT scrollTabColorsChanged(windowId, colors);
 }
 
-QVariantMap TilingAdaptor::scrollTabStrips() const
+QVariantMap TilingService::scrollTabStrips() const
 {
     QVariantMap out;
     for (auto it = m_lastScrollTabStrips.constBegin(); it != m_lastScrollTabStrips.constEnd(); ++it) {
@@ -293,7 +292,7 @@ QVariantMap TilingAdaptor::scrollTabStrips() const
     return out;
 }
 
-QVariantMap TilingAdaptor::scrollTabColors(const QString& windowId)
+QVariantMap TilingService::scrollTabColors(const QString& windowId)
 {
     // The WTA owns the resolve and its memo; this is a pass-through so the
     // effect can reach it on the interface it already listens to.
@@ -303,7 +302,7 @@ QVariantMap TilingAdaptor::scrollTabColors(const QString& windowId)
     return m_windowTracker->tabColorRuleParams(windowId);
 }
 
-QStringList TilingAdaptor::combinedManagedScreens() const
+QStringList TilingService::combinedManagedScreens() const
 {
     QSet<QString> all;
     for (const PhosphorEngine::IPlacementEngine* engine : m_lifecycleEngines) {
@@ -316,7 +315,7 @@ QStringList TilingAdaptor::combinedManagedScreens() const
     return out;
 }
 
-void TilingAdaptor::relayWindowFloatingChanged(const QString& windowId, bool isFloating, const QString& screenId)
+void TilingService::relayWindowFloatingChanged(const QString& windowId, bool isFloating, const QString& screenId)
 {
     const auto it = m_lastFloatBroadcast.constFind(windowId);
     if (it != m_lastFloatBroadcast.constEnd() && it.value() == isFloating) {
@@ -330,7 +329,7 @@ void TilingAdaptor::relayWindowFloatingChanged(const QString& windowId, bool isF
 // Property Accessors
 // ═══════════════════════════════════════════════════════════════════════════
 
-bool TilingAdaptor::enabled() const
+bool TilingService::enabled() const
 {
     return std::any_of(m_lifecycleEngines.cbegin(), m_lifecycleEngines.cend(),
                        [](const PhosphorEngine::IPlacementEngine* engine) {
@@ -338,7 +337,7 @@ bool TilingAdaptor::enabled() const
                        });
 }
 
-QStringList TilingAdaptor::managedScreens() const
+QStringList TilingService::managedScreens() const
 {
     return combinedManagedScreens();
 }
@@ -347,7 +346,7 @@ QStringList TilingAdaptor::managedScreens() const
 // Tiling Operations
 // ═══════════════════════════════════════════════════════════════════════════
 
-void TilingAdaptor::retile(const QString& screenId)
+void TilingService::retile(const QString& screenId)
 {
     if (!ensurePipeline("retile")) {
         return;
@@ -360,17 +359,17 @@ void TilingAdaptor::retile(const QString& screenId)
     }
 }
 
-void TilingAdaptor::retileAllScreens()
+void TilingService::retileAllScreens()
 {
     retile(QString());
 }
 
-int TilingAdaptor::pendingWindowOpensCount() const
+int TilingService::pendingWindowOpensCount() const
 {
     return m_pendingOpens.size();
 }
 
-void TilingAdaptor::dispatchWindowOpened(const PhosphorProtocol::WindowOpenedEntry& entry)
+void TilingService::dispatchWindowOpened(const PhosphorProtocol::WindowOpenedEntry& entry)
 {
     if (entry.windowId.isEmpty() || entry.screenId.isEmpty()) {
         return;
@@ -459,7 +458,7 @@ void TilingAdaptor::dispatchWindowOpened(const PhosphorProtocol::WindowOpenedEnt
     dispatchOpenToClaimingEngine(routedEntry, /*allowPark=*/true, /*allowCrossScreenClaim=*/!ruleRouted);
 }
 
-void TilingAdaptor::setWindowTrackingAdaptor(WindowTracker* wta)
+void TilingService::setWindowTrackingAdaptor(WindowTracker* wta)
 {
     // The old adaptor is left alone: the shutdown clear can run after it is
     // gone, and the dispatcher below checks this adaptor's own lifetime.
@@ -470,19 +469,19 @@ void TilingAdaptor::setWindowTrackingAdaptor(WindowTracker* wta)
     // A rule routing a window from a snapping screen onto a tiling one: the
     // target's engine takes it as an open. No park and no cross-screen claim,
     // since the rule owns where the window goes.
-    wta->setRoutedOpenDispatcher([self = QPointer<TilingAdaptor>(this)](const PhosphorProtocol::WindowOpenedEntry& e) {
+    wta->setRoutedOpenDispatcher([self = QPointer<TilingService>(this)](const PhosphorProtocol::WindowOpenedEntry& e) {
         if (self) {
             self->dispatchOpenToClaimingEngine(e, /*allowPark=*/false, /*allowCrossScreenClaim=*/false);
         }
     });
     // The span the membership pass reads, for the adaptor's own release of a
     // window placed again where a refused move left it.
-    wta->setDesktopSpanQuery([self = QPointer<TilingAdaptor>(this)](const QString& windowId) {
+    wta->setDesktopSpanQuery([self = QPointer<TilingService>(this)](const QString& windowId) {
         return self ? self->desktopSpanQuery()(windowId) : PhosphorEngine::DesktopSpan{};
     });
 }
 
-void TilingAdaptor::dispatchOpenToClaimingEngine(const PhosphorProtocol::WindowOpenedEntry& entry, bool allowPark,
+void TilingService::dispatchOpenToClaimingEngine(const PhosphorProtocol::WindowOpenedEntry& entry, bool allowPark,
                                                  bool allowCrossScreenClaim)
 {
     // The routed open dispatcher and the parked-open retry enter here directly.
@@ -592,7 +591,7 @@ void TilingAdaptor::dispatchOpenToClaimingEngine(const PhosphorProtocol::WindowO
                           << entry.windowId << "- dropped (screen not engine-managed)";
 }
 
-void TilingAdaptor::removeUnclaimedOpen(const QString& windowId)
+void TilingService::removeUnclaimedOpen(const QString& windowId)
 {
     for (int i = m_unclaimedOpens.size() - 1; i >= 0; --i) {
         if (m_unclaimedOpens.at(i).entry.windowId == windowId) {
@@ -601,7 +600,7 @@ void TilingAdaptor::removeUnclaimedOpen(const QString& windowId)
     }
 }
 
-void TilingAdaptor::removePendingOpen(const QString& windowId)
+void TilingService::removePendingOpen(const QString& windowId)
 {
     // The panel-geometry deferral queue's twin of removeUnclaimedOpen: a
     // window that opens and closes inside the startup panel-query window
@@ -615,7 +614,7 @@ void TilingAdaptor::removePendingOpen(const QString& windowId)
     }
 }
 
-bool TilingAdaptor::deferUntilPanelReady(qsizetype incomingCount)
+bool TilingService::deferUntilPanelReady(qsizetype incomingCount)
 {
     // Fast path: panel geometry already known, or no PhosphorScreens::ScreenManager at all (tests
     // without a singleton fall through and proceed with whatever geometry exists).
@@ -650,13 +649,13 @@ bool TilingAdaptor::deferUntilPanelReady(qsizetype incomingCount)
     // PhosphorScreens::ScreenManager::queryKdePlasmaPanels).
     if (!m_pendingOpensListenerInstalled) {
         connect(m_screenManager, &PhosphorScreens::ScreenManager::panelGeometryReady, this,
-                &TilingAdaptor::flushPendingWindowOpens);
+                &TilingService::flushPendingWindowOpens);
         m_pendingOpensListenerInstalled = true;
     }
     return true;
 }
 
-void TilingAdaptor::flushPendingWindowOpens()
+void TilingService::flushPendingWindowOpens()
 {
     if (m_pendingOpens.isEmpty()) {
         return;
@@ -708,19 +707,13 @@ void TilingAdaptor::flushPendingWindowOpens()
     }
 }
 
-void TilingAdaptor::windowOpened(const QString& windowId, const QString& screenId, int minWidth, int minHeight)
+void TilingService::windowOpened(const QString& windowId, const QString& screenId, int minWidth, int minHeight)
 {
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return;
-    }
     announceWindow("windowOpened", windowId, screenId, minWidth, minHeight, /*focusEligible=*/true);
 }
 
-void TilingAdaptor::windowReannounced(const QString& windowId, const QString& screenId, int minWidth, int minHeight)
+void TilingService::windowReannounced(const QString& windowId, const QString& screenId, int minWidth, int minHeight)
 {
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return;
-    }
     // A re-announce places the window again where it actually is. A snap
     // membership it still holds anywhere else is stale: the effect re-announces
     // a window whose workspace move the compositor refused, after the
@@ -731,7 +724,7 @@ void TilingAdaptor::windowReannounced(const QString& windowId, const QString& sc
     announceWindow("windowReannounced", windowId, screenId, minWidth, minHeight, /*focusEligible=*/false);
 }
 
-void TilingAdaptor::announceWindow(const char* method, const QString& windowId, const QString& screenId, int minWidth,
+void TilingService::announceWindow(const char* method, const QString& windowId, const QString& screenId, int minWidth,
                                    int minHeight, bool focusEligible)
 {
     if (!ensurePipeline(method)) {
@@ -765,11 +758,8 @@ void TilingAdaptor::announceWindow(const char* method, const QString& windowId, 
     dispatchWindowOpened(entry);
 }
 
-void TilingAdaptor::windowsOpenedBatch(const PhosphorProtocol::WindowOpenedList& entries)
+void TilingService::windowsOpenedBatch(const PhosphorProtocol::WindowOpenedList& entries)
 {
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return;
-    }
     if (!ensurePipeline("windowsOpenedBatch")) {
         return;
     }
@@ -820,11 +810,8 @@ void TilingAdaptor::windowsOpenedBatch(const PhosphorProtocol::WindowOpenedList&
     }
 }
 
-void TilingAdaptor::windowMinSizeUpdated(const QString& windowId, int minWidth, int minHeight)
+void TilingService::windowMinSizeUpdated(const QString& windowId, int minWidth, int minHeight)
 {
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return;
-    }
     if (!ensurePipeline("windowMinSizeUpdated")) {
         return;
     }
@@ -839,11 +826,8 @@ void TilingAdaptor::windowMinSizeUpdated(const QString& windowId, int minWidth, 
     }
 }
 
-void TilingAdaptor::windowClosed(const QString& windowId)
+void TilingService::windowClosed(const QString& windowId)
 {
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return;
-    }
     if (windowId.isEmpty()) {
         qCDebug(lcDbusTiling) << "windowClosed: empty window ID";
         return;
@@ -903,7 +887,7 @@ void TilingAdaptor::windowClosed(const QString& windowId)
     }
 }
 
-void TilingAdaptor::onTrackedWindowDestroyed(const QString& windowId)
+void TilingService::onTrackedWindowDestroyed(const QString& windowId)
 {
     // Post-teardown raw id only (see the header doc) — the canonical-form
     // residue of a class-mutating app is reclaimed by
@@ -935,7 +919,7 @@ void TilingAdaptor::onTrackedWindowDestroyed(const QString& windowId)
     }
 }
 
-void TilingAdaptor::pruneStaleFloatBroadcasts(const QStringList& aliveInstances)
+void TilingService::pruneStaleFloatBroadcasts(const QStringList& aliveInstances)
 {
     if (aliveInstances.isEmpty()) {
         // Same fail-closed stance as the WTA prune: an empty alive report
@@ -975,7 +959,7 @@ void TilingAdaptor::pruneStaleFloatBroadcasts(const QStringList& aliveInstances)
     });
 }
 
-void TilingAdaptor::forgetFloatBroadcast(const QString& windowId)
+void TilingService::forgetFloatBroadcast(const QString& windowId)
 {
     m_lastFloatBroadcast.remove(windowId);
     if (m_windowTracker) {
@@ -983,15 +967,12 @@ void TilingAdaptor::forgetFloatBroadcast(const QString& windowId)
     }
 }
 
-void TilingAdaptor::releaseWindowTracking(const QString& windowId)
+void TilingService::releaseWindowTracking(const QString& windowId)
 {
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return;
-    }
     releaseWindowTrackingVia(windowId, nullptr);
 }
 
-void TilingAdaptor::releaseWindowTrackingVia(const QString& windowId, PhosphorEngine::IPlacementEngine* owner)
+void TilingService::releaseWindowTrackingVia(const QString& windowId, PhosphorEngine::IPlacementEngine* owner)
 {
     if (windowId.isEmpty()) {
         qCDebug(lcDbusTiling) << "releaseWindowTracking: empty window ID";
@@ -1060,11 +1041,8 @@ void TilingAdaptor::releaseWindowTrackingVia(const QString& windowId, PhosphorEn
     }
 }
 
-void TilingAdaptor::notifyWindowFocused(const QString& windowId, const QString& screenId)
+void TilingService::notifyWindowFocused(const QString& windowId, const QString& screenId)
 {
-    if (!DbusHelpers::admitCompositorReport(this, QLatin1StringView(__func__))) {
-        return;
-    }
     if (!ensurePipeline("notifyWindowFocused")) {
         return;
     }
@@ -1094,7 +1072,7 @@ void TilingAdaptor::notifyWindowFocused(const QString& windowId, const QString& 
 // all float operations are now routed through the unified WTA methods
 // (toggleFloatForWindow for toggle, setWindowFloatingForScreen for directional).
 
-void TilingAdaptor::clearEngine()
+void TilingService::clearEngine()
 {
     // The registry subscription is the one late-bound borrow here that DOES
     // hold a connection, so it is severed with the engines rather than left to

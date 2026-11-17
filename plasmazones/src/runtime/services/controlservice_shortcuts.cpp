@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// ControlAdaptor — shortcut catalog read
+// ControlService — shortcut catalog read
 //
 // The Phosphor shell's keybind cheatsheet draws each chord on the rect it
 // acts on, so it needs the daemon's bound chords per action, uncompressed.
@@ -12,7 +12,7 @@
 // notifyShortcutsChanged. Nothing here touches placement state.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-#include "controladaptor.h"
+#include "controlservice.h"
 
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -20,17 +20,17 @@
 
 namespace PlasmaZones {
 
-void ControlAdaptor::setShortcutCatalogProvider(std::function<QVariantList()> provider)
+void ControlService::setShortcutCatalogProvider(std::function<QVariantList()> provider)
 {
     m_shortcutCatalog = std::move(provider);
 }
 
-void ControlAdaptor::notifyShortcutsChanged()
+void ControlService::notifyShortcutsChanged()
 {
     Q_EMIT shortcutsChanged();
 }
 
-QString ControlAdaptor::getShortcutsJson()
+QString ControlService::getShortcutsJson()
 {
     QJsonArray rows;
     if (m_shortcutCatalog) {

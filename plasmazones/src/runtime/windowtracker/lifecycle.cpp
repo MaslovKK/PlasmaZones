@@ -553,7 +553,7 @@ void WindowTracker::windowClosed(const QString& windowId, int windowKind, const 
         m_windowRegistry->remove(instanceId);
     }
 
-    // DragResolver's drag teardown and TilingAdaptor::onTrackedWindowDestroyed
+    // DragResolver's drag teardown and TilingService::onTrackedWindowDestroyed
     // run off this in-process relay, after the teardown above so they see the
     // post-close state. A relay, not an adaptor signal, so it stays off the bus.
     Q_EMIT m_lifecycleRelay->windowClosed(windowId);
@@ -954,7 +954,7 @@ void WindowTracker::releaseSnapOutsideLiveContext(const QString& rawWindowId, co
     }
     qCInfo(lcDbusWindow) << "placed again on" << liveScreen << ":" << windowId << "gives up" << result.released.size()
                          << "snap membership(s) it held elsewhere";
-    // The bookkeeping TilingAdaptor::applyMembershipResult drives for a
+    // The bookkeeping TilingService::applyMembershipResult drives for a
     // membership pass's snap release, for the same reasons: the persisted
     // record still names the released zone, and so does the effect's zone
     // cache until it hears "unsnapped" for each context left.

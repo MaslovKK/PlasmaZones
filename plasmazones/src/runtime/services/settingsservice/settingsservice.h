@@ -5,13 +5,13 @@
 
 #include "plasmazones_export.h"
 #include <QObject>
-#include <QDBusAbstractAdaptor>
-#include <QDBusVariant>
 #include <QString>
 #include <QVariant>
 #include <QTimer>
 #include <functional>
 #include <QHash>
+
+#include <optional>
 
 namespace PhosphorAnimation {
 class PhosphorProfileRegistry;
@@ -23,17 +23,18 @@ class ISettings;
 class Settings; // Forward declaration for concrete type
 
 /**
- * @brief D-Bus adaptor for settings operations
+ * @brief Settings read/write operations: the service behind
+ *        org.phosphor_works.Placement.Settings
  *
- * Provides D-Bus interface: org.phosphor_works.Placement.Settings
- *  Settings read/write operations
+ * Bound to D-Bus by SettingsAdaptor (dbus/settingsadaptor.h), which converts
+ * between QDBusVariant / QDBusArgument and plain QVariant and turns a refusal
+ * here into a D-Bus error.
  *
  * Uses registry pattern for setSetting.
  */
-/// getSetting answers an UNKNOWN key with a real D-Bus error instead of a
-/// valid-but-empty value, sent through DbusHelpers::sendBusError because Qt
-/// sets a call's context on the object this adaptor is exported through, not
-/// on the adaptor. That distinction is load-bearing: getSetting resolves keys
+/// getSetting answers an UNKNOWN key with no value and an error message,
+/// which SettingsService sends as a real D-Bus error instead of a
+/// valid-but-empty value. That distinction is load-bearing: getSetting resolves keys
 /// through a hand-maintained registry, not through Qt property reflection, so a setting
 /// whose registration is forgotten is a live possibility — and while the miss
 /// answered with an empty string, every one of the ~50 callers coerced it blind
@@ -41,10 +42,9 @@ class Settings; // Forward declaration for concrete type
 /// value instead of failing. An error reply makes loadSettingAsync's
 /// reply.isValid() false, so the callback never runs and the caller keeps its
 /// own default. One central guard instead of a type-check at every call site.
-class PLASMAZONES_EXPORT SettingsAdaptor : public QDBusAbstractAdaptor
+class PLASMAZONES_EXPORT SettingsService : public QObject
 {
     Q_OBJECT
-    Q_CLASSINFO("D-Bus Interface", "org.phosphor_works.Placement.Settings")
 
 public:
     /// @param settings Settings interface (required).
@@ -56,9 +56,9 @@ public:
     ///        registered and consumers fall back to the global duration.
     /// @param parent Qt parent (D-Bus adaptors are owned by their adapted
     ///        QObject via Qt parent-child).
-    explicit SettingsAdaptor(ISettings* settings, PhosphorAnimation::PhosphorProfileRegistry* profileRegistry = nullptr,
+    explicit SettingsService(ISettings* settings, PhosphorAnimation::PhosphorProfileRegistry* profileRegistry = nullptr,
                              QObject* parent = nullptr);
-    ~SettingsAdaptor() override;
+    ~SettingsService() override;
 
     /// Null the borrowed ISettings and profile-registry pointers, sever their
     /// signal wiring, and flush any pending debounced save. Called from
@@ -68,6 +68,23 @@ public:
     /// the destructor is a no-op for the save-on-teardown branch.
     void detach();
 
+    /// The value of @p key, or nullopt for an empty or unknown key, with the
+    /// reason in @p error. A registered key whose getter answers an invalid
+    /// variant answers an empty string. Not a slot: SettingsService serves
+    /// it on the bus as a QDBusVariant.
+    std::optional<QVariant> getSetting(const QString& key, QString* error = nullptr);
+    /// Write @p value, a plain Qt value (SettingsService unwraps a
+    /// QDBusArgument from the wire), to @p key. False for an empty or unknown key.
+    bool setSetting(const QString& key, const QVariant& value);
+    /// Write one per-screen value. False, with the reason in @p rejection,
+    /// when it is refused: no backend, an implausible screen id or key, an
+    /// unknown or read-only category.
+    bool setPerScreenSetting(const QString& screenId, const QString& category, const QString& key,
+                             const QVariant& value, QString* rejection = nullptr);
+    /// Clear one category of a screen's per-screen values. False, with the
+    /// reason in @p rejection, when it is refused, as setPerScreenSetting.
+    bool clearPerScreenSettings(const QString& screenId, const QString& category, QString* rejection = nullptr);
+
 public Q_SLOTS:
     // Settings operations
     void reloadSettings();
@@ -76,8 +93,6 @@ public Q_SLOTS:
 
     // Generic get/set (registry-based)
     QString getAllSettings();
-    QDBusVariant getSetting(const QString& key);
-    bool setSetting(const QString& key, const QDBusVariant& value);
 
     /**
      * @brief Batch-get multiple settings in one D-Bus call.
@@ -122,9 +137,6 @@ public Q_SLOTS:
 
     // Per-screen settings (categories: "autotile", "scrolling", "snapping",
     // "zoneSelector", "scrollingZoneSelector")
-    void setPerScreenSetting(const QString& screenId, const QString& category, const QString& key,
-                             const QDBusVariant& value);
-    void clearPerScreenSettings(const QString& screenId, const QString& category);
     QVariantMap getPerScreenSettings(const QString& screenId, const QString& category);
 
     /**
@@ -267,9 +279,9 @@ Q_SIGNALS:
 private:
     void initializeRegistry();
     /// The per-mode slices of the registry, split into
-    /// settingsadaptor_registry_snapping.cpp,
-    /// settingsadaptor_registry_autotile.cpp and
-    /// settingsadaptor_registry_scrolling.cpp for file size. Each is called
+    /// settingsservice_registry_snapping.cpp,
+    /// settingsservice_registry_autotile.cpp and
+    /// settingsservice_registry_scrolling.cpp for file size. Each is called
     /// only by initializeRegistry and fills the same getter / setter / schema
     /// maps; which key lives in which slice follows the boundary rule
     /// documented in those files' banners.

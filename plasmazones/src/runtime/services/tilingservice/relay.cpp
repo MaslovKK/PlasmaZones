@@ -1,19 +1,19 @@
 // SPDX-FileCopyrightText: 2026 fuddlesworth
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-// Engine relay entry points of TilingAdaptor: the composition root connects
+// Engine relay entry points of TilingService: the composition root connects
 // every pipeline engine's outbound signals here and the adaptor re-emits
 // them on the D-Bus surface. Split from tilingadaptor.cpp by concern; the
 // lifecycle (open / close / focus / release) dispatch stays there.
 
-#include "tilingadaptor.h"
+#include "tilingservice.h"
 
 #include "core/platform/logging.h"
 #include "runtime/windowtracker/windowtracker.h"
 
 #include <PhosphorEngine/DesktopRemap.h>
 #include <PhosphorEngine/IPlacementEngine.h>
-#include <PhosphorProtocol/WindowMarshalling.h>
+#include <PhosphorProtocol/WindowTypes.h>
 #include <PhosphorScreens/Manager.h>
 
 #include <QJsonArray>
@@ -27,7 +27,7 @@
 
 namespace PlasmaZones {
 
-void TilingAdaptor::relayTileRequestsJson(const QString& tileRequestsJson)
+void TilingService::relayTileRequestsJson(const QString& tileRequestsJson)
 {
     if (tileRequestsJson.isEmpty()) {
         return;
@@ -234,7 +234,7 @@ void TilingAdaptor::relayTileRequestsJson(const QString& tileRequestsJson)
     Q_EMIT windowsTileRequested(requests);
 }
 
-void TilingAdaptor::flushTileBatchesHeldForAnnounce()
+void TilingService::flushTileBatchesHeldForAnnounce()
 {
     // Emission order is arrival order: the effect applies batches in
     // sequence and a later batch for the same screen supersedes an earlier
@@ -249,7 +249,7 @@ void TilingAdaptor::flushTileBatchesHeldForAnnounce()
     }
 }
 
-void TilingAdaptor::runBehindScreensAnnounce(std::function<void()> work)
+void TilingService::runBehindScreensAnnounce(std::function<void()> work)
 {
     if (!work) {
         return;
@@ -261,7 +261,7 @@ void TilingAdaptor::runBehindScreensAnnounce(std::function<void()> work)
     work();
 }
 
-void TilingAdaptor::relayWindowsReleased(const QStringList& windowIds)
+void TilingService::relayWindowsReleased(const QStringList& windowIds)
 {
     // The one relay with no change gate — every in-tree producer already
     // gates on a non-empty list, so this belt only keeps a future producer
@@ -273,7 +273,7 @@ void TilingAdaptor::relayWindowsReleased(const QStringList& windowIds)
     Q_EMIT windowsReleasedFromTiling(windowIds);
 }
 
-void TilingAdaptor::notifyEngineScreensChanged(bool isDesktopSwitch)
+void TilingService::notifyEngineScreensChanged(bool isDesktopSwitch)
 {
     // Coalesce (see header doc): a mode flip fires this once per engine in
     // one synchronous pass; emitting eagerly would broadcast an intermediate
@@ -405,7 +405,7 @@ void TilingAdaptor::notifyEngineScreensChanged(bool isDesktopSwitch)
         Qt::QueuedConnection);
 }
 
-void TilingAdaptor::reannounceAfterRenumber(const PhosphorEngine::DesktopRemap& remap)
+void TilingService::reannounceAfterRenumber(const PhosphorEngine::DesktopRemap& remap)
 {
     // Only the desktops the last announce stamped decide it. A renumber that
     // leaves every one of them in place owes nothing: a switch announce
@@ -470,7 +470,7 @@ void TilingAdaptor::reannounceAfterRenumber(const PhosphorEngine::DesktopRemap& 
     }
 }
 
-void TilingAdaptor::relayEnabledChanged()
+void TilingService::relayEnabledChanged()
 {
     // Dedup: two engines feed one signal, and every screen-set change on
     // either would otherwise re-broadcast an unchanged bool.

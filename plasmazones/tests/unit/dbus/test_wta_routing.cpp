@@ -12,7 +12,7 @@
  */
 
 #include "wta_convenience_fixture.h"
-#include "dbus/tilingadaptor/tilingadaptor.h"
+#include "runtime/services/tilingservice/tilingservice.h"
 #include "runtime/windowtracker/lifecyclerelay.h"
 
 #include <PhosphorEngine/DesktopRemap.h>
@@ -132,7 +132,7 @@ private Q_SLOTS:
     {
         // windowActivated is the PRODUCTION entry point for
         // SnapEngine::windowFocused (snap is deliberately not in the
-        // TilingAdaptor lifecycle vector), so this pins the wiring the
+        // TilingService lifecycle vector), so this pins the wiring the
         // engine-level switch suites bypass by calling windowFocused
         // directly — the layer-switch candidate memories are dead in a live
         // session if this relay is dropped.
@@ -758,14 +758,14 @@ private Q_SLOTS:
         QObject parent;
         auto* wta = new WindowTracker(m_layoutManager, m_zoneDetector, &screenMgr, m_settings, &vdm, nullptr, &parent);
         auto* scroll = new PhosphorScrollEngine::ScrollEngine(nullptr, nullptr, &parent);
-        auto* tiling = new TilingAdaptor(&screenMgr, &parent);
+        auto* tiling = new TilingService(&screenMgr, &parent);
         tiling->setLifecycleEngines(QVector<PhosphorEngine::IPlacementEngine*>{scroll});
         tiling->setWindowTrackingAdaptor(wta);
         const auto teardown = qScopeGuard([tiling] {
             tiling->clearEngine();
             tiling->setWindowTrackingAdaptor(nullptr);
         });
-        QSignalSpy spy(tiling, &TilingAdaptor::managedScreensChanged);
+        QSignalSpy spy(tiling, &TilingService::managedScreensChanged);
 
         // A set change stamps both screens, so only a removed desktop a
         // screen was showing can owe the effect anything after it.

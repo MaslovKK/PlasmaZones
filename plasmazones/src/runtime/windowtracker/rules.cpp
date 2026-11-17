@@ -488,7 +488,7 @@ QVariantMap WindowTracker::tabColorRuleParams(const QString& windowId)
         return {};
     }
     // NO screen/mode stamping here, unlike scrollOpenRuleParams: this is
-    // driven by the effect's per-tab query (TilingAdaptor::scrollTabColors)
+    // driven by the effect's per-tab query (TilingService::scrollTabColors)
     // and the per-window title relay, both of which know the window but not
     // which screen's resolve it belongs to, and a wrong stamp is worse than none —
     // it would make a ScreenId-conditioned rule match the wrong monitor. A
@@ -515,7 +515,7 @@ QVariantMap WindowTracker::tabColorRuleParams(const QString& windowId)
     //    after any save the peek misses for every already-open window until
     //    one of those edges re-seeds it, which for most windows is never.
     //    This function runs once per window per call of
-    //    TilingAdaptor::scrollTabColors (the effect queries it per tab it
+    //    TilingService::scrollTabColors (the effect queries it per tab it
     //    paints) and again on every per-window relay the daemon fires on a
     //    registry record change, so a permanent miss means a full rule-set
     //    walk per tab per change.

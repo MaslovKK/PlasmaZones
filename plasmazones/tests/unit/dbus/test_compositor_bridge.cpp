@@ -3,10 +3,10 @@
 
 /**
  * @file test_compositor_bridge.cpp
- * @brief Unit tests for CompositorBridgeAdaptor and ControlAdaptor.
+ * @brief Unit tests for CompositorBridgeAdaptor and ControlService.
  *
  * CompositorBridgeAdaptor: bridge registration, capabilities, modifier state.
- * ControlAdaptor: API version, capabilities, full state snapshot.
+ * ControlService: API version, capabilities, full state snapshot.
  */
 
 #include <QTest>
@@ -22,7 +22,7 @@
 #include "dbus/compositorbridgeadaptor.h"
 
 #include <PhosphorProtocol/ServiceConstants.h>
-#include "dbus/controladaptor.h"
+#include "runtime/services/controlservice.h"
 #include "runtime/windowtracker/windowtracker.h"
 #include <PhosphorSnapEngine/SnapEngine.h>
 #include <PhosphorZones/LayoutRegistry.h>
@@ -73,7 +73,7 @@ private Q_SLOTS:
         m_parent = new QObject(nullptr);
         m_bridgeAdaptor = new CompositorBridgeAdaptor(m_parent);
 
-        // For ControlAdaptor tests we need a WTA + PhosphorZones::LayoutRegistry
+        // For ControlService tests we need a WTA + PhosphorZones::LayoutRegistry
         m_layoutManager = PlasmaZones::TestHelpers::makeLayoutRegistry(QStringLiteral("plasmazones/layouts"));
         m_settings = new StubSettingsBridge(nullptr);
         m_zoneDetector = new StubZoneDetectorBridge(nullptr);
@@ -97,8 +97,7 @@ private Q_SLOTS:
         m_layoutManager->setActiveLayout(layout);
 
         m_controlParent = new QObject(nullptr);
-        m_controlAdaptor = new ControlAdaptor(m_wta, nullptr, m_layoutManager, nullptr, nullptr, m_bridgeAdaptor,
-                                              nullptr, nullptr, m_controlParent);
+        m_controlAdaptor = new ControlService(m_wta, nullptr, m_layoutManager, nullptr, m_controlParent);
     }
 
     void cleanup()
@@ -359,7 +358,7 @@ private Q_SLOTS:
     }
 
     // =====================================================================
-    // ControlAdaptor: getFullState
+    // ControlService: getFullState
     // =====================================================================
 
     void testControlGetFullState_returnsValidJson()
@@ -410,7 +409,7 @@ private:
     WindowTracker* m_wta = nullptr;
     SnapEngine* m_snapEngine = nullptr;
     QObject* m_controlParent = nullptr;
-    ControlAdaptor* m_controlAdaptor = nullptr;
+    ControlService* m_controlAdaptor = nullptr;
 };
 
 QTEST_MAIN(TestCompositorBridge)

@@ -37,7 +37,7 @@ namespace PlasmaZones {
 // ═══════════════════════════════════════════════════════════════════════════════
 // Engine wiring — cross-references and shared navigation feedback
 //
-// Signal relay is handled by dedicated adaptors (SnapService, TilingAdaptor).
+// Signal relay is handled by dedicated adaptors (SnapService, TilingService).
 // This method only wires cross-engine references and the shared OSD path.
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -312,9 +312,9 @@ void WindowTracker::setEngines(PhosphorEngine::PlacementEngineBase* snapEngine,
     // data on org.phosphor_works.Placement.WindowTracking regardless of engine mode.
     //
     // SnapEngine's navigation feedback is connected by SnapService (mirrors
-    // TilingAdaptor's constructor pattern). This single connection is the
+    // TilingService's constructor pattern). This single connection is the
     // only autotile signal that routes through WTA — all other autotile
-    // signals go through TilingAdaptor on org.phosphor_works.Placement.Tiling.
+    // signals go through TilingService on org.phosphor_works.Placement.Tiling.
     //
     // NOTE: AutotileEngine::windowFloatingChanged is NOT relayed here.
     // The daemon intercepts it with a lambda (signals.cpp) for cross-mode
@@ -516,7 +516,7 @@ void WindowTracker::setEngines(PhosphorEngine::PlacementEngineBase* snapEngine,
     // Scrolling engine — the same generic base-class wiring the two engines
     // above receive: OSD feedback, cross-desktop moves, cross-mode handoff,
     // float-restore geometry, and the rule-driven open-floating gate.
-    // Tile-request / floating / screens relays live on TilingAdaptor
+    // Tile-request / floating / screens relays live on TilingService
     // (the scroll engine shares the org.phosphor_works.Placement.Tiling surface).
     // ═══════════════════════════════════════════════════════════════════════════
     if (m_scrollEngine) {

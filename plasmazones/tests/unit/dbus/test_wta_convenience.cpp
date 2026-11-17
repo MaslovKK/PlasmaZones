@@ -886,7 +886,7 @@ private Q_SLOTS:
         QVERIFY(foundUnsnapped);
     }
 
-    // A context release (TilingAdaptor::applyMembershipResult dropping a window
+    // A context release (TilingService::applyMembershipResult dropping a window
     // from a desktop or activity it has left, per window or per screen) does NOT
     // run through uncommitSnap, so the engine emits no windowSnapStateChanged;
     // WindowTracker::relayWindowReleasedFromContext says why that signal

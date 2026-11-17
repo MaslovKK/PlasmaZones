@@ -1,19 +1,19 @@
 // SPDX-FileCopyrightText: 2026 fuddlesworth
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-// The placement-map surfaces of TilingAdaptor: the per-screen replay of the
+// The placement-map surfaces of TilingService: the per-screen replay of the
 // last tile batch (currentTilesJson) and the engine-managed focused window
 // with its change signal (managedFocusedWindow / focusedWindowChanged).
 // Split from tilingadaptor.cpp and relay.cpp by concern. The lifecycle
 // dispatch and the engine relays stay where they were and call the hooks
 // defined here.
 
-#include "tilingadaptor.h"
+#include "tilingservice.h"
 
 #include "core/platform/logging.h"
 
 #include <PhosphorEngine/IPlacementEngine.h>
-#include <PhosphorProtocol/WindowMarshalling.h>
+#include <PhosphorProtocol/WindowTypes.h>
 
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -71,7 +71,7 @@ inline QLatin1String zoneIdKey()
 // currentTilesJson
 // ═══════════════════════════════════════════════════════════════════════════
 
-void TilingAdaptor::recordTileBatch(const PhosphorProtocol::TileRequestList& requests)
+void TilingService::recordTileBatch(const PhosphorProtocol::TileRequestList& requests)
 {
     // One list per screen the batch names, REPLACED rather than merged: the
     // engines emit a screen's whole placement per batch (the emit-on-change
@@ -88,7 +88,7 @@ void TilingAdaptor::recordTileBatch(const PhosphorProtocol::TileRequestList& req
     }
 }
 
-void TilingAdaptor::forgetTileEntriesForWindow(const QString& windowId)
+void TilingService::forgetTileEntriesForWindow(const QString& windowId)
 {
     // Every screen's list, not just the one the window was last tiled on: a
     // window that moved across outputs can sit in an older screen's retained
@@ -108,7 +108,7 @@ void TilingAdaptor::forgetTileEntriesForWindow(const QString& windowId)
     }
 }
 
-QString TilingAdaptor::currentTilesJson(const QString& screenId) const
+QString TilingService::currentTilesJson(const QString& screenId) const
 {
     if (screenId.isEmpty()) {
         return QStringLiteral("[]");
@@ -144,7 +144,7 @@ QString TilingAdaptor::currentTilesJson(const QString& screenId) const
 // managedFocusedWindow / focusedWindowChanged
 // ═══════════════════════════════════════════════════════════════════════════
 
-QString TilingAdaptor::ownerFocusedWindow(const QString& screenId) const
+QString TilingService::ownerFocusedWindow(const QString& screenId) const
 {
     // Strict claim, no primary fallback (the header says why). The first
     // engine whose live set claims the screen answers; the sets are disjoint
@@ -157,7 +157,7 @@ QString TilingAdaptor::ownerFocusedWindow(const QString& screenId) const
     return {};
 }
 
-QString TilingAdaptor::trackedScreenForWindow(const QString& windowId) const
+QString TilingService::trackedScreenForWindow(const QString& windowId) const
 {
     for (const PhosphorEngine::IPlacementEngine* engine : m_lifecycleEngines) {
         if (engine->isWindowTracked(windowId)) {
@@ -167,7 +167,7 @@ QString TilingAdaptor::trackedScreenForWindow(const QString& windowId) const
     return {};
 }
 
-QString TilingAdaptor::managedFocusedWindow(const QString& screenId) const
+QString TilingService::managedFocusedWindow(const QString& screenId) const
 {
     // The LIVE answer, never the broadcast memory: the memory is the change
     // gate's, and it lags the engine between hooks by design.
@@ -177,7 +177,7 @@ QString TilingAdaptor::managedFocusedWindow(const QString& screenId) const
     return ownerFocusedWindow(screenId);
 }
 
-void TilingAdaptor::refreshFocusedWindow(const QString& screenId)
+void TilingService::refreshFocusedWindow(const QString& screenId)
 {
     if (screenId.isEmpty()) {
         return;
@@ -199,7 +199,7 @@ void TilingAdaptor::refreshFocusedWindow(const QString& screenId)
     Q_EMIT focusedWindowChanged(screenId, now);
 }
 
-void TilingAdaptor::reconcileMapStateWithAnnounce(const QStringList& announced)
+void TilingService::reconcileMapStateWithAnnounce(const QStringList& announced)
 {
     // Screens that LEFT the managed set: their retained batch describes a
     // layout no engine owns any more, and their focus, if one was broadcast,

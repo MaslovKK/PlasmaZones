@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 fuddlesworth
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#include "tilingadaptor.h"
+#include "tilingservice.h"
 
 #include "runtime/windowtracker/windowtracker.h"
 
@@ -64,7 +64,7 @@ bool sameContextFields(const PhosphorEngine::WindowMetadata& a, const PhosphorEn
 }
 } // namespace
 
-PhosphorEngine::DesktopSpan TilingAdaptor::spanFor(const PhosphorEngine::WindowMetadata& meta,
+PhosphorEngine::DesktopSpan TilingService::spanFor(const PhosphorEngine::WindowMetadata& meta,
                                                    const QString& canonicalWindowId) const
 {
     PhosphorEngine::DesktopSpan span;
@@ -88,7 +88,7 @@ PhosphorEngine::DesktopSpan TilingAdaptor::spanFor(const PhosphorEngine::WindowM
     return span;
 }
 
-PhosphorEngine::DesktopSpanQuery TilingAdaptor::desktopSpanQuery() const
+PhosphorEngine::DesktopSpanQuery TilingService::desktopSpanQuery() const
 {
     return [this](const QString& windowId) -> PhosphorEngine::DesktopSpan {
         if (!m_windowRegistry) {
@@ -102,7 +102,7 @@ PhosphorEngine::DesktopSpanQuery TilingAdaptor::desktopSpanQuery() const
     };
 }
 
-void TilingAdaptor::setWindowRegistry(PhosphorEngine::WindowRegistry* registry)
+void TilingService::setWindowRegistry(PhosphorEngine::WindowRegistry* registry)
 {
     QObject::disconnect(m_registryDesktopConnection);
     m_registryDesktopConnection = {};
@@ -128,7 +128,7 @@ void TilingAdaptor::setWindowRegistry(PhosphorEngine::WindowRegistry* registry)
                          });
 }
 
-void TilingAdaptor::applyMembershipResult(PhosphorEngine::IPlacementEngine* engine, bool lifecycleEngine,
+void TilingService::applyMembershipResult(PhosphorEngine::IPlacementEngine* engine, bool lifecycleEngine,
                                           const PhosphorEngine::MembershipReconcileResult& result)
 {
     if (result.isEmpty()) {
@@ -177,7 +177,7 @@ void TilingAdaptor::applyMembershipResult(PhosphorEngine::IPlacementEngine* engi
     }
 }
 
-void TilingAdaptor::reconcileWindowMembership(const QString& windowId, const PhosphorEngine::DesktopSpan& span)
+void TilingService::reconcileWindowMembership(const QString& windowId, const PhosphorEngine::DesktopSpan& span)
 {
     if (windowId.isEmpty() || !span.known) {
         // A window whose desktop is not known yet has nothing to check; the
@@ -219,7 +219,7 @@ void TilingAdaptor::reconcileWindowMembership(const QString& windowId, const Pho
     }
 }
 
-void TilingAdaptor::reconcileDesktopMemberships(const QString& screenId)
+void TilingService::reconcileDesktopMemberships(const QString& screenId)
 {
     if (screenId.isEmpty()) {
         return;
@@ -233,7 +233,7 @@ void TilingAdaptor::reconcileDesktopMemberships(const QString& screenId)
     }
 }
 
-void TilingAdaptor::noteRenumberEvictees(const QStringList& candidates, const QSet<int>& removedDesktops)
+void TilingService::noteRenumberEvictees(const QStringList& candidates, const QSet<int>& removedDesktops)
 {
     m_renumberEvictees.clear();
     if (removedDesktops.isEmpty()) {
@@ -251,7 +251,7 @@ void TilingAdaptor::noteRenumberEvictees(const QStringList& candidates, const QS
     }
 }
 
-void TilingAdaptor::readoptRenumberEvictees(const InViewTest& inView)
+void TilingService::readoptRenumberEvictees(const InViewTest& inView)
 {
     const QList<RenumberEvictee> evictees = std::exchange(m_renumberEvictees, {});
     if (!inView || !m_windowRegistry) {
