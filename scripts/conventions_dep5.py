@@ -286,7 +286,7 @@ def _git_ls_files(repo) -> list[str]:
 # debian/copyright from the unpacked tree, where packaging/debian/ has been moved to
 # debian/. A stanza naming it is correct and permanently unmatched here.
 # `packaging/deps/` is the same kind of path: the pinned third-party archives
-# (cmake/PhosphorDependencies.cmake) sit there only in the Debian source package
+# (cmake/PlasmaZonesDependencies.cmake) sit there only in the Debian source package
 # and in a build-deb checkout that fetched them. git ignores the directory.
 DEP5_BUILD_TIME_PREFIXES = ("debian/", "packaging/deps/")
 

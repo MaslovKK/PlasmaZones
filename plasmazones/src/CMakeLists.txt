@@ -338,7 +338,7 @@ target_link_libraries(plasmazones_core
 # but is NOT re-exported to downstream targets that link
 # plasmazones_core (editor / settings) and never touch shortcuts.
 target_include_directories(plasmazones_core SYSTEM PRIVATE
-    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/phosphor-libs/libs/phosphor-shortcuts/include>
+    $<BUILD_INTERFACE:${phosphor-libs_SOURCE_DIR}/libs/phosphor-shortcuts/include>
 )
 
 # Activities are not linked here: ActivityManager lives in PhosphorWorkspaces,
@@ -1002,7 +1002,7 @@ install(TARGETS plasmazones-shader-validate DESTINATION ${KDE_INSTALL_BINDIR})
 # REQUIRES `glslangValidator` (or the newer `glslang` spelling, either name is
 # accepted) on PATH for shader_validate_animations, shader_validate_surface and
 # shader_validate_pointer. On x86-64 Linux the pinned Khronos release is put
-# there (phosphor_put_glslang_on_test_path in cmake/PhosphorDependencies.cmake),
+# there (phosphor_put_glslang_on_test_path in cmake/PlasmaZonesDependencies.cmake),
 # so only other hosts need the system's glslang package. Every animation pack's fragment and declared vertex,
 # every surface pack's fragment, buffer passes and own declared vertex, and
 # every pointer pack's stages, are compiled for the compositor's classic-GL

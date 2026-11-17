@@ -11,7 +11,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
 # Extend the tiling-algorithm API
 
 A script is `return pluau.algorithm { metadata = {...}, tile = function(ctx) ... end }` plus optional hooks.
-`LuauTileAlgorithm` (`phosphor-libs/libs/phosphor-tiles/src/luautilealgorithm.cpp`) owns the whole contract:
+`LuauTileAlgorithm` (`../phosphor-libs/libs/phosphor-tiles/src/luautilealgorithm.cpp`) owns the whole contract:
 `parseMetadata`, `buildContext`, `buildStateMap`, `variantToRects` and `onWindowResized` all read or write a fixed list
 of keys. **A key that list does not name is dropped with no message**, in both directions. `pluau.d.luau` (same lib,
 `src/pluau/`) is the author-facing contract, and nothing checks it against the runtime. CI's `luau-analyze` job
@@ -19,7 +19,7 @@ checks the stub's syntax and internal consistency only (its own comment says agr
 `plasmazones/data/algorithms/.luaurc` declares `pluau` only by name in nonstrict mode, so the analyzer does not hold
 an algorithm's helper calls to the stub.
 
-Follow a finished example end to end: `grep -rn supportsSingleWindow phosphor-libs plasmazones/src plasmazones/dbus`.
+Follow a finished example end to end: `grep -rn supportsSingleWindow ../phosphor-libs plasmazones/src plasmazones/dbus`.
 
 ## A new input (a ctx field)
 
@@ -127,7 +127,7 @@ default and clamps the value itself (`theater.luau`: `pluau.clamp(ctx.custom and
 
 ## Documents and tests
 
-- `pluau.d.luau` comments, `phosphor-libs/libs/phosphor-tiles/README.md` for structural changes, `CHANGELOG.md`, and
+- `pluau.d.luau` comments, `../phosphor-libs/libs/phosphor-tiles/README.md` for structural changes, `CHANGELOG.md`, and
   the authoring guide in the sibling repo `../phosphor-works.github.io/src/pages/guides/tiling.astro` (its own commit).
 - Tests under `plasmazones/tests/unit/`: `scripting/test_luau_tile_algorithm.cpp` (metadata parsing, clamps,
   dropped and malformed values, hooks, custom params), `scripting/test_pluau_helpers.cpp`, `scripting/test_luau_parity.cpp`,

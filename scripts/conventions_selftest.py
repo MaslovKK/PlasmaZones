@@ -291,14 +291,26 @@ def _dep_pins_failures() -> list[str]:
 
     bad: list[str] = []
     sha = "a" * 64
-    pin = ('set(PHOSPHOR_DEPS demo)\n'
-           'set(PHOSPHOR_DEP_demo_VERSION "1.0")\n'
-           'set(PHOSPHOR_DEP_demo_URL "https://example.invalid/demo-1.0.tar.gz")\n'
-           'set(PHOSPHOR_DEP_demo_FILE "demo-1.0.tar.gz")\n'
-           f'set(PHOSPHOR_DEP_demo_SHA256 "{sha}")\n')
-    good = f"source=(demo-1.0.tar.gz::https://example.invalid/demo-1.0.tar.gz)\nsha256sums=('{sha}')\n"
+    def pin_file(prefix, name, sha_hex, extra=()):
+        names = " ".join((name, *extra))
+        return (f'set({prefix}S {names})\n'
+                f'set({prefix}_{name}_VERSION "1.0")\n'
+                f'set({prefix}_{name}_URL "https://example.invalid/{name}-1.0.tar.gz")\n'
+                f'set({prefix}_{name}_FILE "{name}-1.0.tar.gz")\n'
+                f'set({prefix}_{name}_SHA256 "{sha_hex}")\n')
 
-    def run(pin_text, recipe_text, recipes=("recipe",), name="recipe") -> list[str]:
+    pin = pin_file(mod.APP_PREFIX, "demo", sha)
+    good = f"source=(demo-1.0.tar.gz::https://example.invalid/demo-1.0.tar.gz)\nsha256sums=('{sha}')\n"
+    # The app pins the library tree, and the tree pins a dependency of its own,
+    # which the recipe has to carry too.
+    libs_sha, inner_sha = "c" * 64, "d" * 64
+    app_with_libs = pin_file(mod.APP_PREFIX, mod.LIBS_DEP, libs_sha)
+    libs_pin = pin_file(mod.LIBS_PREFIX, "inner", inner_sha)
+    good_with_libs = (f"source=({mod.LIBS_DEP}-1.0.tar.gz::https://example.invalid/{mod.LIBS_DEP}-1.0.tar.gz\n"
+                      f"        inner-1.0.tar.gz::https://example.invalid/inner-1.0.tar.gz)\n"
+                      f"sha256sums=('{libs_sha}' '{inner_sha}')\n")
+
+    def run(pin_text, recipe_text, recipes=("recipe",), name="recipe", libs_text=None) -> list[str]:
         with tempfile.TemporaryDirectory() as tmp:
             d = Path(tmp)
             (d / "cmake").mkdir()
@@ -306,10 +318,14 @@ def _dep_pins_failures() -> list[str]:
                 (d / mod.PIN_FILE).write_text(pin_text, encoding="utf-8")
             if recipe_text is not None:
                 (d / name).write_text(recipe_text, encoding="utf-8")
+            libs_root = d / "libs-tree"
+            (libs_root / "cmake").mkdir(parents=True)
+            if libs_text is not None:
+                (libs_root / mod.LIBS_PIN_FILE).write_text(libs_text, encoding="utf-8")
             saved = mod.PIN_RECIPES
             mod.PIN_RECIPES = recipes
             try:
-                return [m for _, m in mod.dep_pin_problems(d)]
+                return [m for _, m in mod.dep_pin_problems(d, libs_tree=lambda _repo: libs_root)]
             finally:
                 mod.PIN_RECIPES = saved
 
@@ -328,8 +344,13 @@ def _dep_pins_failures() -> list[str]:
            "pinned URL")
     expect("a listed recipe that is missing", run(pin, None), "cannot be read")
     expect("a missing pin file", run(None, good), "cannot read the pin file")
+    expect("a recipe carrying the library tree's pins", run(app_with_libs, good_with_libs, libs_text=libs_pin), None)
+    expect("a recipe with a stale library-tree hash",
+           run(app_with_libs, good_with_libs.replace(inner_sha, "e" * 64), libs_text=libs_pin), "SHA-256")
+    expect("a library tree with no pin file", run(app_with_libs, good_with_libs), "so its pins were not checked")
     expect("a pin reformatted out of the one-line shape",
-           run(pin.replace('set(PHOSPHOR_DEP_demo_SHA256 "', 'set(PHOSPHOR_DEP_demo_SHA256\n    "'), good), "no SHA256")
+           run(pin.replace(f'set({mod.APP_PREFIX}_demo_SHA256 "', f'set({mod.APP_PREFIX}_demo_SHA256\n    "'), good),
+           "no SHA256")
     expect("an empty recipe list", run(pin, good, recipes=()), "checks nothing")
     sri = "sha256-" + base64.b64encode(bytes.fromhex(sha)).decode()
     expect("a .nix recipe carrying the hex and the matching SRI hash",

@@ -87,13 +87,14 @@ find_package(ECM ${KF_MIN_VERSION} REQUIRED NO_MODULE)
 # alongside ECM's.
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${ECM_MODULE_PATH})
 
-# The pinned third-party archives (Luau, valijson, the test-time glslang) and
-# the CPM.cmake that downloads them. Included here, at the top scope, and not
-# from the libraries that use it: its pins and CPM's state are ordinary
-# variables, and a module first included in one library's directory would
-# leave them out of every sibling directory. Pass -DPHOSPHOR_DEPS_ARCHIVES=<dir>
-# for an offline build; the module's header explains both paths.
-include(PhosphorDependencies)
+# The pinned phosphor-libs commit, the branding release, the test-time glslang
+# and the CPM.cmake that downloads them. Included here, at the top scope: its
+# pins and CPM's state are ordinary variables, and a module first included in
+# one tier's directory would leave them out of every sibling. Pass
+# -DPHOSPHOR_DEPS_ARCHIVES=<dir> for an offline build, or
+# -DCPM_phosphor-libs_SOURCE=<dir> to build a local phosphor-libs checkout. The
+# module's header explains every path.
+include(PlasmaZonesDependencies)
 
 # Test/tool toggles MUST be set before KDECMakeSettings, which calls
 # include(CTest) and locks BUILD_TESTING into the cache as ON. Declaring
@@ -185,8 +186,8 @@ add_compile_definitions(QT_NO_CAST_FROM_ASCII)
 #      and the editor's and settings app's QML import org.kde.kirigami at run
 #      time. Shortcuts use XDG Portal or D-Bus trigger fallback.
 # Activity support is not part of this switch: PhosphorWorkspaces looks for
-# PlasmaActivities itself (phosphor-libs/libs/phosphor-workspaces/CMakeLists.txt)
-# and links it in either mode when it is installed.
+# PlasmaActivities itself (libs/phosphor-workspaces/CMakeLists.txt in
+# phosphor-libs) and links it in either mode when it is installed.
 option(USE_KDE_FRAMEWORKS "Build with KDE Frameworks integration" ON)
 
 # Opt-in build for the in-progress phosphor-shell desktop shell and its
@@ -256,6 +257,24 @@ if(NOT DEFINED KDE_INSTALL_SYSTEMDUSERUNITDIR)
     set(KDE_INSTALL_SYSTEMDUSERUNITDIR "${CMAKE_INSTALL_LIBDIR}/systemd/user")
 endif()
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# phosphor-libs
+# ═══════════════════════════════════════════════════════════════════════════════
+# The Phosphor libraries live in their own repository, phosphor-works/
+# phosphor-libs, and are built here from the commit
+# cmake/PlasmaZonesDependencies.cmake pins, added with CPM as a subproject. Every
+# setting above that a library must share (ECM, the KDE settings, Qt and its
+# private modules, QT_NO_CAST_FROM_ASCII) is in force when it is added, so it is
+# added here, before anything reads its targets. The translation module below
+# reads its phosphor-control sources, so this also stays above that include.
+#
+# Its library tests that check a library constant against the packs PlasmaZones
+# ships read them from here. FORCE, so the tree's own empty default, which it
+# declares as a cache entry, never wins.
+set(PHOSPHOR_LIBS_BUNDLED_PACKS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/plasmazones/data" CACHE PATH
+    "Directory holding bundled animations/ and pointer/ packs, for the phosphor-libs tests that check them" FORCE)
+plasmazones_add_phosphor_libs()
+
 # ---------------------------------------------------------------------------
 # Code formatting (clang-format for C++, qmlformat for QML)
 #   make clang-format  (or ninja clang-format)
@@ -283,11 +302,8 @@ file(GLOB_RECURSE ALL_CLANG_FORMAT_SOURCE_FILES
     ${CMAKE_SOURCE_DIR}/plasmazones/kwin-effect/*.hpp
     ${CMAKE_SOURCE_DIR}/plasmazones/tests/*.cpp
     ${CMAKE_SOURCE_DIR}/plasmazones/tests/*.h
-    ${CMAKE_SOURCE_DIR}/phosphor-libs/libs/*.cpp
     ${CMAKE_SOURCE_DIR}/phosphor-shell-libs/libs/*.cpp
-    ${CMAKE_SOURCE_DIR}/phosphor-libs/libs/*.h
     ${CMAKE_SOURCE_DIR}/phosphor-shell-libs/libs/*.h
-    ${CMAKE_SOURCE_DIR}/phosphor-libs/libs/*.hpp
     ${CMAKE_SOURCE_DIR}/phosphor-shell-libs/libs/*.hpp
     ${CMAKE_SOURCE_DIR}/phosphor-shell-libs/examples/*.cpp
     ${CMAKE_SOURCE_DIR}/phosphor-shell/*.cpp
@@ -312,7 +328,6 @@ file(GLOB_RECURSE ALL_QML_FILES
     ${CMAKE_SOURCE_DIR}/plasmazones/src/*.qml
     ${CMAKE_SOURCE_DIR}/phosphor-shell/cli/*.qml
     ${CMAKE_SOURCE_DIR}/plasmazones/kcm/*.qml
-    ${CMAKE_SOURCE_DIR}/phosphor-libs/libs/*.qml
     ${CMAKE_SOURCE_DIR}/phosphor-shell-libs/libs/*.qml
     ${CMAKE_SOURCE_DIR}/phosphor-shell-libs/examples/*.qml
     ${CMAKE_SOURCE_DIR}/phosphor-shell/*.qml
@@ -356,11 +371,9 @@ include_directories("${CMAKE_BINARY_DIR}/generated")
 # ═══════════════════════════════════════════════════════════════════════════════
 # Tiers
 # ═══════════════════════════════════════════════════════════════════════════════
-# The tree is split into four product tiers, each a directory with its own
+# The tree is split into three product tiers, each a directory with its own
 # CMakeLists.txt and, in the moon workspace, its own project:
 #
-#   phosphor-libs/       core LGPL libraries (engines, rendering, layer-shell,
-#                        animation, config, ...) that need no shell
 #   phosphor-shell-libs/ the Phosphor desktop shell libraries and services,
 #                        gated behind BUILD_PHOSPHOR_SHELL
 #   phosphor-shell/      the phosphor-shell binary, phosphorctl and the shell
@@ -368,168 +381,12 @@ include_directories("${CMAKE_BINARY_DIR}/generated")
 #   plasmazones/         the PlasmaZones daemon, editor, settings, KCM, KWin
 #                        effect, bundled data and tests
 #
-# Every tier CMakeLists is entered from here, so the shared Qt/KF6 setup
-# above applies to all of them. Order follows the dependency chain:
-# phosphor-libs, then the shell libraries and the shell, then plasmazones.
-# Target-based linking resolves at generate time, so the order is
-# documentation, not a constraint.
-add_subdirectory(phosphor-libs)
-
-# Canonical list of engine library target names. Consumed by the
-# engine QML firewall below. Kept in sync with the engine
-# add_subdirectory calls by hand; the firewall FATAL_ERRORs naming any
-# entry that matches no target, so a single renamed engine cannot quietly
-# stop being guarded.
-set(PHOSPHOR_ENGINE_TARGETS
-    PhosphorZones
-    PhosphorSnapEngine
-    PhosphorTileEngine
-    PhosphorScrollEngine
-    PhosphorEngine
-    PhosphorWorkspaces
-    PhosphorPlacement
-)
-
-# ─── Engine QML firewall ─────────────────────────────────────────────────────
-#
-# Engine libraries hold authoritative placement/snap/zone state and must
-# stay free of the QML/JS engine. The moment one of them links Qt6::Qml or
-# Qt6::Quick, the cost model changes: every QObject in the engine gets a
-# JS scope, bindings cross language boundaries, and ownership becomes
-# implicit through QQmlEngine. That's the trajectory Noctalia couldn't
-# escape, their engines and config were both QML, so multi-day uptime
-# leaks (FD exhaustion, GC pauses, JSValue retention across reloads) had
-# nowhere to be fixed without a full rewrite.
-#
-# Refuse to configure if any engine target reaches Qml/Quick anywhere in its
-# link closure: its own direct links (PUBLIC and PRIVATE), then the
-# INTERFACE_LINK_LIBRARIES of every target those name, recursively, through
-# in-tree libraries and imported Qt targets alike. A check over the direct
-# lists alone let PhosphorRegistry's PUBLIC Qt6::Qml reach every engine
-# through PhosphorEngine -> PhosphorLayoutApi -> PhosphorRegistry, so the
-# engines compiled with QT_QML_LIB while this guard reported them clean. The
-# failure names the whole chain, so the offending edge is visible.
-#
-# Every entry must also match a real target, so the firewall can't
-# silently degrade if PHOSPHOR_ENGINE_TARGETS goes stale (e.g. an engine
-# lib gets renamed but the list doesn't follow). An unmatched entry would
-# let a future Qml link into that engine through unnoticed, which is
-# exactly the failure mode the rationale above is designed to prevent.
-
-# Strip the link-list wrappers that carry a target name through to the link
-# step, and answer the bare item. Directory-scope markers (`::@...`, recorded
-# when target_link_libraries runs in a directory other than the target's) and
-# install-only entries answer empty, since neither names a build-tree target.
-function(_phosphor_engine_link_item _raw _out)
-    set(_item "${_raw}")
-    if(_item MATCHES "^::@" OR _item MATCHES "^\\$<INSTALL_INTERFACE:")
-        set(${_out} "" PARENT_SCOPE)
-        return()
-    endif()
-    while(_item MATCHES "^\\$<(LINK_ONLY|BUILD_INTERFACE|BUILD_LOCAL_INTERFACE):(.*)>$")
-        set(_item "${CMAKE_MATCH_2}")
-    endwhile()
-    if(TARGET "${_item}")
-        get_target_property(_aliased "${_item}" ALIASED_TARGET)
-        if(_aliased)
-            set(_item "${_aliased}")
-        endif()
-    endif()
-    set(${_out} "${_item}" PARENT_SCOPE)
-endfunction()
-
-# Breadth-first walk of <engine>'s link closure. Sets <out> to the chain
-# "engine -> ... -> Qt6::Qml" for the first Qml/Quick target reached, or to
-# empty when the closure is clean. Each target is visited once, so a diamond in
-# the graph costs nothing extra and a cycle cannot loop.
-function(_phosphor_engine_qml_chain _engine _out)
-    set(_queue "")
-    set(_seen "${_engine}")
-    get_target_property(_direct ${_engine} LINK_LIBRARIES)
-    if(NOT _direct)
-        set(_direct "")
-    endif()
-    get_target_property(_iface ${_engine} INTERFACE_LINK_LIBRARIES)
-    if(_iface)
-        list(APPEND _direct ${_iface})
-    endif()
-    foreach(_raw IN LISTS _direct)
-        _phosphor_engine_link_item("${_raw}" _item)
-        if(_item STREQUAL "" OR _item IN_LIST _seen)
-            continue()
-        endif()
-        list(APPEND _seen "${_item}")
-        list(APPEND _queue "${_item}")
-        string(MAKE_C_IDENTIFIER "${_item}" _key)
-        set(_p_via_${_key} "${_engine}")
-    endforeach()
-    while(_queue)
-        list(POP_FRONT _queue _node)
-        if(_node MATCHES "^Qt6?::(Qml|Quick)(Private)?$")
-            set(_chain "${_node}")
-            set(_cursor "${_node}")
-            while(NOT _cursor STREQUAL _engine)
-                string(MAKE_C_IDENTIFIER "${_cursor}" _key)
-                set(_cursor "${_p_via_${_key}}")
-                set(_chain "${_cursor} -> ${_chain}")
-            endwhile()
-            set(${_out} "${_chain}" PARENT_SCOPE)
-            return()
-        endif()
-        if(NOT TARGET "${_node}")
-            continue()
-        endif()
-        get_target_property(_next "${_node}" INTERFACE_LINK_LIBRARIES)
-        if(NOT _next)
-            continue()
-        endif()
-        foreach(_raw IN LISTS _next)
-            _phosphor_engine_link_item("${_raw}" _item)
-            if(_item STREQUAL "" OR _item IN_LIST _seen)
-                continue()
-            endif()
-            list(APPEND _seen "${_item}")
-            list(APPEND _queue "${_item}")
-            string(MAKE_C_IDENTIFIER "${_item}" _key)
-            set(_p_via_${_key} "${_node}")
-        endforeach()
-    endwhile()
-    set(${_out} "" PARENT_SCOPE)
-endfunction()
-
-set(_p_engine_unmatched "")
-foreach(_p_engine_lib IN LISTS PHOSPHOR_ENGINE_TARGETS)
-    if(NOT TARGET ${_p_engine_lib})
-        list(APPEND _p_engine_unmatched ${_p_engine_lib})
-        continue()
-    endif()
-    _phosphor_engine_qml_chain(${_p_engine_lib} _p_engine_chain)
-    if(_p_engine_chain)
-        message(FATAL_ERROR
-            "Engine library '${_p_engine_lib}' reaches the QML engine through "
-            "its link closure: ${_p_engine_chain}. Engine libs must stay "
-            "QML-free, see the comment above this check in CMakeLists.txt "
-            "for the rationale. Drop the Qml/Quick edge from the library that "
-            "carries it, or move the engine's dependency off that library.")
-    endif()
-endforeach()
-if(_p_engine_unmatched)
-    # PER-ENTRY, not "did anything match". Every name in the list is an
-    # unconditional target by this point in the file, so a name that matches
-    # nothing means that ONE engine silently stopped being guarded while the
-    # others still are — the realistic staleness mode, and one a
-    # matched-anything check sails straight past.
-    message(FATAL_ERROR
-        "Engine QML firewall matched no target for: ${_p_engine_unmatched}. "
-        "Those entries of PHOSPHOR_ENGINE_TARGETS guard nothing, so a Qml "
-        "link into them would go unnoticed. Either the library was renamed "
-        "without updating the list, the add_subdirectory order changed so it "
-        "has not been declared yet at this point, or it got gated behind an "
-        "option that is currently OFF. Update PHOSPHOR_ENGINE_TARGETS to "
-        "match the real engine target names, or move this firewall block "
-        "below the add_subdirectory calls that declare the engines.")
-endif()
-
+# All three build on phosphor-libs, added above. Every tier CMakeLists is
+# entered from here, so the shared Qt/KF6 setup above applies to all of them.
+# Order follows the dependency chain: the shell libraries and the shell, then
+# plasmazones. Target-based linking resolves at generate time, so the order is
+# documentation, not a constraint. The engine QML firewall that used to sit here
+# runs inside phosphor-libs, next to the engines it guards.
 if(BUILD_PHOSPHOR_SHELL)
     add_subdirectory(phosphor-shell-libs)
     add_subdirectory(phosphor-shell)

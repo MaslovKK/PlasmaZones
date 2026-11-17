@@ -63,9 +63,9 @@ endmacro()
 # ShortcutManager and UnifiedLayoutController, the settings app's controllers,
 # stores and helpers, and the shader-pack validators.
 add_library(pz_test_fake_screens OBJECT
-    ${CMAKE_SOURCE_DIR}/phosphor-libs/libs/phosphor-screens/tests/FakePhysicalScreenSource.cpp)
+    ${phosphor-libs_SOURCE_DIR}/libs/phosphor-screens/tests/FakePhysicalScreenSource.cpp)
 # PUBLIC: the tests include FakePhysicalScreenSource.h from their own sources.
-target_include_directories(pz_test_fake_screens PUBLIC ${CMAKE_SOURCE_DIR}/phosphor-libs/libs/phosphor-screens/tests)
+target_include_directories(pz_test_fake_screens PUBLIC ${phosphor-libs_SOURCE_DIR}/libs/phosphor-screens/tests)
 target_link_libraries(pz_test_fake_screens PUBLIC Qt6::Core Qt6::Gui plasmazones_core)
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -300,7 +300,7 @@ add_executable(test_placement_engine_base core/test_placement_engine_base.cpp)
 # The scroll engine's tracker stub (header-only over PhosphorEngine) drives the
 # shared free-size restore without any engine fixture; PhosphorIdentity for the
 # builders' probe helper.
-target_include_directories(test_placement_engine_base PRIVATE ${CMAKE_SOURCE_DIR}/phosphor-libs/libs/phosphor-scroll-engine/tests)
+target_include_directories(test_placement_engine_base PRIVATE ${phosphor-libs_SOURCE_DIR}/libs/phosphor-scroll-engine/tests)
 target_link_libraries(test_placement_engine_base PRIVATE Qt6::Test Qt6::Core PhosphorEngine::PhosphorEngine
                                                          PhosphorIdentity::PhosphorIdentity)
 add_test(NAME test_placement_engine_base COMMAND test_placement_engine_base)
@@ -360,7 +360,7 @@ add_test(NAME test_luau_engine COMMAND test_luau_engine)
 # Shared pluau helpers (guardArea/stripLayout/clamp/…): loads the real pluau.luau
 # prelude into a sandboxed VM and exercises each helper directly.
 add_executable(test_pluau_helpers scripting/test_pluau_helpers.cpp)
-target_compile_definitions(test_pluau_helpers PRIVATE "PHOSPHOR_SOURCE_DIR=\"${CMAKE_SOURCE_DIR}/phosphor-libs\"")
+target_compile_definitions(test_pluau_helpers PRIVATE "PHOSPHOR_SOURCE_DIR=\"${phosphor-libs_SOURCE_DIR}\"")
 target_link_libraries(test_pluau_helpers PRIVATE Qt6::Test Qt6::Core PhosphorScripting::PhosphorScripting)
 add_test(NAME test_pluau_helpers COMMAND test_pluau_helpers)
 
@@ -784,7 +784,7 @@ add_test(NAME test_animation_profile_publication COMMAND test_animation_profile_
 # display.
 add_executable(test_wayland_session_check daemon/test_wayland_session_check.cpp)
 target_include_directories(test_wayland_session_check
-                           PRIVATE ${CMAKE_SOURCE_DIR}/phosphor-libs/libs/phosphor-wayland/include)
+                           PRIVATE ${phosphor-libs_SOURCE_DIR}/libs/phosphor-wayland/include)
 target_link_libraries(test_wayland_session_check PRIVATE Qt6::Test Qt6::Core)
 add_test(NAME test_wayland_session_check COMMAND test_wayland_session_check)
 
@@ -1073,7 +1073,7 @@ target_link_libraries(test_shader_schema_bounds PRIVATE PhosphorPointer::Phospho
 # own define, not a hop off P_SOURCE_DIR, so a later move fails the configure
 # instead of emptying every QJsonObject this test reads.
 target_compile_definitions(test_shader_schema_bounds PRIVATE
-    "P_SHADER_SCHEMA_DIR=\"${CMAKE_SOURCE_DIR}/phosphor-libs/data/schemas\"")
+    "P_SHADER_SCHEMA_DIR=\"${phosphor-libs_SOURCE_DIR}/data/schemas\"")
 
 p_add_test(test_layoutmanager_assignment core/layout/test_layoutmanager_assignment.cpp)
 # The AssignmentEntry-shape half of the suite above, split off at its P6 banner
@@ -1156,9 +1156,9 @@ add_executable(test_layersurface core/wayland/test_layersurface.cpp)
 target_link_libraries(test_layersurface PRIVATE Qt6::Test Qt6::Core Qt6::Gui Qt6::WaylandClientPrivate Wayland::Client plasmazones_core)
 # PhosphorWayland private QPA headers + generated protocol headers
 target_include_directories(test_layersurface PRIVATE
-    ${CMAKE_SOURCE_DIR}/phosphor-libs/libs/phosphor-wayland/src                  # private QPA headers
-    ${CMAKE_BINARY_DIR}/phosphor-libs/libs/phosphor-wayland                      # phosphorwayland_export.h
-    ${CMAKE_BINARY_DIR}/phosphor-libs/libs/phosphor-wayland/generated-protocols  # wlr-layer-shell protocol header
+    ${phosphor-libs_SOURCE_DIR}/libs/phosphor-wayland/src                  # private QPA headers
+    ${phosphor-libs_BINARY_DIR}/libs/phosphor-wayland                      # phosphorwayland_export.h
+    ${phosphor-libs_BINARY_DIR}/libs/phosphor-wayland/generated-protocols  # wlr-layer-shell protocol header
 )
 add_test(NAME test_layersurface COMMAND test_layersurface)
 
@@ -1342,7 +1342,7 @@ target_link_libraries(test_shader_item_qml_bindings PRIVATE Qt6::Test Qt6::Core 
 # another tier's QML, recorded as a test input in plasmazones/moon.yml rather
 # than a dependency, which is what CLAUDE.md prescribes for a cross-tier read.
 target_compile_definitions(test_shader_item_qml_bindings PRIVATE "P_SOURCE_DIR=\"${CMAKE_SOURCE_DIR}/plasmazones\""
-                                                                 "P_SURFACE_QUICK_QML_DIR=\"${CMAKE_SOURCE_DIR}/phosphor-libs/libs/phosphor-surface-quick/qml\"")
+                                                                 "P_SURFACE_QUICK_QML_DIR=\"${phosphor-libs_SOURCE_DIR}/libs/phosphor-surface-quick/qml\"")
 add_test(NAME test_shader_item_qml_bindings COMMAND test_shader_item_qml_bindings)
 
 # Pure-data byte-layout test for the zone UBO extension. No GPU / scene graph
@@ -1970,6 +1970,8 @@ add_test(NAME test_adaptor_bus_context COMMAND test_adaptor_bus_context)
 # PhosphorProtocol arrives through it.
 add_executable(test_compositor_only_gate dbus/test_compositor_only_gate.cpp helpers/BusPeer.h)
 target_link_libraries(test_compositor_only_gate PRIVATE Qt6::Test Qt6::Core Qt6::DBus plasmazones_core)
+target_compile_definitions(test_compositor_only_gate PRIVATE
+    "PHOSPHOR_SCREENS_SOURCE_DIR=\"${phosphor-libs_SOURCE_DIR}/libs/phosphor-screens\"")
 add_test(NAME test_compositor_only_gate COMMAND test_compositor_only_gate)
 
 add_executable(test_compositor_bridge dbus/test_compositor_bridge.cpp)
@@ -2027,7 +2029,7 @@ add_executable(test_settings_registry_contract dbus/test_settings_registry_contr
 target_compile_definitions(test_settings_registry_contract
                            PRIVATE PLASMAZONES_EFFECT_SRC_DIR="${CMAKE_SOURCE_DIR}/plasmazones/kwin-effect"
                                    PLASMAZONES_EDITOR_SRC_DIR="${CMAKE_SOURCE_DIR}/plasmazones/src/editor"
-                                   PLASMAZONES_PROTOCOL_INC_DIR="${CMAKE_SOURCE_DIR}/phosphor-libs/libs/phosphor-protocol/include")
+                                   PLASMAZONES_PROTOCOL_INC_DIR="${phosphor-libs_SOURCE_DIR}/libs/phosphor-protocol/include")
 # PhosphorAnimation: the fixture builds a real PhosphorProfileRegistry, because
 # initializeRegistry() gates the motionProfileTree getter behind a non-null one — with
 # a null registry the test would report a correctly-registered key as missing.
@@ -3496,7 +3498,7 @@ endif()
 # configure time, which means tests added BELOW this line are NOT covered.
 # Always add new test targets ABOVE this block — never after it.
 # ═══════════════════════════════════════════════════════════════════════════════
-include(${CMAKE_SOURCE_DIR}/cmake/PhosphorTestIsolation.cmake)
+include(${PHOSPHOR_LIBS_CMAKE_DIR}/PhosphorTestIsolation.cmake)
 
 # The shared sweep, not a hand-rolled copy. It supplies the private-bus
 # TEST_LAUNCHER and a per-target XDG sandbox. The bus config declares no service
@@ -3510,7 +3512,7 @@ phosphor_apply_directory_test_isolation()
 
 # The shader-pack validator tests run glslang out of process, as the
 # shader_validate_* gates do. Every test here gets the pinned glslang on PATH
-# (cmake/PhosphorDependencies.cmake), not a hand-kept list of the ones that
+# (cmake/PlasmaZonesDependencies.cmake), not a hand-kept list of the ones that
 # reach it today, so a new shader test cannot silently fall back to whatever
 # glslang the host has, or to none.
 get_property(_pz_unit_tests DIRECTORY . PROPERTY TESTS)

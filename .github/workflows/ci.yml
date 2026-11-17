@@ -295,15 +295,17 @@ jobs:
             ccache-arch-${{ matrix.kde }}-${{ needs.changes.outputs.ccache-restore-own }}
             ccache-arch-${{ matrix.kde }}-${{ needs.changes.outputs.ccache-restore-base }}
 
-      # The pinned third-party archives (cmake/PhosphorDependencies.cmake),
-      # which CPM downloads into .cache/cpm at configure time. Cached on the
-      # pin file, so a run downloads only after a pin changes and a GitHub
+      # The pinned archives (cmake/PlasmaZonesDependencies.cmake, and the
+      # third-party ones the pinned phosphor-libs tree pins), which CPM
+      # downloads into .cache/cpm at configure time. Cached on the app's pin
+      # file, which moves whenever either set does, so a run downloads only
+      # after a pin changes and a GitHub
       # hiccup on the archive URLs cannot fail an unrelated build.
       - name: Restore the dependency archives
         uses: actions/cache@v5
         with:
           path: .cache/cpm
-          key: cpm-${{ hashFiles('cmake/PhosphorDependencies.cmake') }}
+          key: cpm-${{ hashFiles('cmake/PlasmaZonesDependencies.cmake') }}
 
       # What CI builds differs from CMake's Release in three ways, each for
       # time, none of them changing what the tests exercise:
@@ -439,7 +441,7 @@ jobs:
         run: |
           set -euo pipefail
           ninja -C build -t targets all > targets.txt
-          for tier in phosphor-libs plasmazones; do
+          for tier in plasmazones; do
             if ! grep -q "^${tier}-tier:" targets.txt; then
               echo "missing aggregate target: ${tier}-tier" >&2
               exit 1
@@ -583,7 +585,9 @@ jobs:
           fi
 
   # ─── JSON Schema: validate every bundled data file against the committed
-  # schemas under phosphor-libs/data/schemas/ and plasmazones/data/schemas/. Runtime
+  # schemas under data/schemas/ in the pinned phosphor-libs tree and
+  # plasmazones/data/schemas/. The script fetches that tree itself
+  # (scripts/pinned_phosphor_libs.py). Runtime
   # validation compiles some of these schema files too (phosphor-fsloader's
   # SchemaValidator via valijson); the others are an author-time contract that
   # no runtime loader compiles. Either way it keeps malformed layouts (and future
@@ -650,7 +654,7 @@ jobs:
   # and the pluau standard library with luau-analyze. Catches parse and type
   # errors (a broken bundled .luau would otherwise only surface at runtime as
   # a silently-skipped algorithm). The analyzer is built from the Luau archive
-  # cmake/PhosphorDependencies.cmake pins, the one the runtime builds from, so
+  # the pinned phosphor-libs tree pins, the one the runtime builds from, so
   # the lint/type ruleset is exactly the runtime we ship — analysis stays
   # deterministic across CI runs and only changes when we deliberately bump
   # that pin.
@@ -675,18 +679,38 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      # The Luau pin and the pluau prelude both live in the phosphor-libs tree,
+      # at the commit cmake/PlasmaZonesDependencies.cmake pins. The fetch script
+      # downloads every archive the build needs, that tree's included, and
+      # checks each hash, so this analyzes the same source the runtime links.
+      - name: Fetch the pinned archives
+        id: libs
+        run: |
+          set -euo pipefail
+          cmake -DPHOSPHOR_DEPS_FETCH=deps -P cmake/PlasmaZonesDependencies.cmake
+          libs_file=$(sed -n 's/^set(PLASMAZONES_DEP_phosphor-libs_FILE "\(.*\)")$/\1/p' cmake/PlasmaZonesDependencies.cmake)
+          if [ -z "$libs_file" ]; then
+            echo "::error::no PLASMAZONES_DEP_phosphor-libs_FILE pin found in cmake/PlasmaZonesDependencies.cmake"
+            exit 1
+          fi
+          mkdir -p phosphor-libs-src
+          tar xzf "deps/$libs_file" -C phosphor-libs-src --strip-components=1
+          echo "tree=$PWD/phosphor-libs-src" >> "$GITHUB_OUTPUT"
+
       # The analyzer only changes when the Luau pin does, so it is built once
       # per pin rather than on every run (two to three minutes each). The key
-      # is the pinned archive's SHA-256, read from the pin file; the toolchain
-      # is not in it, because the binary links only libc and libstdc++, and a
-      # newer image's copies of those still run a binary an older one built.
+      # is the pinned archive's SHA-256, read from the library tree's pin file;
+      # the toolchain is not in it, because the binary links only libc and
+      # libstdc++, and a newer image's copies of those still run a binary an
+      # older one built.
       - name: Read the Luau pin
         id: luau-pin
         run: |
           set -euo pipefail
-          sha=$(sed -n 's/^set(PHOSPHOR_DEP_luau_SHA256 "\([0-9a-f]\{64\}\)")$/\1/p' cmake/PhosphorDependencies.cmake)
+          pins="${{ steps.libs.outputs.tree }}/cmake/PhosphorDependencies.cmake"
+          sha=$(sed -n 's/^set(PHOSPHOR_DEP_luau_SHA256 "\([0-9a-f]\{64\}\)")$/\1/p' "$pins")
           if [ -z "$sha" ]; then
-            echo "::error::no PHOSPHOR_DEP_luau_SHA256 pin found in cmake/PhosphorDependencies.cmake"
+            echo "::error::no PHOSPHOR_DEP_luau_SHA256 pin found in phosphor-libs' cmake/PhosphorDependencies.cmake"
             exit 1
           fi
           echo "sha256=$sha" >> "$GITHUB_OUTPUT"
@@ -706,10 +730,9 @@ jobs:
         if: steps.luau-cache.outputs.cache-hit != 'true'
         run: |
           set -euo pipefail
-          # The fetch script downloads every pinned archive and checks its
-          # hash, so this builds from the same source the runtime links.
-          cmake -DPHOSPHOR_DEPS_FETCH=deps -P cmake/PhosphorDependencies.cmake
-          luau_file=$(sed -n 's/^set(PHOSPHOR_DEP_luau_FILE "\(.*\)")$/\1/p' cmake/PhosphorDependencies.cmake)
+          # deps/ holds the archive the fetch step checked against its pin.
+          luau_file=$(sed -n 's/^set(PHOSPHOR_DEP_luau_FILE "\(.*\)")$/\1/p' \
+            "${{ steps.libs.outputs.tree }}/cmake/PhosphorDependencies.cmake")
           mkdir -p luau-src
           tar xzf "deps/$luau_file" -C luau-src --strip-components=1
           cmake -S luau-src -B luau-cli -G Ninja \
@@ -726,7 +749,7 @@ jobs:
           # are advisory (lintErrors:false in .luaurc) but still printed.
           ./luau-cli/luau-analyze \
             plasmazones/data/algorithms/*.luau \
-            phosphor-libs/libs/phosphor-tiles/src/pluau/pluau.luau
+            "${{ steps.libs.outputs.tree }}/libs/phosphor-tiles/src/pluau/pluau.luau"
 
       - name: Analyze the pluau type stubs
         run: |
@@ -756,9 +779,10 @@ jobs:
           # An all-declare file would strip to nothing; grep exits 1 on no
           # match, so `set -e` fails the step rather than analyzing an empty
           # file and passing.
-          stub_copy=phosphor-libs/libs/phosphor-tiles/src/pluau/pluau-stub-check.luau
+          pluau="${{ steps.libs.outputs.tree }}/libs/phosphor-tiles/src/pluau"
+          stub_copy="$pluau/pluau-stub-check.luau"
           trap 'rm -f "$stub_copy"' EXIT
-          grep -v '^declare ' phosphor-libs/libs/phosphor-tiles/src/pluau/pluau.d.luau > "$stub_copy"
+          grep -v '^declare ' "$pluau/pluau.d.luau" > "$stub_copy"
           ./luau-cli/luau-analyze "$stub_copy"
 
   # ═══════════════════════════════════════════════════════════════════════════

@@ -6,11 +6,18 @@ PlasmaZones: window snapping, tiling and scrolling for KDE Plasma. Qt6, KF6, Kir
 
 ### Placement Modes
 Three mutually exclusive modes. Each screen runs exactly one, resolved per (screen, desktop, activity):
-- **Snapping** — drag a window with a modifier held, drop it into a user-drawn zone. Engine: `phosphor-libs/libs/phosphor-snap-engine`. Artifacts: layouts (`plasmazones/data/layouts`, user copies in `~/.local/share/plasmazones/layouts/`).
-- **Tiling** — windows place themselves via a scripted algorithm. Engine: `phosphor-libs/libs/phosphor-tile-engine` running Luau through `phosphor-tiles` / `phosphor-scripting`. Artifacts: algorithms (`plasmazones/data/algorithms/*.luau`).
-- **Scrolling** — windows form columns on an endless strip, modeled on niri. Engine: `phosphor-libs/libs/phosphor-scroll-engine`. Artifacts: templates (`plasmazones/data/scrolling-templates`).
+- **Snapping** — drag a window with a modifier held, drop it into a user-drawn zone. Engine: `libs/phosphor-snap-engine` in phosphor-libs. Artifacts: layouts (`plasmazones/data/layouts`, user copies in `~/.local/share/plasmazones/layouts/`).
+- **Tiling** — windows place themselves via a scripted algorithm. Engine: `libs/phosphor-tile-engine` in phosphor-libs, running Luau through `phosphor-tiles` / `phosphor-scripting`. Artifacts: algorithms (`plasmazones/data/algorithms/*.luau`).
+- **Scrolling** — windows form columns on an endless strip, modeled on niri. Engine: `libs/phosphor-scroll-engine` in phosphor-libs. Artifacts: templates (`plasmazones/data/scrolling-templates`).
 
-Shared placement policy lives in `phosphor-libs/libs/phosphor-engine`. A verdict from one mode never gates another — see the float-is-per-mode invariant, written up at `phosphor-libs/libs/phosphor-engine/include/PhosphorEngine/WindowPlacement.h` (each engine keeps its own float slot and state, independent of the others). When adding a cross-cutting feature, check whether all three modes need an arm before calling it done.
+Shared placement policy lives in `libs/phosphor-engine` in phosphor-libs. A verdict from one mode never gates another — see the float-is-per-mode invariant, written up at `libs/phosphor-engine/include/PhosphorEngine/WindowPlacement.h` there (each engine keeps its own float slot and state, independent of the others). When adding a cross-cutting feature, check whether all three modes need an arm before calling it done.
+
+### phosphor-libs
+The Phosphor libraries (engines, rendering, layer-shell, animation, config, ipc, ...) live in their own repository, [phosphor-works/phosphor-libs](https://github.com/phosphor-works/phosphor-libs), checked out beside this one as `../phosphor-libs`. PlasmaZones builds them from source, from the one commit `cmake/PlasmaZonesDependencies.cmake` pins, added with CPM as a subproject (`plasmazones_add_phosphor_libs()`), and installs them with the package as before.
+- A change to a library is a phosphor-libs PR. Build PlasmaZones against your checkout of it with `-DCPM_phosphor-libs_SOURCE=../phosphor-libs` (an absolute path is safest), or against a branch with `-DPHOSPHOR_LIBS_GIT_REF=<ref>`.
+- Once the library change is merged, bump the pin: the commit, URL, FILE and SHA-256 together, then the same archive in every recipe the dep-pins rule names. A bump can move the library tree's own Luau and valijson pins too, and the rule reports those.
+- The scripts that read library files without a build (the JSON schema gate, the dep-pins rule) find the pinned tree with `scripts/pinned_phosphor_libs.py`, which unpacks the pinned archive into `.cache/phosphor-libs/`. `PHOSPHOR_LIBS_DIR=<checkout>` points them at a local tree instead.
+- In CMake the library tree is `${phosphor-libs_SOURCE_DIR}` and its build tree `${phosphor-libs_BINARY_DIR}`. Its shared helper modules (`PhosphorTestIsolation`, `PhosphorLibTesting`, `PhosphorTestPch`) are in `${PHOSPHOR_LIBS_CMAKE_DIR}`, which is also on `CMAKE_MODULE_PATH`.
 
 ## Behavioral Rules (Always Enforced)
 - NEVER question or doubt what the user says they did (installed, restarted, tested, etc.) — trust them and focus on the code
@@ -30,7 +37,6 @@ Shared placement policy lives in `phosphor-libs/libs/phosphor-engine`. A verdict
 - Source, tests and data live INSIDE a tier, not at the root. There is no
   top-level `/src`, `/tests`, `/config` or `/examples`:
   - `plasmazones/{src,tests,data}` for the app tier
-  - `phosphor-libs/libs/<lib>/{src,include,tests}` for a tier-1 library
   - `phosphor-shell-libs/{libs/<lib>,examples}` for the shell libraries and their demos
   - `phosphor-shell/{src,shell,tests}` for the shell binary and its bundled QML
 - Use `/docs` for documentation and markdown files
@@ -39,10 +45,10 @@ Shared placement policy lives in `phosphor-libs/libs/phosphor-engine`. A verdict
   authoritative one.
 
 ## License
-- SPDX headers on every file whose format supports comments: `// SPDX-FileCopyrightText: 2026 fuddlesworth`. Data assets in formats with no comment syntax are exempt. JSON is such a format, so no `.json` file needs a header wherever it sits. The usual cases are `plasmazones/data/**/*.json`, the `phosphor-libs/data/schemas/*.json` files, and every `metadata.json` (the ones Qt and KWin plugins embed, such as `plasmazones/kwin-effect/metadata.json` and the plugin demo's `plugins/cpu-meter/metadata.json`, and test fixtures such as wallpaper package metadata) — never add a header to those, it makes the file invalid.
+- SPDX headers on every file whose format supports comments: `// SPDX-FileCopyrightText: 2026 fuddlesworth`. Data assets in formats with no comment syntax are exempt. JSON is such a format, so no `.json` file needs a header wherever it sits. The usual cases are `plasmazones/data/**/*.json`, and every `metadata.json` (the ones Qt and KWin plugins embed, such as `plasmazones/kwin-effect/metadata.json` and the plugin demo's `plugins/cpu-meter/metadata.json`, and test fixtures such as wallpaper package metadata) — never add a header to those, it makes the file invalid.
 - License identifier depends on the tree:
   - **App tiers** (`plasmazones/**` except its `data/` trees, `phosphor-shell/**`, `phosphor-shell-libs/examples/**`, `scripts/**`): `GPL-3.0-or-later`
-  - **Reusable libraries, including their own tests** (`phosphor-libs/libs/phosphor-*/**` and `phosphor-shell-libs/libs/phosphor-*/**`, which subsumes each library's `tests/`): `LGPL-2.1-or-later`
+  - **Reusable libraries, including their own tests** (`phosphor-shell-libs/libs/phosphor-*/**`, which subsumes each library's `tests/`, and everything in phosphor-libs): `LGPL-2.1-or-later`
   - A library's own `tests/` follow the library (LGPL), NOT the app-tier GPL rule: test code that links and ships inside an LGPL lib must not taint that lib's build tree with GPL. The GPL `plasmazones/tests/**` rule means only the top-level app test tree.
   - **Bundled animation and pointer shader packs** (`plasmazones/data/animations/**` and `plasmazones/data/pointer/**` shader source: `.frag`, `.vert`, `.glsl`): `LGPL-2.1-or-later` for PlasmaZones-original shaders, so a third-party pack or tool can build on them. The exception is incorporated upstream copyleft. A shader that copies verbatim or ports GPL-3.0 upstream code (the Burn-My-Windows ports and their `shared/bmw_compat.glsl` shim, the niri `honeycomb` port) MUST stay `GPL-3.0-or-later` and carries a second `SPDX-FileCopyrightText` crediting the upstream author, because PlasmaZones is not the copyright holder of those bodies and cannot relicense them. The license follows the incorporated content and is never a per-directory blanket, so a pack's `.frag` and `.vert` may legitimately differ (a GPL-derived `.frag` beside a PlasmaZones-original LGPL `.vert`). Ports of permissively-licensed upstreams such as the MIT gl-transitions `desktop-*` frags may be LGPL. Generated editor aids like `p_generated.glsl` are gitignored and carry no SPDX header. (`plasmazones/data/overlays/**` is currently GPL and `plasmazones/data/surface/**` is mixed. Neither has been normalized, so follow the existing header in those trees.)
   - Rationale: the shell is GPL; libraries are LGPL so third-party plugins / tools can link them without inheriting GPL. Never "fix" a lib header to GPL-3 without understanding the split.
@@ -193,18 +199,20 @@ On Linux (native):
 # `glslang`; either name works) to compile every animation, surface and pointer
 # pack for the compositor's classic-GL branch, and HARD-FAIL when neither is on
 # PATH rather than skipping. On x86-64 Linux the configure fetches the glslang
-# release cmake/PhosphorDependencies.cmake pins and puts it on those tests' PATH,
+# release cmake/PlasmaZonesDependencies.cmake pins and puts it on those tests' PATH,
 # so nothing needs installing. Anywhere else install your distro's glslang
 # package before running ctest. Not needed with BUILD_TESTING=OFF.
 #
-# THIRD-PARTY SOURCES: Luau and valijson are pinned archives in
-# cmake/PhosphorDependencies.cmake (version, URL, SHA-256), not committed
-# files. The first configure downloads them with CPM into .cache/cpm, which
-# every build dir shares. An offline build passes
+# PINNED SOURCES: phosphor-libs and the branding release are pinned archives in
+# cmake/PlasmaZonesDependencies.cmake (version, URL, SHA-256), and the
+# phosphor-libs tree pins its own Luau and valijson the same way. None of them
+# is committed here. The first configure downloads them with CPM into
+# .cache/cpm, which every build dir shares. An offline build passes
 # -DPHOSPHOR_DEPS_ARCHIVES=<dir> holding the archives instead, and
-# `cmake -DPHOSPHOR_DEPS_FETCH=<dir> -P cmake/PhosphorDependencies.cmake` fills
-# such a dir. The packaging recipes repeat each pin, and the dep-pins
-# conventions rule fails when one drifts.
+# `cmake -DPHOSPHOR_DEPS_FETCH=<dir> -P cmake/PlasmaZonesDependencies.cmake`
+# fills such a dir with all of them. The packaging recipes repeat each pin, and
+# the dep-pins conventions rule fails when one drifts. To build against a local
+# phosphor-libs checkout, add -DCPM_phosphor-libs_SOURCE=<dir>.
 #
 # SECOND TEST-TIME DEPENDENCY: `appstreamcli` (distro package `appstream`).
 # ECM registers the `appstreamtest` test only when it finds appstreamcli AT
@@ -241,7 +249,8 @@ ctest --test-dir build --output-on-failure
 # DESCRIPTION reads identically on every pack that offers it (the twenty
 # roundBottomCorners copies; the check and its data live in
 # scripts/conventions_shared_text.py), and that every packaging recipe repeats
-# the third-party pins of cmake/PhosphorDependencies.cmake exactly (the dep-pins
+# the archive pins of cmake/PlasmaZonesDependencies.cmake and of the pinned
+# phosphor-libs tree exactly (the dep-pins
 # rule, in scripts/conventions_dep_pins.py). Stdlib only, spread over seven
 # files: the entry point plus conventions_dep5.py, conventions_dep_pins.py,
 # conventions_prose.py, conventions_shared_text.py, conventions_selftest.py and
@@ -269,17 +278,17 @@ python3 scripts/check-conventions.py --list-rules
 ```
 
 ### Per-tier builds with moon
-The repo is a [moon](https://moonrepo.dev) workspace. CMake still does every compile; moon adds the tier graph on top: one command per tier, dependency ordering, and affected-only runs locally (CI still drives CMake directly). The four tiers are the projects `phosphor-libs`, `phosphor-shell-libs`, `phosphor-shell` and `plasmazones`, plus `repo` for the whole-tree checks. Install moon from the AUR (`moon-bin`) or with `proto install moon`.
+The repo is a [moon](https://moonrepo.dev) workspace. CMake still does every compile; moon adds the tier graph on top: one command per tier, dependency ordering, and affected-only runs locally (CI still drives CMake directly). The three tiers are the projects `phosphor-shell-libs`, `phosphor-shell` and `plasmazones`, plus `repo` for the whole-tree checks. phosphor-libs is not a project: it is the pinned repository above, and the pin file is a test input of every tier. Install moon from the AUR (`moon-bin`) or with `proto install moon`.
 
 ```bash
 moon run plasmazones:build          # build that tier and its upstream tiers (configure runs first each time)
-moon run phosphor-libs:test              # ctest --test-dir build/phosphor-libs
+moon run phosphor-shell-libs:test        # ctest --test-dir build/phosphor-shell-libs
 moon run :test --affected           # every tier touched by the working-tree diff
 moon run repo:check                 # conventions + JSON schema gates
 moon run repo:install               # whole-tree install (needs root at the default prefix)
 DESTDIR=/tmp/stage moon run repo:install   # staged install, no root
 moon run plasmazones:build-release  # same, from the release preset into build-release/
-moon run phosphor-libs:test-release      # ctest --test-dir build-release/phosphor-libs
+moon run plasmazones:test-release   # ctest --test-dir build-release/plasmazones
 moon query projects --affected      # which tiers a change reaches
 ```
 
@@ -289,21 +298,18 @@ How it maps onto CMake (see `.moon/tasks/cmake.yml`): every tier task runs from 
 
 Install is a whole-tree verb on the `repo` project, not a per-tier one, because CMake cannot install a subset here: none of the install rules declares a `COMPONENT`, so `cmake --install build --component <tier>` would install nothing. Per-tier install verbs need every rule tagged with a component first. Follow an install with `moon run repo:post-install` to refresh the KDE service cache, the same step `make post-install` runs.
 
-Layer enforcement is on (`.moon/workspace.yml`): an application tier may not depend on another application tier, so `phosphor-shell` must never link a `plasmazones_*` target. Its surface decoration comes from `phosphor-libs/libs/phosphor-surface-quick` (SurfaceShaderItem and the `org.phosphor.surface` QML module). Runtime data reads across tiers (tier-1 and shell tests reading `plasmazones/data/`) are recorded as workspace-relative test inputs in each `moon.yml`, not as dependencies, so enforcement does not see them.
+Layer enforcement is on (`.moon/workspace.yml`): an application tier may not depend on another application tier, so `phosphor-shell` must never link a `plasmazones_*` target. Its surface decoration comes from phosphor-libs' `phosphor-surface-quick` (SurfaceShaderItem and the `org.phosphor.surface` QML module). Runtime data reads across tiers (the shell tests reading `plasmazones/data/`) are recorded as workspace-relative test inputs in each `moon.yml`, not as dependencies, so enforcement does not see them.
 
 - CMake with `CMAKE_AUTOMOC/AUTORCC/AUTOUIC ON`
 - `qt_add_qml_module()` — ALL QML files must be listed (missing = runtime "not a type" error)
 - `cmake -DUSE_KDE_FRAMEWORKS=ON` (default) or `OFF` for a portable build without the KWin effect, the KCM and dynamic workspaces (compiled out under the `USE_KDE_FRAMEWORKS` define). `OFF` is not Qt-only: the settings app requires KF6 `Kirigami` in both modes
-- KF6 deps: `Kirigami` always (`plasmazones/src/settings/CMakeLists.txt`); when ON also `KCMUtils`, `GlobalAccel`, `ColorScheme` (the KWin effect's KColorScheme), `Config` (KConfig reads kwinrc and makes the consented `PerOutputVirtualDesktops` write for dynamic workspaces); optional in either mode: `Activities`, which only `phosphor-libs/libs/phosphor-workspaces` looks up and links
+- KF6 deps: `Kirigami` always (`plasmazones/src/settings/CMakeLists.txt`); when ON also `KCMUtils`, `GlobalAccel`, `ColorScheme` (the KWin effect's KColorScheme), `Config` (KConfig reads kwinrc and makes the consented `PerOutputVirtualDesktops` write for dynamic workspaces); optional in either mode: `Activities`, which only phosphor-libs' `phosphor-workspaces` looks up and links
 - Pluggable backends: `PhosphorConfig::IBackend`, `PhosphorShortcuts::IBackend`, `IWallpaperProvider`
 - Standalone settings app (`plasmazones-settings`) + minimal KCM launcher
 
 ### Directory Structure
-The tree is four product tiers plus repo-level support directories. Each tier has its own `CMakeLists.txt` (entered from the root one) and its own `moon.yml` project.
+The tree is three product tiers plus repo-level support directories. Each tier has its own `CMakeLists.txt` (entered from the root one) and its own `moon.yml` project. The core libraries all three build on are the phosphor-libs repository (see phosphor-libs above).
 ```
-phosphor-libs/           — tier 1: core LGPL libraries
-  libs/phosphor-*/       — engines, rendering, layer-shell, animation, config, ipc, service-idle, ...
-  data/schemas/          — JSON schemas for library-owned document formats; the libraries compile most of them in
 phosphor-shell-libs/     — tier 2: shell libraries (BUILD_PHOSPHOR_SHELL)
   libs/phosphor-*/       — theme, popout, phosphor-shell*, phosphor-service-* (all but idle)
   examples/              — demos and CLI acceptance harnesses
@@ -338,11 +344,11 @@ plasmazones/             — tier 4: PlasmaZones
   data/curves/           — Animation easing curves
   data/placement-hosts/  — Host descriptor for the placement settings API
   data/schemas/          — Schemas for plasmazones-only documents (whatsnew, scrolling templates)
-cmake/                   — Shared CMake modules, including the third-party pins (PhosphorDependencies.cmake)
+cmake/                   — Shared CMake modules, including the pins (PlasmaZonesDependencies.cmake)
 scripts/                 — Repo-level checks and dev harnesses
 .moon/                   — moon workspace config (see Build & Test)
 ```
-Not exhaustive: `scripts/`, `packaging/` and `docs/` sit at the root; `plasmazones/translations/`, `plasmazones/dbus/` and `plasmazones/scripts/` (the installed support script) live inside their tiers. `phosphor-shell/` also carries its own `scripts/`. App icons are not in the tree: they install from the pinned branding release (`cmake/PhosphorDependencies.cmake`).
+Not exhaustive: `scripts/`, `packaging/` and `docs/` sit at the root; `plasmazones/translations/`, `plasmazones/dbus/` and `plasmazones/scripts/` (the installed support script) live inside their tiers. `phosphor-shell/` also carries its own `scripts/`. App icons are not in the tree: they install from the pinned branding release (`cmake/PlasmaZonesDependencies.cmake`).
 
 ## Testing
 - Qt Test: `QTEST_MAIN`, `QCOMPARE`, `QVERIFY`

@@ -36,8 +36,9 @@ License:        GPL-3.0-or-later AND LGPL-2.1-or-later AND MIT AND BSD-2-Clause 
 URL:            https://github.com/phosphor-works/PlasmaZones
 Source0:        %{url}/archive/refs/tags/v%{version}/%{name}-%{version}.tar.gz
 
-# Luau and valijson: the release archives pinned (version, URL and SHA-256) in
-# cmake/PhosphorDependencies.cmake, fetched as sources of their own and built
+# Luau and valijson: the release archives pinned (version, URL and SHA-256) by
+# the phosphor-libs commit below, in its cmake/PhosphorDependencies.cmake,
+# fetched as sources of their own and built
 # into the shipped objects. The #/ fragment stores each under the file name
 # CMake looks for, and %%build hands the source directory to CMake as
 # PHOSPHOR_DEPS_ARCHIVES, which checks each archive against the SHA-256 below
@@ -58,6 +59,12 @@ Source2:        https://github.com/tristanpenman/valijson/archive/refs/tags/v1.1
 # bundled() provide.
 # phosphor-branding-0.1.0.tar.gz sha256 53c7247e7e2c304a4d2e75a7bdd1a87164c63c1defa4159f3cef8da23d8244b3
 Source3:        https://github.com/phosphor-works/branding/releases/download/v0.1.0/phosphor-branding-0.1.0.tar.gz#/phosphor-branding-0.1.0.tar.gz
+# The phosphor-libs commit PlasmaZones builds against, pinned in
+# cmake/PlasmaZonesDependencies.cmake. Its libraries are built from it and
+# installed with the package. Luau and valijson above are the archives that
+# commit pins in its own cmake/PhosphorDependencies.cmake.
+# phosphor-libs-5cc4ed09736e12942019caf761427cd2a88cd001.tar.gz sha256 97b1ca72e5f4a8ed972da46445ca03a6dacf48d7d017536eba7d0c32d0210ef2
+Source4:        https://github.com/phosphor-works/phosphor-libs/archive/5cc4ed09736e12942019caf761427cd2a88cd001.tar.gz#/phosphor-libs-5cc4ed09736e12942019caf761427cd2a88cd001.tar.gz
 Provides:       bundled(luau) = 0.745
 Provides:       bundled(valijson) = 1.1.3
 
@@ -260,7 +267,7 @@ Features:
 # changing the KWin floor: this is the path that compiles against Fedora's and
 # openSUSE's KWin, so it proves the build rather than the behaviour.
 #
-# %%autosetup above unpacks Source0 only. Source1 and Source2 stay archives in
+# %%autosetup above unpacks Source0 only. Source1 to Source4 stay archives in
 # the source directory, where PHOSPHOR_DEPS_ARCHIVES points CMake.
 %cmake \
     -DCMAKE_BUILD_TYPE=RelWithDebInfo \

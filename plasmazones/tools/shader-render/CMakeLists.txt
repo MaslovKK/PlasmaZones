@@ -156,7 +156,7 @@ if(BUILD_TESTING)
     # also used the raw `set_tests_properties(... PROPERTIES ENVIRONMENT ...)` SET
     # form and gave BOTH targets one shared XDG home. The helper owns all three
     # concerns, so there is nothing left here to drift.
-    include(${CMAKE_SOURCE_DIR}/cmake/PhosphorTestIsolation.cmake)
+    include(${PHOSPHOR_LIBS_CMAKE_DIR}/PhosphorTestIsolation.cmake)
     foreach(_pz_sr_test test_shader_render_layoutloader test_shader_render_metadataloader)
         phosphor_apply_test_isolation(${_pz_sr_test})
         # APPEND, never a bare SET — a SET here would drop the XDG sandbox the

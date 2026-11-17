@@ -8,14 +8,14 @@ export DEB_BUILD_MAINT_OPTIONS = hardening=+all
 %:
 	dh $@ --buildsystem=cmake+ninja
 
-# PHOSPHOR_DEPS_ARCHIVES: the Luau, valijson and branding archives pinned in
-# cmake/PhosphorDependencies.cmake, which CMake checks against their hashes and
+# PHOSPHOR_DEPS_ARCHIVES: the phosphor-libs, Luau, valijson and branding archives pinned in
+# cmake/PlasmaZonesDependencies.cmake and the pinned phosphor-libs tree, which CMake checks against their hashes and
 # unpacks, so the build never reaches the network. packaging/deps is filled in
 # both places this package is built: the OBS source package carries the
 # archives there inside its orig tarball, and the release workflow's build-deb
 # job fetches them there before dpkg-buildpackage (see publish-obs and
 # build-deb in .github/workflows/release.yml). By hand, fill it first with
-#   cmake -DPHOSPHOR_DEPS_FETCH=packaging/deps -P cmake/PhosphorDependencies.cmake
+#   cmake -DPHOSPHOR_DEPS_FETCH=packaging/deps -P cmake/PlasmaZonesDependencies.cmake
 override_dh_auto_configure:
 	dh_auto_configure -- \
 		-DCMAKE_BUILD_TYPE=RelWithDebInfo \

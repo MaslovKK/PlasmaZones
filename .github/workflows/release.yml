@@ -371,8 +371,9 @@ jobs:
               apt-get build-dep -y --no-install-recommends ./
           fi
 
-      # The third-party archives the build compiles in, pinned in
-      # cmake/PhosphorDependencies.cmake. debian/rules hands packaging/deps to
+      # The archives the build compiles in, pinned in
+      # cmake/PlasmaZonesDependencies.cmake and in the pinned phosphor-libs
+      # tree's own pin file, which the script mode follows. debian/rules hands packaging/deps to
       # CMake as PHOSPHOR_DEPS_ARCHIVES, the same in-tree path the OBS Debian
       # source package carries them at (see publish-obs), so the rules file
       # names one location for both and the build itself never reaches the
@@ -387,11 +388,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [[ ! -f cmake/PhosphorDependencies.cmake ]]; then
-              echo "::notice::This tag predates cmake/PhosphorDependencies.cmake and carries its dependency archives in-tree; nothing to fetch."
+          # The pin file's name follows the tag: PlasmaZonesDependencies.cmake since
+          # phosphor-libs left the tree, PhosphorDependencies.cmake before, none at all
+          # before the archives were pinned.
+          pins=cmake/PlasmaZonesDependencies.cmake
+          [[ -f "$pins" ]] || pins=cmake/PhosphorDependencies.cmake
+          if [[ ! -f "$pins" ]]; then
+              echo "::notice::This tag predates the pinned dependency archives and carries them in-tree; nothing to fetch."
               exit 0
           fi
-          cmake -DPHOSPHOR_DEPS_FETCH="$PWD/packaging/deps" -P cmake/PhosphorDependencies.cmake
+          cmake -DPHOSPHOR_DEPS_FETCH="$PWD/packaging/deps" -P "$pins"
 
       - name: Generate Debian changelog from CHANGELOG.md
         # Force bash for the same reason the build step below does: the
@@ -606,8 +612,8 @@ jobs:
       - name: Setup rpmbuild
         run: rpmdev-setuptree
 
-      # The spec's Source1 and Source2: the third-party archives the build
-      # compiles in, pinned in cmake/PhosphorDependencies.cmake. rpmbuild looks
+      # The spec's extra Sources: the archives the build compiles in, pinned in
+      # cmake/PlasmaZonesDependencies.cmake and the pinned phosphor-libs tree. rpmbuild looks
       # for them in SOURCES under their file names, and the spec hands that
       # directory to CMake as PHOSPHOR_DEPS_ARCHIVES, so the build itself never
       # reaches the network. The script mode downloads each pinned archive and
@@ -622,11 +628,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [[ ! -f cmake/PhosphorDependencies.cmake ]]; then
-              echo "::notice::This tag predates cmake/PhosphorDependencies.cmake and carries its dependency archives in-tree; nothing to fetch."
+          # The pin file's name follows the tag: PlasmaZonesDependencies.cmake since
+          # phosphor-libs left the tree, PhosphorDependencies.cmake before, none at all
+          # before the archives were pinned.
+          pins=cmake/PlasmaZonesDependencies.cmake
+          [[ -f "$pins" ]] || pins=cmake/PhosphorDependencies.cmake
+          if [[ ! -f "$pins" ]]; then
+              echo "::notice::This tag predates the pinned dependency archives and carries them in-tree; nothing to fetch."
               exit 0
           fi
-          cmake -DPHOSPHOR_DEPS_FETCH="$HOME/rpmbuild/SOURCES" -P cmake/PhosphorDependencies.cmake
+          cmake -DPHOSPHOR_DEPS_FETCH="$HOME/rpmbuild/SOURCES" -P "$pins"
 
       # Template the version FIRST so the source tarball baked into the
       # SRPM carries the matching spec rather than the 0.0.0 placeholder.
@@ -861,11 +872,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [[ ! -f cmake/PhosphorDependencies.cmake ]]; then
-              echo "::notice::This tag predates cmake/PhosphorDependencies.cmake and carries its dependency archives in-tree; nothing to fetch."
+          # The pin file's name follows the tag: PlasmaZonesDependencies.cmake since
+          # phosphor-libs left the tree, PhosphorDependencies.cmake before, none at all
+          # before the archives were pinned.
+          pins=cmake/PlasmaZonesDependencies.cmake
+          [[ -f "$pins" ]] || pins=cmake/PhosphorDependencies.cmake
+          if [[ ! -f "$pins" ]]; then
+              echo "::notice::This tag predates the pinned dependency archives and carries them in-tree; nothing to fetch."
               exit 0
           fi
-          cmake -DPHOSPHOR_DEPS_FETCH="$HOME/rpmbuild/SOURCES" -P cmake/PhosphorDependencies.cmake
+          cmake -DPHOSPHOR_DEPS_FETCH="$HOME/rpmbuild/SOURCES" -P "$pins"
 
       - name: Generate RPM changelog and set version from CHANGELOG.md
         # See the Debian step: the version assertion below uses `[[ ]]`, which
@@ -1177,8 +1193,9 @@ jobs:
             qt6-wayland plasma-activities \
             vulkan-headers vulkan-icd-loader
 
-      # The third-party archives the build compiles in, pinned in
-      # cmake/PhosphorDependencies.cmake. PKGBUILD.ci below builds from this
+      # The archives the build compiles in, pinned in
+      # cmake/PlasmaZonesDependencies.cmake and in the pinned phosphor-libs
+      # tree's own pin file, which the script mode follows. PKGBUILD.ci below builds from this
       # checkout and hands packaging/deps to CMake as PHOSPHOR_DEPS_ARCHIVES,
       # the offline path packaging/arch/PKGBUILD takes with its extra sources,
       # so the build itself never reaches the network. The script mode
@@ -1191,11 +1208,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [[ ! -f cmake/PhosphorDependencies.cmake ]]; then
-              echo "::notice::This tag predates cmake/PhosphorDependencies.cmake and carries its dependency archives in-tree; nothing to fetch."
+          # The pin file's name follows the tag: PlasmaZonesDependencies.cmake since
+          # phosphor-libs left the tree, PhosphorDependencies.cmake before, none at all
+          # before the archives were pinned.
+          pins=cmake/PlasmaZonesDependencies.cmake
+          [[ -f "$pins" ]] || pins=cmake/PhosphorDependencies.cmake
+          if [[ ! -f "$pins" ]]; then
+              echo "::notice::This tag predates the pinned dependency archives and carries them in-tree; nothing to fetch."
               exit 0
           fi
-          cmake -DPHOSPHOR_DEPS_FETCH="$PWD/packaging/deps" -P cmake/PhosphorDependencies.cmake
+          cmake -DPHOSPHOR_DEPS_FETCH="$PWD/packaging/deps" -P "$pins"
 
       - name: Prepare PKGBUILD
         run: |
@@ -1823,7 +1845,7 @@ jobs:
           # sha256sums entry, the one for source[0], which the PKGBUILD leaves
           # as 'SKIP'. The entries after it pin the dependency archives by
           # their literal hashes, which check-conventions.py holds to
-          # cmake/PhosphorDependencies.cmake, so the rewrite passes them
+          # cmake/PlasmaZonesDependencies.cmake and the pinned phosphor-libs tree, so the rewrite passes them
           # through untouched. Same rewrite as packaging/arch/update-aur.sh.
           # A PKGBUILD from a tag that predates those archives has the
           # single-line one-entry form, which the rewrite also takes.
@@ -2070,7 +2092,7 @@ jobs:
           echo "Debian recipe version: $DSC_VER"
 
       # The Debian targets' source tarball: this tag's tree with the pinned
-      # dependency archives (cmake/PhosphorDependencies.cmake) added at
+      # dependency archives (cmake/PlasmaZonesDependencies.cmake) added at
       # packaging/deps, where debian/rules points CMake as
       # PHOSPHOR_DEPS_ARCHIVES. OBS builds offline, so the archives have to
       # arrive as sources, and the RPM targets get theirs that way:
@@ -2103,8 +2125,11 @@ jobs:
           VERSION: ${{ needs.version.outputs.version }}
         run: |
           set -euo pipefail
-          if [[ ! -f cmake/PhosphorDependencies.cmake ]]; then
-              echo "::notice::This tag predates cmake/PhosphorDependencies.cmake and carries its dependency archives in-tree; its Debian targets build from Source0."
+          # The pin file's name follows the tag, as in the fetch steps above.
+          pins=cmake/PlasmaZonesDependencies.cmake
+          [[ -f "$pins" ]] || pins=cmake/PhosphorDependencies.cmake
+          if [[ ! -f "$pins" ]]; then
+              echo "::notice::This tag predates the pinned dependency archives and carries them in-tree; its Debian targets build from Source0."
               echo "path=" >> "$GITHUB_OUTPUT"
               exit 0
           fi
@@ -2120,7 +2145,7 @@ jobs:
               echo "Error: the tag tracks files under packaging/deps, which this step fills itself" >&2
               exit 1
           fi
-          cmake -DPHOSPHOR_DEPS_FETCH="$STAGE/$TOP/packaging/deps" -P cmake/PhosphorDependencies.cmake
+          cmake -DPHOSPHOR_DEPS_FETCH="$STAGE/$TOP/packaging/deps" -P "$pins"
           MTIME="$(git log -1 --format=%ct HEAD)"
           tar -C "$STAGE" -rf "$STAGE/orig.tar" \
               --sort=name --owner=0 --group=0 --numeric-owner \
