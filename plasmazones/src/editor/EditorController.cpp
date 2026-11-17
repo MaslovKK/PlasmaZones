@@ -159,7 +159,8 @@ EditorController::EditorController(QObject* parent)
     // the offline save fallback. The store watches nothing, so subscribe to
     // the daemon's change signal for cross-process writes — no debounce
     // needed, template CRUD emits once per operation.
-    m_templateStore = std::make_unique<PhosphorZones::ScrollingTemplateStore>();
+    m_templateStore =
+        std::make_unique<PhosphorZones::ScrollingTemplateStore>(ConfigDefaults::scrollingTemplatesSubdir());
     m_templateStore->loadTemplates();
     subscribe(iface, QStringLiteral("scrollingTemplatesChanged"), this, SLOT(reloadLocalTemplates()));
 

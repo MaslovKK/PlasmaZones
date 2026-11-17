@@ -437,7 +437,7 @@ private Q_SLOTS:
         mgr->setQuickLayoutSlot(autotile, 2, QStringLiteral("autotile:bsp"));
         // Scrolling owns its OWN array and on-disk key since the
         // native-template pivot; its slot values are template ids.
-        PhosphorZones::ScrollingTemplateStore store;
+        PhosphorZones::ScrollingTemplateStore store(PlasmaZones::ConfigDefaults::scrollingTemplatesSubdir());
         mgr->setScrollingTemplateStore(&store);
         PhosphorZones::ScrollingTemplate slotTemplate;
         slotTemplate.name = QStringLiteral("SlotTemplate");
@@ -522,7 +522,7 @@ private Q_SLOTS:
     void testLayoutManager_setAllQuickLayoutSlots_validatesAndCanonicalizes()
     {
         QScopedPointer<PhosphorZones::LayoutRegistry> mgr(createManager());
-        PhosphorZones::ScrollingTemplateStore store;
+        PhosphorZones::ScrollingTemplateStore store(PlasmaZones::ConfigDefaults::scrollingTemplatesSubdir());
         mgr->setScrollingTemplateStore(&store);
 
         PhosphorZones::ScrollingTemplate templ;

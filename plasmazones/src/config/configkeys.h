@@ -1142,6 +1142,8 @@ public:
     P_CONFIG_KEY(profilesSubdir, "plasmazones/profiles")
     P_CONFIG_KEY(pointerSubdir, "plasmazones/pointer")
     P_CONFIG_KEY(curvesSubdir, "plasmazones/curves")
+    P_CONFIG_KEY(shaderPresetsSubdir, "plasmazones/shader-presets")
+    P_CONFIG_KEY(scrollingTemplatesSubdir, "plasmazones/scrolling-templates")
     P_CONFIG_KEY(surfacePacksSubdir, PHOSPHOR_SURFACE_PACKS_DATA_SUBDIR)
 
 private:

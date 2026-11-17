@@ -5,6 +5,8 @@
 
 #include "pointer_controller_detail.h"
 
+#include "config/configdefaults.h"
+
 #include <PhosphorPointer/PointerFrameState.h>
 #include <PhosphorPointer/PointerShaderEffect.h>
 #include <PhosphorPointer/PointerShaderRegistry.h>
@@ -105,7 +107,7 @@ bool PointerPreviewController::configurePreviewItem(QQuickItem* item, const QStr
     // Always set, for the same reason the buffer block below is: a reconfigure
     // of the same item must replace what the previous pack installed, not
     // leave it standing when the new answer happens to be empty.
-    shaderItem->setShaderIncludePaths(Registry::includePathsFor(effect.sourceDir));
+    shaderItem->setShaderIncludePaths(Registry::includePathsFor(effect.sourceDir, ConfigDefaults::pointerSubdir()));
     shaderItem->setShaderSource(QUrl::fromLocalFile(effect.fragmentShaderPath));
     // The `#define p_<id> customParamsN_x` block, spliced after `#version` at
     // bake time. Its slot allocation mirrors translatePointerParams exactly, so

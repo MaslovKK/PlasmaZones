@@ -390,7 +390,8 @@ SettingsController::SettingsController(QObject* parent)
     // same across daemon/editor/settings. Adding a new engine library
     // doesn't require editing this file unless the engine demands a
     // service the settings app doesn't already publish.
-    m_localTemplateStore = std::make_unique<PhosphorZones::ScrollingTemplateStore>();
+    m_localTemplateStore =
+        std::make_unique<PhosphorZones::ScrollingTemplateStore>(ConfigDefaults::scrollingTemplatesSubdir());
     m_localTemplateStore->loadTemplates();
     buildStandardLayoutSourceBundle(m_localSources, m_localLayoutManager.get(), m_localAlgorithmRegistry.get(),
                                     m_localTemplateStore.get());
@@ -803,7 +804,7 @@ SettingsController::SettingsController(QObject* parent)
     // never come. Before the page controllers below, which hand a bridge to
     // QML.
     m_presetStore = std::make_unique<PhosphorShaders::ShaderPresetStore>(nullptr);
-    m_presetStore->load();
+    m_presetStore->load(PhosphorShaders::standardUserPresetRoot(ConfigDefaults::shaderPresetsSubdir()));
     {
         // Push each family's pack-declared presets now, and again on every
         // reload, so a pack dropped in while the window is open brings its

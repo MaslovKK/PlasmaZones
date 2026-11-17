@@ -15,6 +15,8 @@
  * the C++ that produces and normalizes the documents it describes.
  */
 
+#include "config/configdefaults.h"
+
 #include <QTest>
 #include <QSignalSpy>
 #include <QDir>
@@ -183,7 +185,7 @@ private Q_SLOTS:
 
     void storeCrudRoundTrip()
     {
-        ScrollingTemplateStore store;
+        ScrollingTemplateStore store(PlasmaZones::ConfigDefaults::scrollingTemplatesSubdir());
         store.loadTemplates();
         QSignalSpy changedSpy(&store, &ScrollingTemplateStore::templatesChanged);
 
@@ -211,7 +213,7 @@ private Q_SLOTS:
 
     void invalidTemplateRefusedBySave()
     {
-        ScrollingTemplateStore store;
+        ScrollingTemplateStore store(PlasmaZones::ConfigDefaults::scrollingTemplatesSubdir());
         ScrollingTemplate nameless = makeTemplate();
         nameless.name.clear();
         QCOMPARE(store.saveTemplate(nameless), QUuid());
@@ -249,7 +251,7 @@ private Q_SLOTS:
             }
         });
 
-        ScrollingTemplateStore store;
+        ScrollingTemplateStore store(PlasmaZones::ConfigDefaults::scrollingTemplatesSubdir());
         store.loadTemplates();
         QVERIFY(store.contains(bundled.id));
         QVERIFY(store.templateById(bundled.id).isSystem);

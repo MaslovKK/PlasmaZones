@@ -379,10 +379,10 @@ void PlasmaZonesEffect::initRenderingAndRegistries()
     // default of all four. Each loader holds a QFileSystemWatcher and re-parses
     // its whole directory on every save, here on the compositor thread, so the
     // overlay family the effect cannot consult was real work for no effect.
-    m_shaderManager.presetStore().load(PhosphorShaders::standardUserPresetRoot(),
-                                       {PhosphorShaders::ShaderFamily::Animation,
-                                        PhosphorShaders::ShaderFamily::Surface,
-                                        PhosphorShaders::ShaderFamily::Pointer});
+    m_shaderManager.presetStore().load(
+        PhosphorShaders::standardUserPresetRoot(QStringLiteral("plasmazones/shader-presets")),
+        {PhosphorShaders::ShaderFamily::Animation, PhosphorShaders::ShaderFamily::Surface,
+         PhosphorShaders::ShaderFamily::Pointer});
     {
         // Seed what the three registries already declare. The projection is
         // PhosphorShaders::seedPackPresets, shared with the daemon and the settings

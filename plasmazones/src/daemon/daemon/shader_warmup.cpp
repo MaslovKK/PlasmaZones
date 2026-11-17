@@ -151,7 +151,7 @@ void Daemon::setupShaderPresets()
     // compositor names its own: an unlisted family costs a watcher and a
     // directory re-parse on every preset the user saves. The daemon serves
     // animation, surface and overlay; pointer is compositor-only.
-    m_presetStore->load(PhosphorShaders::standardUserPresetRoot(),
+    m_presetStore->load(PhosphorShaders::standardUserPresetRoot(ConfigDefaults::shaderPresetsSubdir()),
                         {PhosphorShaders::ShaderFamily::Animation, PhosphorShaders::ShaderFamily::Surface,
                          PhosphorShaders::ShaderFamily::Overlay});
 

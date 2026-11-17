@@ -42,6 +42,7 @@
 #include <PhosphorZones/Zone.h>
 
 #include "RuleCascadeFixture.h"
+#include "config/configdefaults.h"
 
 class TestRuleCascadeContext : public QObject, public RuleCascadeFixture
 {
@@ -715,7 +716,7 @@ private Q_SLOTS:
         // that borrows it: locals are destroyed in reverse, and a registry torn
         // down while still holding a pointer into a dead store is a dangling
         // read in whatever the destructor touches.
-        PhosphorZones::ScrollingTemplateStore store;
+        PhosphorZones::ScrollingTemplateStore store(PlasmaZones::ConfigDefaults::scrollingTemplatesSubdir());
         RegistryFixture f = makeRegistryFixture();
         f.registry->setScrollingTemplateStore(&store);
         PhosphorZones::ScrollingTemplate templ;
