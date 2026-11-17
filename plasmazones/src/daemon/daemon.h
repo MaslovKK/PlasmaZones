@@ -1497,7 +1497,8 @@ private:
     std::unique_ptr<PhosphorScreens::VirtualScreenSwapper> m_virtualScreenSwapper;
     SnapService* m_snapService = nullptr;
     SnapAdaptor* m_snapAdaptor = nullptr; // D-Bus binding of m_snapService, deleted before it
-    TilingAdaptor* m_tilingAdaptor = nullptr;
+    TilingService* m_tilingService = nullptr;
+    TilingAdaptor* m_tilingAdaptor = nullptr; // D-Bus binding of m_tilingService, deleted before it
     /// Autotile-engine wire surface (org.phosphor_works.Placement.Autotile) — algorithm
     /// selection, master ops, and autotile config; lifecycle traffic rides
     /// the shared tiling adaptor. Qt-parented; stop() clears its engine

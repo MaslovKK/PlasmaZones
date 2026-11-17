@@ -235,11 +235,13 @@ set(plasmazones_core_SRCS
     runtime/services/autotileservice/autotileservice.cpp
     runtime/services/autotileservice/config.cpp
     runtime/services/autotileservice/autotileservice.h
-    dbus/tilingadaptor/tilingadaptor.cpp
-    dbus/tilingadaptor/relay.cpp
-    dbus/tilingadaptor/mapmodel.cpp
-    dbus/tilingadaptor/desktopreconcile.cpp
-    dbus/tilingadaptor/tilingadaptor.h
+    dbus/tilingadaptor.cpp
+    dbus/tilingadaptor.h
+    runtime/services/tilingservice/tilingservice.cpp
+    runtime/services/tilingservice/relay.cpp
+    runtime/services/tilingservice/mapmodel.cpp
+    runtime/services/tilingservice/desktopreconcile.cpp
+    runtime/services/tilingservice/tilingservice.h
     dbus/snapadaptor.cpp
     dbus/snapadaptor.h
     runtime/services/snapservice/snapservice.cpp

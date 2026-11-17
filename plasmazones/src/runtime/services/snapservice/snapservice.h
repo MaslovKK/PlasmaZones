@@ -107,7 +107,7 @@ public:
 
     /// Runs the work it is handed behind any screens announce still queued,
     /// so the effect judges a placement against the managed set it was
-    /// computed for (TilingAdaptor::runBehindScreensAnnounce, #1151). Every
+    /// computed for (TilingService::runBehindScreensAnnounce, #1151). Every
     /// zone batch this adaptor emits goes through it (the engine's own, the
     /// settings reflows, the bus resnaps and the virtual-screen resnap), so
     /// they reach the effect in the order they were committed, and so does

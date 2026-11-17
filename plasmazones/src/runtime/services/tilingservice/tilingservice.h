@@ -6,9 +6,8 @@
 #include "plasmazones_export.h"
 
 #include <PhosphorEngine/EngineTypes.h>
-#include <PhosphorProtocol/AutotileMarshalling.h>
-#include <PhosphorProtocol/WindowMarshalling.h>
-#include <QDBusAbstractAdaptor>
+#include <PhosphorProtocol/AutotileTypes.h>
+#include <PhosphorProtocol/WindowTypes.h>
 #include <QPointer>
 #include <QHash>
 #include <QObject>
@@ -38,9 +37,12 @@ namespace PlasmaZones {
 class WindowTracker;
 
 /**
- * @brief D-Bus adaptor for the shared tiling-family transport
+ * @brief The shared tiling-family transport: the service behind
+ *        org.phosphor_works.Placement.Tiling
  *
- * Provides D-Bus interface: org.phosphor_works.Placement.Tiling
+ * Bound to D-Bus by TilingAdaptor (dbus/tilingadaptor.h), which also admits
+ * the compositor-only reports. "The adaptor" in the comments below is this
+ * service, which held the D-Bus surface itself until the split.
  *
  * The engine-NEUTRAL wire surface shared by every tiling-family placement
  * engine (autotile, scrolling): the effect keeps ONE engine-managed screen
@@ -60,10 +62,9 @@ class WindowTracker;
  * GATED relay from the scroll engine, which drops the tick while edge
  * auto-scroll is running (see the connect in init_engines.cpp).
  */
-class PLASMAZONES_EXPORT TilingAdaptor : public QDBusAbstractAdaptor
+class PLASMAZONES_EXPORT TilingService : public QObject
 {
     Q_OBJECT
-    Q_CLASSINFO("D-Bus Interface", "org.phosphor_works.Placement.Tiling")
 
     Q_PROPERTY(bool enabled READ enabled NOTIFY enabledChanged)
     Q_PROPERTY(QStringList managedScreens READ managedScreens NOTIFY managedScreensChanged)
@@ -71,13 +72,13 @@ class PLASMAZONES_EXPORT TilingAdaptor : public QDBusAbstractAdaptor
 
 public:
     /**
-     * @brief Construct a TilingAdaptor
+     * @brief Construct a TilingService
      *
      * @param screenManager Screen manager (for panel-geometry deferral)
      * @param parent Parent QObject (typically the daemon)
      */
-    explicit TilingAdaptor(PhosphorScreens::ScreenManager* screenManager, QObject* parent = nullptr);
-    ~TilingAdaptor() override = default;
+    explicit TilingService(PhosphorScreens::ScreenManager* screenManager, QObject* parent = nullptr);
+    ~TilingService() override = default;
 
     /// Wire the WindowTracker (post-construction, to break the
     /// construction-order cycle) so the tiling open path can resolve
@@ -394,7 +395,7 @@ public Q_SLOTS:
      * startup/restart and mode toggle-on to avoid per-window D-Bus
      * round-trips.
      *
-     * Compositor-only (DbusHelpers::admitCompositorReport, #1155): any bus
+     * Compositor-only (TilingAdaptor runs DbusHelpers::admitCompositorReport, #1155): any bus
      * caller but the registered bridge is answered with AccessDenied. The
      * bridge is trusted on size: batch size is deliberately unbounded on the
      * panel-ready path (the deferral queue's kMaxPendingOpens is a depth

@@ -347,7 +347,7 @@ public Q_SLOTS:
      * No in-tree caller: the effect unfloats through
      * setWindowFloatingForScreen(false). Kept as external contract
      * surface (scripting/automation query into the pre-float state),
-     * same policy as TilingAdaptor::retileAllScreens.
+     * same policy as TilingService::retileAllScreens.
      */
     bool getPreFloatZone(const QString& windowId, QString& zoneId);
 
@@ -382,7 +382,7 @@ public Q_SLOTS:
      *
      * No in-tree caller (the effect restores via getValidatedPreTileGeometry
      * without a pre-check) — kept as external contract surface, same policy
-     * as TilingAdaptor::retileAllScreens.
+     * as TilingService::retileAllScreens.
      */
     bool hasPreTileGeometry(const QString& windowId);
 
@@ -581,7 +581,7 @@ public Q_SLOTS:
      *
      * No in-tree caller (snap-to-last-zone moved to SnapService) — kept as
      * external contract surface, same policy as
-     * TilingAdaptor::retileAllScreens.
+     * TilingService::retileAllScreens.
      */
     QString getLastUsedZoneId();
 
@@ -875,7 +875,7 @@ public:
     /// records nothing: a frame still on its zone or tile rect (or a window a
     /// tiling engine holds tiled), and a window excluded from placement that
     /// has no record of its own. NOTE a screen-LESS call is
-    /// not necessarily a live capture: TilingAdaptor::windowClosed runs the
+    /// not necessarily a live capture: TilingService::windowClosed runs the
     /// funnel screen-less while its engine still tracks the closing window,
     /// deliberately forfeiting the close-only branches above in
     /// exchange for an authoritative engine slot; the WindowTracking close
@@ -892,7 +892,7 @@ public:
     /// Announce that @p windowId no longer occupies a zone in the context it
     /// was released from, as an "unsnapped" windowStateChanged entry. For the
     /// releases that do not run through SnapEngine::uncommitSnap:
-    /// TilingAdaptor::applyMembershipResult, for the per-window
+    /// TilingService::applyMembershipResult, for the per-window
     /// reconcileWindowMembership and for the per-screen
     /// reconcileDesktopMemberships the daemon runs after a desktop or activity
     /// switch. That pass emits no windowSnapStateChanged, whose per-window tiling float-marker
@@ -930,7 +930,7 @@ public:
     bool readoptOnArrival(const QString& windowId, const QString& screenId);
     /// Drop the window's parked contexts on desktops and activities @p span no longer covers.
     void dropParkedOutsideSpan(const QString& windowId, const PhosphorEngine::DesktopSpan& span);
-    /// The registry-backed desktop span query the membership pass reads (TilingAdaptor wires it). Unset, every span
+    /// The registry-backed desktop span query the membership pass reads (TilingService wires it). Unset, every span
     /// is unknown.
     void setDesktopSpanQuery(PhosphorEngine::DesktopSpanQuery query);
     /// The window was placed again where it actually is, on @p screenId (a tiling re-announce, or a snapping
@@ -992,7 +992,7 @@ public:
     /// The hint-bearing resolver has to seed first, and does on both open paths today (snap's,
     /// and the tiling adaptor's for autotile and scrolling): SnapEngine::resolveWindowRestore calls
     /// calculateSnapToPlacementRule (phosphor-snap-engine lifecycle.cpp) ahead of the restore, managed-restore
-    /// and float predicates, and TilingAdaptor::dispatchWindowOpened calls
+    /// and float predicates, and TilingService::dispatchWindowOpened calls
     /// applyOpenRoutingForTiling ahead of the tiling engine's windowOpened.
     /// Reordering either would silently revert ActiveLayout / ScreenId matching
     /// on the open path without failing a test.
@@ -1091,7 +1091,7 @@ public:
     /// through a PRIVATE memo (see m_tabColorMemo) — not the shared evaluator
     /// cache, which cannot serve this query in either direction. Unlike
     /// scrollOpenRuleParams this runs per tab the effect queries
-    /// (TilingAdaptor::scrollTabColors) and per registry record change (the
+    /// (TilingService::scrollTabColors) and per registry record change (the
     /// per-window relay) rather than once per window open, so it is kept to
     /// a slot read with no screen or mode stamping.
     QVariantMap tabColorRuleParams(const QString& windowId);
@@ -1251,7 +1251,7 @@ public:
     /// MATCHED, moved or not.
     bool applyOpenScreenRouting(const QString& windowId, const QString& screenId,
                                 PhosphorEngine::RestoreReason reason = PhosphorEngine::RestoreReason::Open);
-    /// How a routed open reaches a tiling target's engine (TilingAdaptor wires it).
+    /// How a routed open reaches a tiling target's engine (TilingService wires it).
     void setRoutedOpenDispatcher(std::function<void(const PhosphorProtocol::WindowOpenedEntry&)> dispatcher);
 
     /// Drops the routing verdict published for @p windowId's current pass
@@ -1919,7 +1919,7 @@ public:
     /// desktops, #648), falling back to the global current desktop; 0 without
     /// a VirtualDesktopManager.
     ///
-    /// Public so TilingAdaptor can stamp managedScreensChanged with the
+    /// Public so TilingService can stamp managedScreensChanged with the
     /// per-screen desktop the announced set was resolved against. A pure
     /// query of the VirtualDesktopManager this adaptor borrows.
     int currentDesktopForScreen(const QString& screenId) const;

@@ -101,6 +101,7 @@ class RuleAdaptor;
 class RuleService;
 class UnifiedLayoutController;
 class WorkspaceController;
+class TilingService;
 class TilingAdaptor;
 class AutotileAdaptor;
 class AutotileService;

@@ -51,7 +51,7 @@ namespace PlasmaZones {
  * Window lifecycle and tile-request traffic for scrolling screens
  * deliberately stays on org.phosphor_works.Placement.Tiling — the effect keeps ONE
  * engine-managed screen set and one geometry pipeline for both tiling-family
- * engines, and TilingAdaptor routes per screen.
+ * engines, and TilingService routes per screen.
  */
 class PLASMAZONES_EXPORT ScrollingService : public QObject
 {

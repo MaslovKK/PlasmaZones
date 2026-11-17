@@ -3,7 +3,7 @@
 
 #include "daemon/daemon.h"
 #include "daemon/overlayservice.h"
-#include "dbus/tilingadaptor/tilingadaptor.h"
+#include "runtime/services/tilingservice/tilingservice.h"
 #include "daemon/controllers/unifiedlayoutcontroller.h"
 #include <PhosphorZones/LayoutRegistry.h>
 #include <PhosphorZones/LayoutComputeService.h>
@@ -662,14 +662,14 @@ void Daemon::updateEngineScreens()
     // sets-unchanged short-circuit: a desktop switch changes the map while
     // both engines' screen sets stay identical. The adaptor owns the
     // emit-on-change dedup, so the unconditional push costs one map compare.
-    if (m_tilingAdaptor) {
+    if (m_tilingService) {
         QVariantMap activeLayouts;
         for (const QString& screenId : effectiveIds) {
             activeLayouts.insert(
                 screenId,
                 m_layoutManager->rulesVisibleActiveLayoutId(screenId, currentDesktopForScreen(screenId), activity));
         }
-        m_tilingAdaptor->setActiveLayouts(activeLayouts);
+        m_tilingService->setActiveLayouts(activeLayouts);
     }
 }
 

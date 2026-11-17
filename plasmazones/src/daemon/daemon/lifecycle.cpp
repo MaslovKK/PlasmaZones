@@ -29,7 +29,7 @@
 #include "dbus/windowtrackingadaptor.h"
 #include "runtime/dragresolver/dragresolver.h"
 #include "runtime/services/autotileservice/autotileservice.h"
-#include "dbus/tilingadaptor/tilingadaptor.h"
+#include "runtime/services/tilingservice/tilingservice.h"
 #include "runtime/services/scrollingservice/scrollingservice.h"
 #include "runtime/services/snapservice/snapservice.h"
 #include "runtime/services/shaderservice.h"
@@ -414,7 +414,7 @@ void Daemon::stop()
     // The other raw-Qt-parented adaptors (LayoutAdaptor,
     // OverlayAdaptor, ZoneDetectionAdaptor, WindowTracker,
     // DBusScreenAdaptor, DragResolver, CompositorBridgeAdaptor,
-    // SnapService, TilingAdaptor, AutotileAdaptor, ScrollingService) all
+    // SnapService, TilingService, AutotileAdaptor, ScrollingService) all
     // ship destructors that don't
     // deref any borrowed pointer — they are `= default` or empty-body
     // (no member access); DBusScreenAdaptor's out-of-line body does
@@ -423,7 +423,7 @@ void Daemon::stop()
     // destructors" — confirmed by inspecting each header + cpp pair,
     // not header alone. Their borrowed pointers are still severed below
     // (the engine adaptors' clearEngine, and the WTA's, WDA's,
-    // TilingAdaptor's and SnapService's late-bound borrows), with the bus
+    // TilingService's and SnapService's late-bound borrows), with the bus
     // already unregistered above; none of them needs a detach() for its
     // DESTRUCTOR. If a future adaptor grows a dtor body that
     // derefs a borrowed member, add detach() to it AND wire the call here
@@ -557,8 +557,8 @@ void Daemon::stop()
     // children of the daemon (destroyed later); a D-Bus call arriving between engine
     // destruction and adaptor destruction would otherwise access freed memory. After
     // clearing, ensureEngine() returns false.
-    if (m_tilingAdaptor) {
-        m_tilingAdaptor->clearEngine();
+    if (m_tilingService) {
+        m_tilingService->clearEngine();
     }
     if (m_autotileService) {
         m_autotileService->clearEngine();
@@ -642,17 +642,17 @@ void Daemon::stop()
         // SnapService holds no router.
         m_windowTracker->setScreenModeRouter(nullptr);
     }
-    if (m_tilingAdaptor) {
+    if (m_tilingService) {
         // Sever the tiling adaptor's post-construction borrow of the WTA (wired
         // in init() so the tiling open path can resolve RouteToScreen /
         // RouteToDesktop rules). The tiling open path no-ops on a null WTA, so
         // a D-Bus open landing in the teardown gap can't drive routing against
         // half-torn-down state. Symmetric with the resolver / router clears above
         // and honours the shutdown-nullptr contract documented in tilingadaptor.h.
-        m_tilingAdaptor->setWindowTrackingAdaptor(nullptr);
+        m_tilingService->setWindowTrackingAdaptor(nullptr);
         // Same contract for the registry subscription: a metadata push landing
         // in the teardown gap must not walk engines that are being reset.
-        m_tilingAdaptor->setWindowRegistry(nullptr);
+        m_tilingService->setWindowRegistry(nullptr);
     }
 
     // Sever SnapEngine's borrow of m_excludeRuleSet (a daemon-owned value

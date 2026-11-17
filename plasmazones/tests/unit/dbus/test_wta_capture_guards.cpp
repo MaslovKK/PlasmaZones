@@ -42,7 +42,7 @@
 #include <PhosphorZones/LayoutRegistry.h>
 #include <PhosphorTileEngine/AutotileEngine.h>
 #include "FakePhysicalScreenSource.h"
-#include "dbus/tilingadaptor/tilingadaptor.h"
+#include "runtime/services/tilingservice/tilingservice.h"
 #include "runtime/windowtracker/windowtracker.h"
 #include "helpers/AutotileTestHelpers.h"
 
@@ -379,7 +379,7 @@ private Q_SLOTS:
 
     void testTilingCloseRelayCapturesEngineSlotBeforeUntrack()
     {
-        // The close relay's ordering contract: TilingAdaptor::windowClosed
+        // The close relay's ordering contract: TilingService::windowClosed
         // runs the shared capture funnel BEFORE forwarding the close to the
         // engine, so the persisted slot carries the LIVE order — obtainable
         // only pre-untrack (the engine's capturePlacement answers nullopt the
@@ -399,7 +399,7 @@ private Q_SLOTS:
         autotile.setAutotileScreens({screen});
         wta->setEngines(nullptr, &autotile, nullptr);
 
-        auto* tiling = new TilingAdaptor(&screenMgr, &parent);
+        auto* tiling = new TilingService(&screenMgr, &parent);
         tiling->setWindowTrackingAdaptor(wta);
         tiling->setLifecycleEngines(QVector<PhosphorEngine::IPlacementEngine*>{&autotile});
 

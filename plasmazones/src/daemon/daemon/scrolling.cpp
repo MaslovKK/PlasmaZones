@@ -20,7 +20,7 @@
 // Complete type needed for setScrollEffectBehaviour — daemon.h forward
 // declares ScrollingService only.
 #include "runtime/services/scrollingservice/scrollingservice.h"
-#include "dbus/tilingadaptor/tilingadaptor.h"
+#include "runtime/services/tilingservice/tilingservice.h"
 #include "seedorderfilter.h"
 
 #include "runtime/windowtracker/windowtracker.h"
@@ -479,7 +479,7 @@ void Daemon::updateScrollingScreens(const QSet<QString>& scrollingScreens)
         // presentation state. Pushed even when EMPTY, like the engine map
         // above — empty is how a screen whose rules stopped overriding falls
         // back to the global look.
-        if (m_tilingAdaptor) {
+        if (m_tilingService) {
             QVariantMap paint;
             if (params.tabIndicatorStyle) {
                 paint.insert(WindowPaintKeys::tabStyle(), *params.tabIndicatorStyle);
@@ -520,7 +520,7 @@ void Daemon::updateScrollingScreens(const QSet<QString>& scrollingScreens)
             if (params.tabIndicatorFontStrikeout) {
                 paint.insert(WindowPaintKeys::tabFontStrikeout(), *params.tabIndicatorFontStrikeout);
             }
-            m_tilingAdaptor->setScrollTabPaintOverrides(screenId, paint);
+            m_tilingService->setScrollTabPaintOverrides(screenId, paint);
         }
         // The drop indicator's overrides are keyed by the QML property names
         // its slot reads and handed to the overlay rather than the engine. ALL
@@ -631,8 +631,8 @@ void Daemon::updateScrollingScreens(const QSet<QString>& scrollingScreens)
         // And the effect's tab paint overrides for the departed screen: the
         // pills it painted there are gone with the strip, and a stale map
         // would colour the next strip this screen hosts.
-        if (m_tilingAdaptor) {
-            m_tilingAdaptor->setScrollTabPaintOverrides(screenId, {});
+        if (m_tilingService) {
+            m_tilingService->setScrollTabPaintOverrides(screenId, {});
         }
     }
 

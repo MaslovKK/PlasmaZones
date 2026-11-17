@@ -37,7 +37,7 @@
 #include "dbus/windowtrackingadaptor.h"
 #include "runtime/dragresolver/dragresolver.h"
 #include "dbus/windowdragadaptor.h"
-#include "dbus/tilingadaptor/tilingadaptor.h"
+#include "runtime/services/tilingservice/tilingservice.h"
 // Needed as COMPLETE types, not just forward declarations: the re-entry
 // preamble below deletes them, and deleting through an incomplete type calls
 // neither the destructor nor a class-specific operator delete.
@@ -46,6 +46,7 @@
 #include "runtime/services/scrollingservice/scrollingservice.h"
 #include "dbus/scrollingadaptor.h"
 #include "dbus/snapadaptor.h"
+#include "dbus/tilingadaptor.h"
 #include "runtime/services/snapservice/snapservice.h"
 #include "dbus/shaderadaptor.h"
 #include "runtime/services/shaderservice.h"
@@ -90,6 +91,8 @@ void Daemon::initCoreAdaptors()
     // whole Tiling/Scrolling wire surface after a daemon restart.
     delete m_tilingAdaptor;
     m_tilingAdaptor = nullptr;
+    delete m_tilingService;
+    m_tilingService = nullptr;
     delete m_scrollingAdaptor;
     m_scrollingAdaptor = nullptr;
     delete m_scrollingService;

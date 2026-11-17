@@ -130,7 +130,7 @@ void Daemon::applyScreenDesktopSeed(const QString& screenId, int desktop)
     }
     updateEngineScreens();
     if (m_screenManager) {
-        reconcileMembershipsForScreens(m_tilingAdaptor, m_screenManager->virtualScreenIdsFor(screenId));
+        reconcileMembershipsForScreens(m_tilingService, m_screenManager->virtualScreenIdsFor(screenId));
     }
 }
 

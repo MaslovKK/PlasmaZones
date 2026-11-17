@@ -105,7 +105,7 @@ ScrollingService::ScrollingService(PhosphorScrollEngine::ScrollEngine* engine, Q
     // Undamped, unlike the sibling relay of this same signal onto
     // Tiling.tilingChanged (init_engines.cpp), which skips the edge
     // auto-scroll's ~60 Hz tick. Deliberate rather than an oversight: that
-    // one's subscribers (TilingAdaptor::refreshFocusedWindow and the shell
+    // one's subscribers (TilingService::refreshFocusedWindow and the shell
     // placement map, placementmap_p.h) would run on every tick, while both
     // readers of this signal coalesce. The settings reader folds every wake-up onto a settle
     // timer and re-reads once, and the shell's placement map

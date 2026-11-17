@@ -210,7 +210,7 @@ void WindowTracker::windowActivated(const QString& windowId, const QString& scre
         // Snap's layer-focus memories (the switch verb's "return to the
         // window I was on" candidates) are armed here, on the adaptor that
         // already holds the snap engine — snap is deliberately NOT in the
-        // TilingAdaptor lifecycle vector, whose focus relay serves the
+        // TilingService lifecycle vector, whose focus relay serves the
         // tiling family. Must run AFTER the migrate above: noteFocused
         // writes through the window's owning store, and the migrate is what
         // re-keys that store onto the activation screen. Accepted side

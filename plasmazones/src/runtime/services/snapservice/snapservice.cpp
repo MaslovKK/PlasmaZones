@@ -147,7 +147,7 @@ void SnapService::clearEngine()
     // a possibly-stale pointer; the existing per-slot null guards now
     // catch the cleared state instead.
     m_contextResolver = nullptr;
-    // The sequencer borrows the TilingAdaptor, which clears its own held work
+    // The sequencer borrows the TilingService, which clears its own held work
     // with the announce it voids; what this adaptor still holds names the
     // dead session's windows.
     m_announceSequencer = {};
